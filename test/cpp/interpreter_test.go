@@ -2,6 +2,7 @@ package cpp_test
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/spectrumwebco/agent_runtime/internal/cpp"
@@ -64,5 +65,27 @@ int main() {
 		_, err := interpreter.Exec(ctx, code)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "compilation failed")
+	})
+	
+	t.Run("library_compilation", func(t *testing.T) {
+		code := `
+#include <iostream>
+
+extern "C" {
+    int add(int a, int b) {
+        return a + b;
+    }
+}
+`
+		ctx := context.Background()
+		libPath, err := interpreter.CompileLibrary(ctx, code, "mathlib")
+		require.NoError(t, err)
+		assert.Contains(t, libPath, "libmathlib.so")
+		
+		defer func() {
+			if err := os.Remove(libPath); err != nil {
+				t.Logf("Failed to remove test library: %v", err)
+			}
+		}()
 	})
 }
