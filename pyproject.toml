@@ -25,15 +25,24 @@ dependencies = [
     "flask",
     "flask-cors",
     "flask-socketio",
-    "pydantic",
+    "pydantic>=2", # Ensure v2+ for SWE-ReX compatibility
     "python-dotenv",
     "pydantic_settings",
     "litellm",
     "GitPython",
     "ghapi",
-    "swe-rex>=1.2.0",
+    # "swe-rex>=1.2.0", # Removed, will add source code instead
     "tabulate",
     "textual>=1.0.0",
+    # Added from SWE-ReX
+    "fastapi",
+    "uvicorn",
+    "requests",
+    "pexpect",
+    "bashlex",
+    "python-multipart",
+    "boto3", # Added for SWE-ReX deployment tests
+    "modal", # Added for SWE-ReX modal deployment tests
 ]
 
 [project.scripts]
@@ -54,6 +63,7 @@ dev = [
     "pre-commit",
     "pytest-xdist",
     "griffe-pydantic!=1.1.3",
+    "pytest-asyncio", # Added to handle async tests properly
 ]
 
 [tool.setuptools]
@@ -63,5 +73,13 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."] # Search for packages in the root directory
-include = ["sweagent*", "tools*", "tests*"] # Include the copied directories
+include = ["sweagent*", "tools*", "tests*", "swerex*"] # Include copied SWE-Agent and SWE-ReX dirs
 namespaces = false
+
+[tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function" # Explicitly set scope
+
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "cloud: mark tests for modal/fargate/etc.",
+]
