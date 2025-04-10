@@ -9,6 +9,7 @@ import (
 )
 
 type Config struct {
+ssu	Agent   AgentConfig   `yaml:"agent"`
 	Server  ServerConfig  `yaml:"server"`
 	Logging LoggingConfig `yaml:"logging"`
 	LLM     LLMConfig     `yaml:"llm"`
@@ -50,6 +51,12 @@ type PythonConfig struct {
 	Paths       []string `yaml:"paths"`
 }
 
+type AgentConfig struct {
+	Name        string `yaml:"name"`
+	Description string `yaml:"description"`
+	Version     string `yaml:"version"`
+}
+
 type RuntimeConfig struct {
 	Sandbox      bool              `yaml:"sandbox"`
 	AllowedPaths []string          `yaml:"allowedPaths"`
@@ -58,6 +65,11 @@ type RuntimeConfig struct {
 
 func DefaultConfig() *Config {
 	return &Config{
+		Agent: AgentConfig{
+			Name:        "Sam Sepiol",
+			Description: "An autonomous software engineering agent",
+			Version:     "0.1.0",
+		},
 		Server: ServerConfig{
 			Port: 8080,
 			Host: "0.0.0.0",
@@ -94,24 +106,24 @@ func DefaultConfig() *Config {
 
 func Load(path string) (*Config, error) {
 	config := DefaultConfig()
-	
+
 	if path == "" {
 		return config, nil
 	}
-	
+
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil, fmt.Errorf("configuration file not found: %s", path)
 	}
-	
+
 	data, err := os.ReadFile(filepath.Clean(path))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read configuration file: %w", err)
 	}
-	
+
 	if err := yaml.Unmarshal(data, config); err != nil {
 		return nil, fmt.Errorf("failed to parse configuration file: %w", err)
 	}
-	
+
 	return config, nil
 }
 
@@ -120,10 +132,10 @@ func (c *Config) Save(path string) error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal configuration: %w", err)
 	}
-	
+
 	if err := os.WriteFile(filepath.Clean(path), data, 0600); err != nil {
 		return fmt.Errorf("failed to write configuration file: %w", err)
 	}
-	
+
 	return nil
 }
