@@ -64,7 +64,9 @@ The framework includes several built-in MCP servers:
 
 MCP Servers are managed by the MCP Manager, which handles their lifecycle and provides access to them.
 
-### Python Integration
+### Language Integrations
+
+#### Python Integration
 
 The Python Integration component enables the agent to execute Python code and interact with Python libraries. It provides a bridge between Go and Python, allowing the agent to leverage existing Python tools and libraries.
 
@@ -73,6 +75,17 @@ The Python Integration includes:
 - **Interpreter**: Manages the Python interpreter
 - **FFI**: Provides foreign function interface for calling Python from Go
 - **Package Management**: Handles Python package installation and management
+
+#### C++ Integration
+
+The C++ Integration component enables the agent to execute C++ code for high-performance computing tasks. It provides a bridge between Go and C++, allowing the agent to implement performance-critical components in C++.
+
+The C++ Integration includes:
+
+- **Interpreter**: Manages C++ code compilation and execution
+- **Library Management**: Handles C++ library compilation and linking
+- **Header Management**: Manages include paths and header files
+- **Optimization**: Provides configuration for compiler optimization flags
 
 ## Interfaces
 
