@@ -21,7 +21,7 @@ This framework serves as the foundation for the Agent Runtime ecosystem, providi
 
 - **MCP Server Integration**: Native support for the Model Context Protocol, enabling seamless communication between LLMs and external tools
 - **Go-Based Performance**: High-throughput, low-latency execution compared to Python-based alternatives
-- **Python FFI Support**: Call Python scripts directly from Go for compatibility with existing tools
+- **Language Interoperability**: Call Python and C++ code directly from Go for compatibility with existing tools and high-performance components
 - **Kubernetes Native**: Designed to run in kata containers within a Kubernetes cluster
 - **IDE Integration**: Support for JetBrains Toolbox, Windsurf, and VSCode
 - **Modular Architecture**: Extensible design with pluggable components
@@ -102,7 +102,9 @@ mcp:
       enabled: true
 ```
 
-## Python Integration
+## Language Interoperability
+
+### Python Integration
 
 Agent Runtime supports calling Python scripts through FFI:
 
@@ -117,6 +119,52 @@ func main() {
     
     // Execute Python code
     result, err := py.Exec("import numpy as np; print(np.array([1, 2, 3]))")
+    if err != nil {
+        log.Fatal(err)
+    }
+    
+    fmt.Println(result)
+}
+```
+
+### C++ Integration
+
+Agent Runtime also supports executing C++ code for high-performance components:
+
+```go
+// Example of C++ integration
+import (
+    "context"
+    "github.com/spectrumwebco/agent_runtime/cpp"
+)
+
+func main() {
+    // Initialize C++ interpreter
+    config := cpp.InterpreterConfig{
+        Flags: []string{"-std=c++17", "-O2"},
+    }
+    cppInterp, err := cpp.NewInterpreter(config)
+    if err != nil {
+        log.Fatal(err)
+    }
+    defer cppInterp.Close()
+    
+    // Execute C++ code
+    ctx := context.Background()
+    code := `
+    #include <iostream>
+    #include <vector>
+    
+    int main() {
+        std::vector<int> v = {1, 2, 3};
+        for (auto i : v) {
+            std::cout << i << " ";
+        }
+        return 0;
+    }
+    `
+    
+    result, err := cppInterp.Exec(ctx, code)
     if err != nil {
         log.Fatal(err)
     }
