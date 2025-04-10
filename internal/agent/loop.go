@@ -21,12 +21,14 @@ type Loop struct {
 }
 
 type LoopState struct {
-	Phase       string                 `json:"phase"`
-	Task        string                 `json:"task"`
-	StartTime   time.Time              `json:"startTime"`
-	Events      []Event                `json:"events"`
-	Context     map[string]interface{} `json:"context"`
-	CurrentTool string                 `json:"currentTool"`
+	Phase         string                 `json:"phase"` // Current phase (e.g., query_model, execute_action)
+	Task          string                 `json:"task"`  // Description of the overall task
+	StartTime     time.Time              `json:"startTime"`
+	Events        []Event                `json:"events"` // Log of significant events
+	Context       map[string]interface{} `json:"context"` // General context data
+	CurrentAction string                 `json:"currentAction,omitempty"` // The action being executed
+	LastError     string                 `json:"lastError,omitempty"`   // Last error encountered
+	StepCount     int                    `json:"stepCount"`             // Number of steps taken
 }
 
 type Event struct {
@@ -45,6 +47,7 @@ func NewLoop(agent *Agent, moduleRegistry *modules.Registry, toolRegistry *tools
 			StartTime: time.Now(),
 			Events:    make([]Event, 0),
 			Context:   make(map[string]interface{}),
+			StepCount: 0,
 		},
 		stopChan:    make(chan struct{}),
 		stoppedChan: make(chan struct{}),
@@ -112,7 +115,7 @@ func (l *Loop) run(ctx context.Context) {
 	defer close(l.stoppedChan)
 	
 	l.mutex.Lock()
-	l.state.Phase = "task_initiation"
+	l.state.Phase = "setup" // Start with setup phase
 	l.mutex.Unlock()
 	
 	l.AddEvent("task_started", map[string]interface{}{
@@ -150,6 +153,9 @@ func (l *Loop) run(ctx context.Context) {
 			l.state.Phase = "error_handling"
 			l.mutex.Unlock()
 			
+			l.mutex.Lock()
+			l.state.LastError = err.Error()
+			l.mutex.Unlock()
 			l.AddEvent("phase_error", map[string]interface{}{
 				"phase": l.state.Phase,
 				"error": err.Error(),
@@ -196,24 +202,20 @@ func (l *Loop) executePhase(ctx context.Context) (string, error) {
 	l.mutex.RUnlock()
 	
 	switch phase {
-	case "task_initiation":
-		return l.executeTaskInitiation(ctx)
-	case "analyze_requirements":
-		return l.executeAnalyzeRequirements(ctx)
-	case "tool_discovery":
-		return l.executeToolDiscovery(ctx)
-	case "planning_phase":
-		return l.executePlanningPhase(ctx)
-	case "execution_phase":
-		return l.executeExecutionPhase(ctx)
-	case "tool_transition_evaluation":
-		return l.executeToolTransitionEvaluation(ctx)
-	case "toolbelt_activation":
-		return l.executeToolbeltActivation(ctx)
-	case "completion_verification":
-		return l.executeCompletionVerification(ctx)
-	case "state_cleanup":
-		return l.executeStateCleanup(ctx)
+	case "setup":
+		return l.executeSetup(ctx)
+	case "query_model":
+		return l.executeQueryModel(ctx)
+	case "parse_action":
+		return l.executeParseAction(ctx)
+	case "execute_action":
+		return l.executeExecuteAction(ctx)
+	case "handle_observation":
+		return l.executeHandleObservation(ctx)
+	case "error_handling":
+		return l.state.Phase, nil // Stay in error handling until resolved
+	case "idle":
+		return "idle", nil // Should not execute phase when idle
 	default:
 		return "", fmt.Errorf("unknown phase: %s", phase)
 	}
@@ -228,47 +230,72 @@ func (l *Loop) handleError(ctx context.Context, err error) (string, error) {
 	return "idle", nil
 }
 
-func (l *Loop) executeTaskInitiation(ctx context.Context) (string, error) {
-	
-	return "analyze_requirements", nil
+
+func (l *Loop) executeSetup(ctx context.Context) (string, error) {
+	l.AddEvent("setup_started", nil)
+	l.agent.History = []Message{} // Reset history
+	l.AddEvent("setup_completed", nil)
+	return "query_model", nil // Move to querying the model first
 }
 
-func (l *Loop) executeAnalyzeRequirements(ctx context.Context) (string, error) {
-	
-	return "tool_discovery", nil
+func (l *Loop) executeQueryModel(ctx context.Context) (string, error) {
+	l.AddEvent("query_model_started", nil)
+	l.state.Context["last_model_output"] = map[string]string{
+		"message": "placeholder model output with thought and action", // Placeholder
+	}
+	l.AddEvent("query_model_completed", map[string]interface{}{"output_length": len("placeholder...")})
+	return "parse_action", nil
 }
 
-func (l *Loop) executeToolDiscovery(ctx context.Context) (string, error) {
-	
-	return "planning_phase", nil
+func (l *Loop) executeParseAction(ctx context.Context) (string, error) {
+	l.AddEvent("parse_action_started", nil)
+	modelOutput := l.state.Context["last_model_output"].(map[string]string)["message"]
+	thought, action, err := l.tools.ParseAction(modelOutput) // Assuming ParseAction exists
+	if err != nil {
+		l.AddEvent("parse_action_failed", map[string]interface{}{"error": err.Error()})
+		return "error_handling", fmt.Errorf("parsing action failed: %w", err) // Let main loop handle error phase
+	}
+	l.state.Context["current_thought"] = thought
+	l.state.CurrentAction = action
+	l.AddEvent("parse_action_completed", map[string]interface{}{"action": action})
+	return "execute_action", nil
 }
 
-func (l *Loop) executePlanningPhase(ctx context.Context) (string, error) {
-	
-	return "execution_phase", nil
+func (l *Loop) executeExecuteAction(ctx context.Context) (string, error) {
+	l.mutex.Lock()
+	action := l.state.CurrentAction
+	l.mutex.Unlock()
+
+	l.AddEvent("execute_action_started", map[string]interface{}{"action": action})
+
+	if action == "exit" {
+		l.AddEvent("exit_command_received", nil)
+		return "idle", nil // Task completed by exit command
+	}
+
+	observation, err := l.tools.Execute(ctx, action, l.agent.Env) // Assuming Execute exists
+	if err != nil {
+		l.AddEvent("execute_action_failed", map[string]interface{}{"action": action, "error": err.Error()})
+		return "error_handling", fmt.Errorf("executing action '%s' failed: %w", action, err)
+	}
+
+	l.mutex.Lock()
+	l.state.Context["last_observation"] = observation
+	l.state.StepCount++ // Increment step count after successful execution
+	l.mutex.Unlock()
+
+	l.AddEvent("execute_action_completed", map[string]interface{}{"action": action, "observation_length": len(observation)})
+	return "handle_observation", nil
 }
 
-func (l *Loop) executeExecutionPhase(ctx context.Context) (string, error) {
-	
-	return "tool_transition_evaluation", nil
-}
+func (l *Loop) executeHandleObservation(ctx context.Context) (string, error) {
+	l.AddEvent("handle_observation_started", nil)
 
-func (l *Loop) executeToolTransitionEvaluation(ctx context.Context) (string, error) {
-	
-	return "completion_verification", nil
-}
+	done := false // Check step output or other conditions
 
-func (l *Loop) executeToolbeltActivation(ctx context.Context) (string, error) {
-	
-	return "execution_phase", nil
-}
-
-func (l *Loop) executeCompletionVerification(ctx context.Context) (string, error) {
-	
-	return "state_cleanup", nil
-}
-
-func (l *Loop) executeStateCleanup(ctx context.Context) (string, error) {
-	
-	return "idle", nil
+	l.AddEvent("handle_observation_completed", map[string]interface{}{"task_done": done})
+	if done {
+		return "idle", nil
+	}
+	return "query_model", nil // Loop back to query model for next step
 }
