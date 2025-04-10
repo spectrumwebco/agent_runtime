@@ -268,7 +268,21 @@ func (h *Handler) ExecuteAction(ctx context.Context, action string, environment 
 	switch toolName {
 	case "submit":
 		argsMap["submission"] = argsStr // Assumes submission text follows the command
-	case "python", "cpp":
+	case "python":
+		if strings.HasPrefix(argsStr, "--script ") {
+			scriptParts := strings.Fields(strings.TrimPrefix(argsStr, "--script "))
+			if len(scriptParts) > 0 {
+				argsMap["script_path"] = scriptParts[0]
+				if len(scriptParts) > 1 {
+					argsMap["script_args"] = scriptParts[1:]
+				}
+			} else {
+				fmt.Printf("Warning: Could not parse script path for python tool: %s\n", argsStr)
+			}
+		} else {
+			argsMap["code"] = argsStr // Assumes code follows the command if --script is not present
+		}
+	case "cpp":
 		argsMap["code"] = argsStr // Assumes code follows the command
 	case "shell":
 		argsMap["command"] = argsStr // The rest of the string is the command
@@ -605,22 +619,50 @@ type PythonTool struct {
 func (t *PythonTool) Name() string        { return t.name }
 func (t *PythonTool) Description() string { return t.description }
 func (t *PythonTool) Execute(ctx context.Context, args map[string]interface{}, environment *env.SWEEnv) (string, error) {
-	if t.interpreter == nil {
-		return "Error: Python interpreter is not available.", nil
-	}
-	code, ok := args["code"].(string)
-	if !ok || code == "" {
-		return "Error: Invalid or missing 'code' argument for python tool.", nil
-	}
-	fmt.Printf("Executing Python code via FFI: %s\n", code)
-	output, err := t.interpreter.Exec(ctx, code)
-	if err != nil {
-		if ctx.Err() == context.DeadlineExceeded {
-			return "Error: Python execution timed out.", nil
+	code, codeOK := args["code"].(string)
+	scriptPath, scriptOK := args["script_path"].(string)
+	var scriptArgs []string
+	if scriptArgsVal, ok := args["script_args"]; ok {
+		if sa, ok := scriptArgsVal.([]string); ok {
+			scriptArgs = sa
+		} else {
+			fmt.Printf("Warning: 'script_args' provided but not as []string: %T\n", scriptArgsVal)
+			return "Error: Invalid 'script_args' format. Expected []string.", nil
 		}
-		return fmt.Sprintf("Error executing Python code: %v\nOutput:\n%s", err, output), nil
+	} else {
+		scriptArgs = []string{} // Default to empty slice if not provided
+	}
+
+
+	if !codeOK && !scriptOK {
+		return "Error: Missing or invalid arguments for python tool. Requires 'code' or 'script_path'.", nil
+	}
+	if codeOK && scriptOK {
+		return "Error: Cannot provide both 'code' and 'script_path' to python tool.", nil
+	}
+
+	if t.interpreter == nil {
+		return "Error: Python interpreter is not initialized.", nil
+	}
+
+	fmt.Printf("Executing python tool with args: %+v\n", args)
+
+	if codeOK {
+		fmt.Printf("Executing Python code snippet...\n")
+		output, err := t.interpreter.ExecCode(ctx, code)
+		if err != nil {
+			return fmt.Sprintf("Error executing Python code: %v", err), nil
+		}
+		return "Output:\n" + output, nil
+	}
+
+	fmt.Printf("Executing Python script: %s with args %v\n", scriptPath, scriptArgs)
+	output, err := t.interpreter.ExecScript(ctx, scriptPath, scriptArgs...)
+	if err != nil {
+		return fmt.Sprintf("Error executing Python script %s: %v", scriptPath, err), nil
 	}
 	return "Output:\n" + output, nil
+
 }
 
 
