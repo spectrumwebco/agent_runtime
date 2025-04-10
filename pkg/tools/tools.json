@@ -1,0 +1,234 @@
+{
+  "tools": [
+    {
+      "name": "shell",
+      "description": "Executes a shell command",
+      "parameters": {
+        "command": {
+          "type": "string",
+          "description": "Command to execute"
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Command output"
+      }
+    },
+    {
+      "name": "file",
+      "description": "Performs file operations",
+      "parameters": {
+        "operation": {
+          "type": "string",
+          "description": "Operation to perform (read, write, list, delete)",
+          "enum": ["read", "write", "list", "delete"]
+        },
+        "path": {
+          "type": "string",
+          "description": "Path to the file or directory"
+        },
+        "content": {
+          "type": "string",
+          "description": "Content to write (for write operation)",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Operation result"
+      }
+    },
+    {
+      "name": "http",
+      "description": "Makes HTTP requests",
+      "parameters": {
+        "url": {
+          "type": "string",
+          "description": "URL to request"
+        },
+        "method": {
+          "type": "string",
+          "description": "HTTP method",
+          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
+          "default": "GET"
+        },
+        "headers": {
+          "type": "object",
+          "description": "HTTP headers",
+          "required": false
+        },
+        "body": {
+          "type": "string",
+          "description": "Request body",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "object",
+        "description": "HTTP response",
+        "properties": {
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code"
+          },
+          "headers": {
+            "type": "object",
+            "description": "HTTP response headers"
+          },
+          "body": {
+            "type": "string",
+            "description": "Response body"
+          }
+        }
+      }
+    },
+    {
+      "name": "git",
+      "description": "Performs Git operations",
+      "parameters": {
+        "operation": {
+          "type": "string",
+          "description": "Git operation to perform",
+          "enum": ["clone", "pull", "push", "commit", "checkout", "status"]
+        },
+        "repository": {
+          "type": "string",
+          "description": "Git repository URL or path",
+          "required": false
+        },
+        "branch": {
+          "type": "string",
+          "description": "Git branch",
+          "required": false
+        },
+        "message": {
+          "type": "string",
+          "description": "Commit message",
+          "required": false
+        },
+        "files": {
+          "type": "array",
+          "description": "Files to add to commit",
+          "required": false,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Git operation result"
+      }
+    },
+    {
+      "name": "python",
+      "description": "Executes Python code",
+      "parameters": {
+        "code": {
+          "type": "string",
+          "description": "Python code to execute"
+        },
+        "file": {
+          "type": "string",
+          "description": "Python file to execute",
+          "required": false
+        },
+        "function": {
+          "type": "string",
+          "description": "Python function to execute",
+          "required": false
+        },
+        "module": {
+          "type": "string",
+          "description": "Python module containing the function",
+          "required": false
+        },
+        "args": {
+          "type": "array",
+          "description": "Arguments for the function",
+          "required": false,
+          "items": {
+            "type": "any"
+          }
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Python execution result"
+      }
+    },
+    {
+      "name": "docker",
+      "description": "Manages Docker containers",
+      "parameters": {
+        "operation": {
+          "type": "string",
+          "description": "Docker operation to perform",
+          "enum": ["run", "build", "stop", "rm", "ps", "images", "pull"]
+        },
+        "image": {
+          "type": "string",
+          "description": "Docker image",
+          "required": false
+        },
+        "container": {
+          "type": "string",
+          "description": "Docker container",
+          "required": false
+        },
+        "options": {
+          "type": "array",
+          "description": "Docker command options",
+          "required": false,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Docker operation result"
+      }
+    },
+    {
+      "name": "kubernetes",
+      "description": "Manages Kubernetes resources",
+      "parameters": {
+        "operation": {
+          "type": "string",
+          "description": "Kubernetes operation to perform",
+          "enum": ["apply", "get", "delete", "describe", "logs", "exec"]
+        },
+        "resource": {
+          "type": "string",
+          "description": "Kubernetes resource type",
+          "required": false
+        },
+        "name": {
+          "type": "string",
+          "description": "Resource name",
+          "required": false
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Kubernetes namespace",
+          "required": false
+        },
+        "file": {
+          "type": "string",
+          "description": "YAML file for apply operation",
+          "required": false
+        },
+        "command": {
+          "type": "string",
+          "description": "Command to execute in the pod",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Kubernetes operation result"
+      }
+    }
+  ]
+}

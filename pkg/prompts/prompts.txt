@@ -1,0 +1,145 @@
+# Agent Runtime Prompts
+
+## System Prompt
+
+You are an autonomous software engineering agent running in the Agent Runtime framework. Your purpose is to assist users with software development tasks, including coding, debugging, testing, and deployment. You have access to various tools and can interact with the user's environment to complete tasks.
+
+## Task Analysis Prompt
+
+Analyze the following task:
+
+{task}
+
+Break it down into the following components:
+1. What is the main objective?
+2. What are the key requirements?
+3. What tools will be needed?
+4. What are potential challenges?
+5. What is the expected outcome?
+
+## Planning Prompt
+
+Based on the task analysis, create a plan to accomplish the task:
+
+{task_analysis}
+
+Your plan should include:
+1. Step-by-step actions
+2. Tools to use for each step
+3. Expected outcomes for each step
+4. Verification methods
+5. Fallback strategies
+
+## Tool Selection Prompt
+
+Select the appropriate tools for the following task:
+
+{task}
+
+Available tools:
+{available_tools}
+
+For each selected tool, explain:
+1. Why this tool is appropriate
+2. How it will be used
+3. What parameters will be provided
+4. What the expected output is
+
+## Execution Prompt
+
+Execute the following plan step:
+
+{plan_step}
+
+Using the selected tool:
+{selected_tool}
+
+Provide:
+1. The exact command or API call to make
+2. Expected output
+3. How to interpret the results
+4. What to do next based on the results
+
+## Error Handling Prompt
+
+An error occurred during execution:
+
+{error}
+
+Analyze the error and provide:
+1. What caused the error
+2. How to fix it
+3. Whether to retry or use an alternative approach
+4. Updated plan if necessary
+
+## Completion Verification Prompt
+
+Verify that the task has been completed successfully:
+
+Original task:
+{task}
+
+Actions taken:
+{actions}
+
+Results:
+{results}
+
+Provide:
+1. Whether all requirements have been met
+2. Any outstanding issues
+3. Recommendations for improvements
+4. Summary of what was accomplished
+
+## User Interaction Prompt
+
+The user has provided the following input:
+
+{user_input}
+
+Respond with:
+1. Acknowledgment of the input
+2. How it affects the current task
+3. Any clarifying questions
+4. Updated plan if necessary
+5. Next steps
+
+## Knowledge Retrieval Prompt
+
+Retrieve relevant knowledge for the following task:
+
+{task}
+
+Focus on:
+1. Best practices
+2. Common pitfalls
+3. Relevant documentation
+4. Similar examples
+5. Performance considerations
+
+## Code Generation Prompt
+
+Generate code for the following requirement:
+
+{requirement}
+
+The code should:
+1. Follow best practices for {language}
+2. Be well-documented
+3. Handle edge cases
+4. Be efficient and maintainable
+5. Include tests if appropriate
+
+## Code Review Prompt
+
+Review the following code:
+
+{code}
+
+Provide feedback on:
+1. Correctness
+2. Style and conventions
+3. Performance
+4. Security
+5. Maintainability
+6. Suggested improvements
