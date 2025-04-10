@@ -24,7 +24,7 @@ func NewInterpreter() (*Interpreter, error) {
 	return &Interpreter{pythonPath: path}, nil
 }
 
-func (i *Interpreter) Exec(ctx context.Context, code string) (string, error) {
+func (i *Interpreter) ExecCode(ctx context.Context, code string) (string, error) {
 	if ctx == nil {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second) // 30-second timeout
@@ -52,6 +52,45 @@ func (i *Interpreter) Exec(ctx context.Context, code string) (string, error) {
 
 	if stderrStr != "" {
 		fmt.Printf("Python execution produced stderr (even on success):\n%s\n", stderrStr)
+		return stdoutStr + "\n--- STDERR ---\n" + stderrStr, nil
+	}
+
+	return stdoutStr, nil
+}
+
+
+func (i *Interpreter) ExecScript(ctx context.Context, scriptPath string, args ...string) (string, error) {
+	if ctx == nil {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second) // Longer timeout for scripts
+		defer cancel()
+	}
+
+	cmdArgs := append([]string{scriptPath}, args...)
+	cmd := exec.CommandContext(ctx, i.pythonPath, cmdArgs...)
+
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+
+	fmt.Printf("Executing Python script via FFI: %s %v\n", scriptPath, args)
+	err := cmd.Run()
+
+	stdoutStr := stdout.String()
+	stderrStr := stderr.String()
+
+	if ctx.Err() == context.DeadlineExceeded {
+		return "", fmt.Errorf("python script execution timed out (%s): %w", scriptPath, ctx.Err())
+	}
+	if err != nil {
+		if exitErr, ok := err.(*exec.ExitError); ok {
+			return stdoutStr, fmt.Errorf("python script execution failed (%s) with exit code %d: %w\nStderr: %s", scriptPath, exitErr.ExitCode(), err, stderrStr)
+		}
+		return stdoutStr, fmt.Errorf("python script execution failed (%s): %w\nStderr: %s", scriptPath, err, stderrStr)
+	}
+
+	if stderrStr != "" {
+		fmt.Printf("Python script execution (%s) produced stderr (even on success):\n%s\n", scriptPath, stderrStr)
 		return stdoutStr + "\n--- STDERR ---\n" + stderrStr, nil
 	}
 
