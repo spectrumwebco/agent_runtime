@@ -15,6 +15,7 @@ type Config struct {
 	LLM     LLMConfig     `yaml:"llm"`
 	MCP     MCPConfig     `yaml:"mcp"`
 	Python  PythonConfig  `yaml:"python"`
+	CPP     CPPConfig     `yaml:"cpp"`
 	Runtime RuntimeConfig `yaml:"runtime"`
 }
 
@@ -49,6 +50,14 @@ type PythonConfig struct {
 	Enabled     bool     `yaml:"enabled"`
 	Interpreter string   `yaml:"interpreter"`
 	Paths       []string `yaml:"paths"`
+}
+
+type CPPConfig struct {
+	Enabled     bool              `yaml:"enabled"`
+	Compiler    string            `yaml:"compiler"`
+	Flags       []string          `yaml:"flags"`
+	Libraries   []string          `yaml:"libraries"`
+	Options     map[string]string `yaml:"options"`
 }
 
 type AgentConfig struct {
@@ -97,6 +106,15 @@ func DefaultConfig() *Config {
 		Python: PythonConfig{
 			Enabled:     true,
 			Interpreter: "python3",
+		},
+		CPP: CPPConfig{
+			Enabled:  true,
+			Compiler: "g++",
+			Flags:    []string{"-std=c++17", "-O2"},
+			Libraries: []string{
+				"boost",
+				"eigen",
+			},
 		},
 		Runtime: RuntimeConfig{
 			Sandbox: true,

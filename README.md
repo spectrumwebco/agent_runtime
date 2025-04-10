@@ -15,6 +15,8 @@
 
 Agent Runtime is a high-performance Go-based backend framework for building autonomous software engineering agents, featuring Sam Sepiol as the lead agent. It leverages the Model Context Protocol (MCP) to create a powerful, extensible system that can integrate with various LLMs and tools.
 
+Sam Sepiol is a complete 1:1 port of the SWE-Agent and SWE-ReX frameworks to Go, providing superior performance and efficiency while maintaining all the capabilities of the original Python implementations.
+
 This framework serves as the foundation for the Agent Runtime ecosystem, providing the core backend logic without frontends. It's designed to be integrated into Kubernetes clusters using kata containers, with native support for TypeScript-based guardrails and mutations through kpolicy.
 
 ## Key Features

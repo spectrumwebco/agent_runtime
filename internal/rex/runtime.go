@@ -7,12 +7,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/spectrumwebco/agent_runtime/internal/agent"
+	"github.com/spectrumwebco/agent_runtime/pkg/interfaces"
 	"github.com/spectrumwebco/agent_runtime/pkg/tools"
 )
 
 type Runtime struct {
-	Agent *agent.Agent
+	Agent interfaces.Agent
 	
 	Trajectories map[string]*Trajectory
 	
@@ -33,7 +33,7 @@ type RuntimeConfig struct {
 	TrajectoryPath string `json:"trajectory_path"`
 }
 
-func NewRuntime(agent *agent.Agent, config RuntimeConfig) (*Runtime, error) {
+func NewRuntime(agent interfaces.Agent, config RuntimeConfig) (*Runtime, error) {
 	runtime := &Runtime{
 		Agent:        agent,
 		Trajectories: make(map[string]*Trajectory),
