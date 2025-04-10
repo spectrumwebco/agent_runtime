@@ -9,7 +9,7 @@ import (
 )
 
 type Config struct {
-ssu	Agent   AgentConfig   `yaml:"agent"`
+	Agent   AgentConfig   `yaml:"agent"`
 	Server  ServerConfig  `yaml:"server"`
 	Logging LoggingConfig `yaml:"logging"`
 	LLM     LLMConfig     `yaml:"llm"`
