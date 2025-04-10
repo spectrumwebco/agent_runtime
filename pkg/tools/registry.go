@@ -42,6 +42,16 @@ func (r *Registry) registerBuiltinTools() {
 		name:        "http",
 		description: "Makes HTTP requests",
 	})
+	
+	pythonTool, err := NewPythonTool("python", "Executes Python code")
+	if err == nil {
+		r.Register(pythonTool)
+	}
+	
+	cppTool, err := NewCppTool("cpp", "Executes C++ code")
+	if err == nil {
+		r.Register(cppTool)
+	}
 }
 
 func (r *Registry) Register(tool Tool) error {

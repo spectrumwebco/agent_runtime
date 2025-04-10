@@ -158,6 +158,54 @@
       }
     },
     {
+      "name": "cpp",
+      "description": "Executes C++ code",
+      "parameters": {
+        "code": {
+          "type": "string",
+          "description": "C++ code to execute"
+        },
+        "input": {
+          "type": "string",
+          "description": "Input to provide to the program",
+          "required": false
+        },
+        "flags": {
+          "type": "array",
+          "description": "Compiler flags",
+          "required": false,
+          "items": {
+            "type": "string"
+          }
+        },
+        "include_dirs": {
+          "type": "array",
+          "description": "Include directories",
+          "required": false,
+          "items": {
+            "type": "string"
+          }
+        },
+        "libraries": {
+          "type": "array",
+          "description": "Libraries to link",
+          "required": false,
+          "items": {
+            "type": "string"
+          }
+        },
+        "library": {
+          "type": "string",
+          "description": "Compile as a library with this name",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "C++ execution result"
+      }
+    },
+    {
       "name": "docker",
       "description": "Manages Docker containers",
       "parameters": {

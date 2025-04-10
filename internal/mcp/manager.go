@@ -165,6 +165,27 @@ func (m *Manager) GetServer(name string) (*ServerInfo, error) {
 func (m *Manager) StartServers() error {
 	for _, s := range m.servers {
 		if s.Enabled {
+			switch s.Name {
+			case "filesystem":
+				if err := RegisterFilesystemResources(s.Server); err != nil {
+					return fmt.Errorf("failed to register filesystem resources: %w", err)
+				}
+				if err := RegisterFilesystemTools(s.Server); err != nil {
+					return fmt.Errorf("failed to register filesystem tools: %w", err)
+				}
+			case "tools":
+				if err := RegisterToolsServerTools(s.Server); err != nil {
+					return fmt.Errorf("failed to register tools server tools: %w", err)
+				}
+			case "runtime":
+				if err := RegisterRuntimeTools(s.Server); err != nil {
+					return fmt.Errorf("failed to register runtime tools: %w", err)
+				}
+			}
+			
+			if err := s.Server.Start(); err != nil {
+				return fmt.Errorf("failed to start server %s: %w", s.Name, err)
+			}
 		}
 	}
 	
@@ -174,6 +195,9 @@ func (m *Manager) StartServers() error {
 func (m *Manager) StopServers() error {
 	for _, s := range m.servers {
 		if s.Enabled {
+			if err := s.Server.Stop(); err != nil {
+				return fmt.Errorf("failed to stop server %s: %w", s.Name, err)
+			}
 		}
 	}
 	
