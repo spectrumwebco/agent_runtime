@@ -1,73 +1,288 @@
 package agent
 
 import (
-	"context"
 	"fmt"
+	"os" // Added for file system operations
+	"path/filepath" // Added for path manipulation
 	"time"
 
-	"github.com/spectrumwebco/agent_runtime/internal/mcp"
-	"github.com/spectrumwebco/agent_runtime/pkg/config"
+	"github.com/spectrumwebco/agent_runtime/internal/config" // Assuming config is internal
+	"github.com/spectrumwebco/agent_runtime/internal/env"   // Assuming env is internal
 	"github.com/spectrumwebco/agent_runtime/pkg/tools"
 )
 
-type Agent struct {
-	config    *config.Config
-	mcpManager *mcp.Manager
-	tools     *tools.Registry
-	state     *State
+type AgentInfo struct {
+	Submission      string                 `json:"submission"`
+	ExitStatus      string                 `json:"exit_status"`
+	ModelStats      map[string]interface{} `json:"model_stats"` // Placeholder for model statistics
+	EditedFiles     map[string]string      `json:"edited_files"`  // Placeholder for edited files context
+	SweAgentHash    string                 `json:"swe_agent_hash"`    // Go equivalent placeholder
+	SweAgentVersion string                 `json:"swe_agent_version"` // Go equivalent placeholder
+	SweRexVersion   string                 `json:"swe_rex_version"`   // Go equivalent placeholder
+	SweRexHash      string                 `json:"swe_rex_hash"`      // Go equivalent placeholder
 }
 
-type State struct {
-	Status    string    `json:"status"`
-	StartTime time.Time `json:"startTime"`
-	Task      string    `json:"task"`
+type StepOutput struct {
+	Thought       string                 `json:"thought"`
+	Action        string                 `json:"action"`
+	Observation   string                 `json:"observation"`
+	Output        string                 `json:"output"` // Raw model output
+	State         map[string]interface{} `json:"state"`  // Environment state snapshot
+	Submission    string                 `json:"submission"`
+	ExitStatus    string                 `json:"exit_status"`
+	Done          bool                   `json:"done"`
+	ExecutionTime time.Duration          `json:"execution_time"`
+	ExtraInfo     map[string]interface{} `json:"extra_info"`
+	ToolCalls     []interface{}          `json:"tool_calls"`    // Placeholder for tool calls
+	ToolCallIDs   []string               `json:"tool_call_ids"` // Placeholder for tool call IDs
 }
 
-type ExecutionResult struct {
-	Success bool        `json:"success"`
-	Message string      `json:"message"`
-	Data    interface{} `json:"data,omitempty"`
+type TrajectoryStep struct {
+	Action        string                 `json:"action"`
+	Observation   string                 `json:"observation"`
+	Response      string                 `json:"response"`
+	Thought       string                 `json:"thought"`
+	ExecutionTime time.Duration          `json:"execution_time"`
+	State         map[string]interface{} `json:"state"`
+	Messages      []map[string]string    `json:"messages"` // History messages at this step
+	ExtraInfo     map[string]interface{} `json:"extra_info"`
 }
 
-func New(cfg *config.Config, mcpManager *mcp.Manager) (*Agent, error) {
-	toolRegistry, err := tools.NewRegistry(cfg)
+type ProblemStatement struct {
+	ID               string
+	ProblemStatement string
+}
+
+func (ps *ProblemStatement) GetProblemStatement() string {
+	if ps == nil {
+		return ""
+	}
+	return ps.ProblemStatement
+}
+
+func (ps *ProblemStatement) GetID() string {
+	if ps == nil {
+		return ""
+	}
+	return ps.ID
+}
+
+type DefaultAgent struct {
+	Name                 string
+	Config               *config.Config // Placeholder for agent config (needs definition)
+	Templates            interface{}    // Placeholder for template config (e.g., TemplateConfig struct)
+	Tools                *tools.Handler // Placeholder for tool handler (needs definition)
+	HistoryProcessors    []interface{}  // Placeholder for history processors
+	Model                interface{}    // Placeholder for the language model interface
+	MaxRequeries         int
+	History              []map[string]string // Stores the conversation history
+	trajectory           []TrajectoryStep    // Stores the execution trajectory
+	Info                 AgentInfo
+	env                  *env.SWEEnv       // Execution environment
+	problemStatement     *ProblemStatement // Task definition
+	outputDir            string            // Directory for output files
+	trajPath             string            // Path to save trajectory file
+	alwaysRequireZeroExit bool
+	nConsecutiveTimeouts int
+	totalExecutionTime   time.Duration
+}
+
+func NewDefaultAgent(/* TODO: Add parameters based on SWE-Agent __init__ */) (*DefaultAgent, error) {
+	fmt.Println("Placeholder: Initializing DefaultAgent...")
+	agentInfo := AgentInfo{
+		ModelStats:  make(map[string]interface{}),
+		EditedFiles: make(map[string]string),
+	}
+	return &DefaultAgent{
+		Name:              "default-go-agent",
+		MaxRequeries:      3, // Default from Python
+		History:           make([]map[string]string, 0),
+		trajectory:        make([]TrajectoryStep, 0),
+		Info:              agentInfo, // Use initialized AgentInfo
+	}, nil
+}
+
+func (a *DefaultAgent) Setup(environment *env.SWEEnv, problemStmt *ProblemStatement, outputDirPath string) error {
+	if environment == nil {
+		return fmt.Errorf("environment cannot be nil")
+	}
+	if problemStmt == nil {
+		return fmt.Errorf("problem statement cannot be nil")
+	}
+	if outputDirPath == "" {
+		outputDirPath = "." // Default to current directory
+	}
+
+	err := os.MkdirAll(outputDirPath, 0755)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create tool registry: %w", err)
+		return fmt.Errorf("failed to create output directory %s: %w", outputDirPath, err)
 	}
-	
-	agent := &Agent{
-		config:    cfg,
-		mcpManager: mcpManager,
-		tools:     toolRegistry,
-		state: &State{
-			Status:    "idle",
-			StartTime: time.Now(),
-		},
+
+	a.outputDir = outputDirPath
+	a.problemStatement = problemStmt
+	a.env = environment
+	instanceID := a.problemStatement.GetID()
+
+	fmt.Printf("Setting up agent for instance %s\n", instanceID)
+
+	a.trajPath = filepath.Join(a.outputDir, instanceID+".traj")
+	fmt.Printf("Trajectory will be saved to %s\n", a.trajPath)
+
+	fmt.Println("Placeholder: Installing tools...")
+	if a.Tools == nil {
+		toolRegistry, _ := tools.NewRegistry(a.Config) // Assuming a.Config is initialized
+		toolDefs := []tools.ToolDefinition{} // Load from config
+		toolConf := tools.ToolConfig{} // Load from config
+		a.Tools, _ = tools.NewHandler(toolConf, toolDefs, toolRegistry)
+		fmt.Println("Warning: Tools handler was nil, initialized with placeholder.")
 	}
-	
-	return agent, nil
+
+	a.Info = AgentInfo{
+		SweAgentHash:    "go-dev-hash",
+		SweAgentVersion: "go-dev-version",
+		SweRexVersion:   "go-rex-dev-version",
+		SweRexHash:      "go-rex-dev-hash",
+		ModelStats:      make(map[string]interface{}), // Initialize maps
+		EditedFiles:     make(map[string]string),
+	}
+	a.History = make([]map[string]string, 0) // Reset history
+	a.trajectory = make([]TrajectoryStep, 0) // Reset trajectory
+	a.nConsecutiveTimeouts = 0
+	a.totalExecutionTime = 0
+
+	err = a.env.SetEnvVariables(map[string]string{
+		"PROBLEM_STATEMENT": a.problemStatement.GetProblemStatement(),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to set PROBLEM_STATEMENT env var: %w", err)
+	}
+
+	err = a.addSystemMessageToHistory()
+	if err != nil {
+		return fmt.Errorf("failed to add system message: %w", err)
+	}
+	err = a.addDemonstrationsToHistory()
+	if err != nil {
+		return fmt.Errorf("failed to add demonstrations: %w", err)
+	}
+
+	initialState, err := a.Tools.GetState(a.env)
+	if err != nil {
+		fmt.Printf("Warning: Failed to get initial state: %v\n", err)
+		initialState = make(map[string]interface{}) // Use empty state
+	}
+
+	err = a.addInstanceTemplateToHistory(initialState)
+	if err != nil {
+		return fmt.Errorf("failed to add instance template: %w", err)
+	}
+
+	fmt.Println("Agent setup complete.")
+	return nil
 }
 
-func (a *Agent) Execute(ctx context.Context, task string) (*ExecutionResult, error) {
-	a.state.Status = "running"
-	a.state.Task = task
-	
-	
-	result := &ExecutionResult{
-		Success: true,
-		Message: "Task executed successfully",
-		Data: map[string]interface{}{
-			"task": task,
-			"time": time.Now().Format(time.RFC3339),
-		},
-	}
-	
-	a.state.Status = "idle"
-	a.state.Task = ""
-	
-	return result, nil
+func (a *DefaultAgent) Step() (*StepOutput, error) {
+	fmt.Println("Placeholder: Executing agent step...")
+	stepOutput := &StepOutput{Done: true} // Placeholder to stop loop for now
+	a.addStepToTrajectory(stepOutput)     // Add placeholder step
+	return stepOutput, nil
 }
 
-func (a *Agent) Status() *State {
-	return a.state
+func (a *DefaultAgent) Run(environment *env.SWEEnv, problemStmt *ProblemStatement, outputDirPath string) (*AgentRunResult, error) {
+	fmt.Println("Placeholder: Starting agent run...")
+
+	err := a.Setup(environment, problemStmt, outputDirPath)
+	if err != nil {
+		return nil, fmt.Errorf("agent setup failed: %w", err)
+	}
+
+	var stepOutput *StepOutput
+	for i := 0; i < 1; i++ { // Limit steps for now
+		stepOutput, err = a.Step()
+		if err != nil {
+			return nil, fmt.Errorf("agent step failed: %w", err)
+		}
+		if stepOutput.Done {
+			break
+		}
+	}
+
+	fmt.Println("Placeholder: Agent run finished.")
+	return &AgentRunResult{
+		Info:       a.Info,
+		Trajectory: a.trajectory,
+	}, nil
+}
+
+func (a *DefaultAgent) addStepToTrajectory(step *StepOutput) {
+	histCopy := make([]map[string]string, len(a.History))
+	for i, msg := range a.History {
+		msgCopy := make(map[string]string)
+		for k, v := range msg {
+			msgCopy[k] = v
+		}
+		histCopy[i] = msgCopy
+	}
+	stateCopy := make(map[string]interface{})
+	if step.State != nil {
+		for k, v := range step.State {
+			stateCopy[k] = v // Assuming state values are immutable or copying is sufficient
+		}
+	}
+
+	trajectoryStep := TrajectoryStep{
+		Action:        step.Action,
+		Observation:   step.Observation,
+		Response:      step.Output,
+		Thought:       step.Thought,
+		ExecutionTime: step.ExecutionTime,
+		State:         stateCopy,
+		Messages:      histCopy, // Use the deep copied history
+		ExtraInfo:     step.ExtraInfo, // Assuming ExtraInfo is okay with shallow copy
+	}
+	a.trajectory = append(a.trajectory, trajectoryStep)
+}
+
+type AgentRunResult struct {
+	Info       AgentInfo        `json:"info"`
+	Trajectory []TrajectoryStep `json:"trajectory"`
+}
+
+func (a *DefaultAgent) _appendHistory(item map[string]string) {
+	histItem := make(map[string]string)
+	for k, v := range item {
+		histItem[k] = v
+	}
+	a.History = append(a.History, histItem)
+}
+
+func (a *DefaultAgent) addSystemMessageToHistory() error {
+	fmt.Println("Placeholder: Adding system message to history...")
+	systemMsg := "Placeholder System Message for " + a.problemStatement.GetID() // Placeholder
+	fmt.Printf("SYSTEM (%s)\n%s\n", a.Name, systemMsg)
+	a._appendHistory(map[string]string{
+		"role":         "system",
+		"content":      systemMsg,
+		"agent":        a.Name,
+		"message_type": "system_prompt",
+	})
+	return nil
+}
+
+func (a *DefaultAgent) addDemonstrationsToHistory() error {
+	fmt.Println("Placeholder: Adding demonstrations to history...")
+	return nil
+}
+
+func (a *DefaultAgent) addInstanceTemplateToHistory(state map[string]interface{}) error {
+	fmt.Println("Placeholder: Adding instance template to history...")
+	instanceMsg := fmt.Sprintf("Placeholder Instance Template for %s\nInitial State: %+v", a.problemStatement.GetID(), state) // Placeholder
+	fmt.Printf("USER (%s)\n%s\n", a.Name, instanceMsg)
+	a._appendHistory(map[string]string{
+		"role":         "user",
+		"content":      instanceMsg,
+		"agent":        a.Name,
+		"message_type": "instance_prompt",
+	})
+	return nil
 }
