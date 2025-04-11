@@ -6,7 +6,7 @@ import os
 import json
 import asyncio
 import logging
-from typing import Dict, List, Any, Optional, Set, Tuple
+from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 
 from .integration import GitHubIntegration
