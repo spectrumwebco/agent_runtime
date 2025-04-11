@@ -1,3 +1,4 @@
+// Package commands provides CLI commands for the agent runtime
 package commands
 
 import (
@@ -11,6 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// NewConfigCommand creates a new command for managing Sam Sepiol configuration
 func NewConfigCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",

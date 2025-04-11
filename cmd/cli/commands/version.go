@@ -1,3 +1,4 @@
+// Package commands provides CLI commands for the agent runtime
 package commands
 
 import (
@@ -8,13 +9,19 @@ import (
 )
 
 var (
+	// Version is the current version of Sam Sepiol
 	Version   = "0.1.0"
+	// BuildDate is the date when Sam Sepiol was built
 	BuildDate = "unknown"
+	// GitCommit is the git commit hash from which Sam Sepiol was built
 	GitCommit = "unknown"
+	// GoVersion is the Go version used to build Sam Sepiol
 	GoVersion = runtime.Version()
+	// Platform is the operating system and architecture Sam Sepiol is running on
 	Platform  = fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH)
 )
 
+// NewVersionCommand creates a new command for displaying version information
 func NewVersionCommand() *cobra.Command {
 	var verbose bool
 

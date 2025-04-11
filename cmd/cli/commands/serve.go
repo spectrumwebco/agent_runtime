@@ -1,3 +1,4 @@
+// Package commands provides CLI commands for the agent runtime
 package commands
 
 import (
@@ -11,6 +12,7 @@ import (
 	"github.com/spectrumwebco/agent_runtime/pkg/config"
 )
 
+// NewServeCommand creates a new command for starting the Sam Sepiol API server
 func NewServeCommand() *cobra.Command {
 	var configPath string
 	var port int

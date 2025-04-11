@@ -48,17 +48,40 @@ module "k8s" {
   vcluster_version = var.vcluster_version
   
   jspolicy_enabled = var.jspolicy_enabled
+}
 
-module "dragonfly" {
-  source = "./modules/dragonfly"
+module "vcluster" {
+  source = "./modules/vcluster"
   
+  count = var.vcluster_enabled ? 1 : 0
+  
+  name      = "${var.cluster_name}-vcluster"
   namespace = var.namespace
-  replicas  = var.dragonfly_replicas
-  dragonfly_password = var.dragonfly_password # Pass password variable
+  version   = var.vcluster_version
   
   depends_on = [module.k8s]
 }
 
+module "jspolicy" {
+  source = "./modules/jspolicy"
+  
+  count = var.jspolicy_enabled ? 1 : 0
+  
+  name      = "${var.cluster_name}-jspolicy"
+  namespace = var.namespace
+  
+  depends_on = [module.k8s]
+}
+
+module "vnode" {
+  source = "./modules/vnode"
+  
+  name      = "${var.cluster_name}-vnode"
+  namespace = var.namespace
+  vnode_image = "ghcr.io/loft-sh/vnode-runtime"
+  vnode_version = "0.0.1-alpha.1"
+  
+  depends_on = [module.k8s, module.vcluster]
 }
 
 module "kata" {
@@ -75,6 +98,7 @@ module "dragonfly" {
   
   namespace = var.namespace
   replicas  = var.dragonfly_replicas
+  dragonfly_password = var.dragonfly_password
   
   depends_on = [module.k8s]
 }
@@ -86,4 +110,36 @@ module "rocketmq" {
   replicas  = var.rocketmq_replicas
   
   depends_on = [module.k8s]
+}
+
+module "monitoring" {
+  source = "./modules/monitoring"
+  
+  namespace = var.namespace
+  
+  enable_prometheus = true
+  enable_grafana = true
+  enable_thanos = true
+  enable_loki = true
+  enable_jaeger = true
+  enable_vector = true
+  enable_opentelemetry = true
+  enable_kube_state_metrics = true
+  enable_cadvisor = true
+  enable_kubernetes_dashboard = true
+  
+  depends_on = [module.k8s]
+}
+
+module "ragflow" {
+  source = "./modules/ragflow"
+  
+  name = "${var.cluster_name}-ragflow"
+  namespace = "ragflow"
+  create_namespace = true
+  vcluster_enabled = true
+  
+  enable_kata_container_integration = true
+  
+  depends_on = [module.k8s, module.vcluster, module.kata]
 }

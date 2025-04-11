@@ -1,0 +1,455 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ragflow
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ragflow
+  namespace: ragflow
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: ragflow
+  namespace: ragflow
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: ragflow
+  namespace: ragflow
+subjects:
+- kind: ServiceAccount
+  name: ragflow
+  namespace: ragflow
+roleRef:
+  kind: Role
+  name: ragflow
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ragflow-config
+  namespace: ragflow
+data:
+  config.yaml: |
+    embedding_model: sentence-transformers/all-mpnet-base-v2
+    llm_model: gpt-3.5-turbo
+    vector_db: qdrant
+    document_store: minio
+    api:
+      port: 8000
+      max_tokens: 1024
+      temperature: 0.7
+      top_p: 0.95
+      top_k: 40
+      chunk_size: 1000
+      chunk_overlap: 200
+      max_documents: 10
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ragflow-qdrant
+  namespace: ragflow
+  labels:
+    app.kubernetes.io/name: ragflow
+    app.kubernetes.io/component: qdrant
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ragflow-qdrant
+  template:
+    metadata:
+      labels:
+        app: ragflow-qdrant
+        app.kubernetes.io/name: ragflow
+        app.kubernetes.io/component: qdrant
+    spec:
+      containers:
+      - name: qdrant
+        image: qdrant/qdrant:latest
+        ports:
+        - containerPort: 6333
+          name: http
+        - containerPort: 6334
+          name: grpc
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+          requests:
+            cpu: 500m
+            memory: 1Gi
+        volumeMounts:
+        - name: qdrant-data
+          mountPath: /qdrant/storage
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 6333
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 6333
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: qdrant-data
+        persistentVolumeClaim:
+          claimName: ragflow-qdrant-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ragflow-qdrant-data
+  namespace: ragflow
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ragflow-qdrant
+  namespace: ragflow
+spec:
+  selector:
+    app: ragflow-qdrant
+  ports:
+  - port: 6333
+    targetPort: 6333
+    name: http
+  - port: 6334
+    targetPort: 6334
+    name: grpc
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ragflow-minio
+  namespace: ragflow
+  labels:
+    app.kubernetes.io/name: ragflow
+    app.kubernetes.io/component: minio
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ragflow-minio
+  template:
+    metadata:
+      labels:
+        app: ragflow-minio
+        app.kubernetes.io/name: ragflow
+        app.kubernetes.io/component: minio
+    spec:
+      containers:
+      - name: minio
+        image: minio/minio:latest
+        args: ["server", "/data", "--console-address", ":9001"]
+        ports:
+        - containerPort: 9000
+          name: api
+        - containerPort: 9001
+          name: console
+        env:
+        - name: MINIO_ROOT_USER
+          value: minioadmin
+        - name: MINIO_ROOT_PASSWORD
+          value: minioadmin
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+          requests:
+            cpu: 500m
+            memory: 1Gi
+        volumeMounts:
+        - name: minio-data
+          mountPath: /data
+        livenessProbe:
+          httpGet:
+            path: /minio/health/live
+            port: 9000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /minio/health/ready
+            port: 9000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: minio-data
+        persistentVolumeClaim:
+          claimName: ragflow-minio-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ragflow-minio-data
+  namespace: ragflow
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ragflow-minio
+  namespace: ragflow
+spec:
+  selector:
+    app: ragflow-minio
+  ports:
+  - port: 9000
+    targetPort: 9000
+    name: api
+  - port: 9001
+    targetPort: 9001
+    name: console
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ragflow-redis
+  namespace: ragflow
+  labels:
+    app.kubernetes.io/name: ragflow
+    app.kubernetes.io/component: redis
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ragflow-redis
+  template:
+    metadata:
+      labels:
+        app: ragflow-redis
+        app.kubernetes.io/name: ragflow
+        app.kubernetes.io/component: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:latest
+        ports:
+        - containerPort: 6379
+          name: redis
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 2Gi
+          requests:
+            cpu: 500m
+            memory: 1Gi
+        volumeMounts:
+        - name: redis-data
+          mountPath: /data
+        livenessProbe:
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 6379
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: redis-data
+        persistentVolumeClaim:
+          claimName: ragflow-redis-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ragflow-redis-data
+  namespace: ragflow
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ragflow-redis
+  namespace: ragflow
+spec:
+  selector:
+    app: ragflow-redis
+  ports:
+  - port: 6379
+    targetPort: 6379
+    name: redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ragflow
+  namespace: ragflow
+  labels:
+    app.kubernetes.io/name: ragflow
+    app.kubernetes.io/component: api
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ragflow
+  template:
+    metadata:
+      labels:
+        app: ragflow
+        app.kubernetes.io/name: ragflow
+        app.kubernetes.io/component: api
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+    spec:
+      containers:
+      - name: ragflow
+        image: ragflow/ragflow:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: RAGFLOW_CONFIG_PATH
+          value: /etc/ragflow/config.yaml
+        - name: QDRANT_URL
+          value: http://ragflow-qdrant.ragflow.svc.cluster.local:6333
+        - name: QDRANT_COLLECTION
+          value: ragflow
+        - name: MINIO_URL
+          value: http://ragflow-minio.ragflow.svc.cluster.local:9000
+        - name: MINIO_ACCESS_KEY
+          value: minioadmin
+        - name: MINIO_SECRET_KEY
+          value: minioadmin
+        - name: MINIO_BUCKET
+          value: ragflow
+        - name: REDIS_URL
+          value: redis://ragflow-redis.ragflow.svc.cluster.local:6379
+        - name: ENABLE_PROMETHEUS
+          value: "true"
+        - name: ENABLE_JAEGER
+          value: "true"
+        - name: ENABLE_OPENTELEMETRY
+          value: "true"
+        - name: ENABLE_LOKI
+          value: "true"
+        - name: ENABLE_VECTOR
+          value: "true"
+        resources:
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+          requests:
+            cpu: 1000m
+            memory: 2Gi
+        volumeMounts:
+        - name: config
+          mountPath: /etc/ragflow
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: ragflow-config
+      serviceAccountName: ragflow
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ragflow
+  namespace: ragflow
+spec:
+  selector:
+    app: ragflow
+  ports:
+  - port: 8000
+    targetPort: 8000
+    name: http
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: ragflow
+  namespace: ragflow
+  labels:
+    app.kubernetes.io/name: ragflow
+spec:
+  selector:
+    matchLabels:
+      app: ragflow
+  endpoints:
+  - port: http
+    interval: 15s
+    path: /metrics
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ragflow-kata-integration
+  namespace: ragflow
+  labels:
+    app.kubernetes.io/name: ragflow
+    app.kubernetes.io/component: kata-integration
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ragflow-kata-integration
+  template:
+    metadata:
+      labels:
+        app: ragflow-kata-integration
+        app.kubernetes.io/name: ragflow
+        app.kubernetes.io/component: kata-integration
+    spec:
+      runtimeClassName: kata-containers
+      containers:
+      - name: kata-integration
+        image: ubuntu:22.04
+        command:
+        - /bin/bash
+        - -c
+        - apt-get update && apt-get install -y curl python3 python3-pip && pip3 install ragflow-client && sleep infinity
+        env:
+        - name: RAGFLOW_API_URL
+          value: http://ragflow.ragflow.svc.cluster.local:8000
+        resources:
+          limits:
+            cpu: 500m
+            memory: 1Gi
+          requests:
+            cpu: 250m
+            memory: 512Mi

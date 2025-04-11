@@ -1,12 +1,14 @@
+// Package types provides common type definitions used throughout the agent runtime
 package types
 import "time"
 
-
+// Message represents a communication between the agent and other components
 type Message struct {
 	Role    string      `json:"role"`
 	Content interface{} `json:"content"` // Can be string or list[dict]
 }
 
+// StepOutput contains the result of a single step in the agent's execution
 type StepOutput struct {
 	Thought      string                 `json:"thought"`
 	Action       string                 `json:"action"`
@@ -22,6 +24,7 @@ type StepOutput struct {
 	ExtraInfo    map[string]interface{} `json:"extra_info,omitempty"`
 }
 
+// TrajectoryStep represents a single step in the agent's execution trajectory
 type TrajectoryStep struct {
 	Action       string                 `json:"action"`
 	Observation  string                 `json:"observation"`
@@ -33,6 +36,7 @@ type TrajectoryStep struct {
 	ExtraInfo    map[string]interface{} `json:"extra_info,omitempty"`
 }
 
+// AgentInfo contains metadata about the agent and its execution
 type AgentInfo struct {
 	ModelStats      map[string]float64 `json:"model_stats,omitempty"`
 	ExitStatus      *string            `json:"exit_status,omitempty"`
@@ -48,13 +52,13 @@ type AgentInfo struct {
 	SweRexHash      string             `json:"swe_rex_hash,omitempty"`
 }
 
+// AgentRunResult contains the complete result of an agent run
 type AgentRunResult struct {
 	Info       AgentInfo        `json:"info"`
 	Trajectory []TrajectoryStep `json:"trajectory"`
 }
 
-
-
+// ExampleType is an example struct for demonstration purposes
 type ExampleType struct {
 	ID   string
 	Name string

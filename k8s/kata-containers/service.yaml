@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent-runtime-sandbox
+  labels:
+    app: agent-runtime-sandbox
+spec:
+  selector:
+    app: agent-runtime-sandbox
+  ports:
+  - name: rdp
+    port: 3389
+    targetPort: 3389
+  - name: e2b-surf
+    port: 3000
+    targetPort: 3000
+  - name: ssh
+    port: 22
+    targetPort: 22
