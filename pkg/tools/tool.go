@@ -1,3 +1,4 @@
+// Package tools provides tool implementations for the agent runtime
 package tools
 
 import (
@@ -11,6 +12,7 @@ import (
 	"strings"
 )
 
+// Tool is the interface that all tools must implement
 type Tool interface {
 	Name() string
 	
@@ -19,20 +21,24 @@ type Tool interface {
 	Execute(ctx context.Context, args map[string]interface{}) (interface{}, error)
 }
 
+// ShellTool implements the Tool interface for executing shell commands
 type ShellTool struct {
 	name        string
 	description string
 	sandbox     bool
 }
 
+// Name returns the name of the shell tool
 func (t *ShellTool) Name() string {
 	return t.name
 }
 
+// Description returns the description of the shell tool
 func (t *ShellTool) Description() string {
 	return t.description
 }
 
+// Execute runs a shell command with the provided arguments
 func (t *ShellTool) Execute(ctx context.Context, args map[string]interface{}) (interface{}, error) {
 	command, ok := args["command"].(string)
 	if !ok {
@@ -71,6 +77,7 @@ func isCommandAllowed(command string) bool {
 	return true
 }
 
+// FileTool implements the Tool interface for file operations
 type FileTool struct {
 	name         string
 	description  string
@@ -78,14 +85,17 @@ type FileTool struct {
 	allowedPaths []string
 }
 
+// Name returns the name of the file tool
 func (t *FileTool) Name() string {
 	return t.name
 }
 
+// Description returns the description of the file tool
 func (t *FileTool) Description() string {
 	return t.description
 }
 
+// Execute performs file operations based on the provided arguments
 func (t *FileTool) Execute(ctx context.Context, args map[string]interface{}) (interface{}, error) {
 	operation, ok := args["operation"].(string)
 	if !ok {
@@ -211,19 +221,23 @@ func (t *FileTool) isPathAllowed(path string) bool {
 	return false
 }
 
+// HTTPTool implements the Tool interface for HTTP requests
 type HTTPTool struct {
 	name        string
 	description string
 }
 
+// Name returns the name of the HTTP tool
 func (t *HTTPTool) Name() string {
 	return t.name
 }
 
+// Description returns the description of the HTTP tool
 func (t *HTTPTool) Description() string {
 	return t.description
 }
 
+// Execute performs HTTP requests with the provided arguments
 func (t *HTTPTool) Execute(ctx context.Context, args map[string]interface{}) (interface{}, error) {
 	url, ok1 := args["url"].(string)
 	method, ok2 := args["method"].(string)
