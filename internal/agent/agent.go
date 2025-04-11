@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/spectrumwebco/agent_runtime/internal/config"
@@ -82,6 +84,17 @@ func (ps *ProblemStatement) GetID() string {
 	return ps.ID
 }
 
+type Task struct {
+	ID          string                 `json:"id"`
+	Description string                 `json:"description"`
+	Priority    int                    `json:"priority"` // Higher number = higher priority
+	CreatedAt   time.Time              `json:"created_at"`
+	State       map[string]interface{} `json:"state"`    // Task-specific state
+	ParentID    string                 `json:"parent_id"` // ID of parent task if this is a subtask
+	Completed   bool                   `json:"completed"`
+	Result      string                 `json:"result"`
+}
+
 type DefaultAgent struct {
 	Name                 string
 	Config               *config.Config // Placeholder for agent config (needs definition)
@@ -102,6 +115,11 @@ type DefaultAgent struct {
 	alwaysRequireZeroExit bool
 	nConsecutiveTimeouts int
 	totalExecutionTime   time.Duration
+	
+	taskQueue            []*Task            // LIFO queue of tasks
+	taskMutex            sync.Mutex         // Mutex for thread-safe task queue operations
+	currentTaskID        string             // ID of the currently executing task
+	eventStream          interface{}        // Connection to the Event Stream system
 }
 
 type AgentOption func(*DefaultAgent) error
@@ -383,6 +401,81 @@ func (a *DefaultAgent) Step(ctx context.Context) (*StepOutput, error) {
 	return stepOutput, nil
 }
 
+func (a *DefaultAgent) AddTask(description string, priority int, state map[string]interface{}, parentID string) string {
+	a.taskMutex.Lock()
+	defer a.taskMutex.Unlock()
+	
+	taskID := fmt.Sprintf("task-%d", time.Now().UnixNano())
+	
+	task := &Task{
+		ID:          taskID,
+		Description: description,
+		Priority:    priority,
+		CreatedAt:   time.Now(),
+		State:       state,
+		ParentID:    parentID,
+		Completed:   false,
+	}
+	
+	a.taskQueue = append(a.taskQueue, task)
+	
+	sort.Slice(a.taskQueue, func(i, j int) bool {
+		return a.taskQueue[i].Priority > a.taskQueue[j].Priority
+	})
+	
+	if a.eventStream != nil {
+		taskData := map[string]interface{}{
+			"task_id":     task.ID,
+			"description": task.Description,
+			"priority":    task.Priority,
+			"created_at":  task.CreatedAt,
+			"parent_id":   task.ParentID,
+		}
+		
+		// }
+	}
+	
+	return taskID
+}
+
+func (a *DefaultAgent) GetNextTask() *Task {
+	a.taskMutex.Lock()
+	defer a.taskMutex.Unlock()
+	
+	if len(a.taskQueue) == 0 {
+		return nil
+	}
+	
+	task := a.taskQueue[len(a.taskQueue)-1]
+	a.taskQueue = a.taskQueue[:len(a.taskQueue)-1]
+	a.currentTaskID = task.ID
+	
+	return task
+}
+
+func (a *DefaultAgent) CompleteTask(taskID string, result string) {
+	a.taskMutex.Lock()
+	defer a.taskMutex.Unlock()
+	
+	for i, task := range a.taskQueue {
+		if task.ID == taskID {
+			task.Completed = true
+			task.Result = result
+			
+			a.taskQueue = append(a.taskQueue[:i], a.taskQueue[i+1:]...)
+			break
+		}
+	}
+	
+	if a.currentTaskID == taskID {
+		a.currentTaskID = ""
+	}
+	
+	if a.eventStream != nil {
+		// }
+	}
+}
+
 func (a *DefaultAgent) Run(environment *env.SWEEnv, problemStmt *ProblemStatement, outputDirPath string) (*AgentRunResult, error) {
 	fmt.Println("Starting agent run...")
 
@@ -395,6 +488,9 @@ func (a *DefaultAgent) Run(environment *env.SWEEnv, problemStmt *ProblemStatemen
 	ctx, cancel := context.WithTimeout(context.Background(), totalTimeout)
 	defer cancel()
 
+	initialState := make(map[string]interface{})
+	a.AddTask(problemStmt.GetProblemStatement(), 100, initialState, "")
+
 	var stepOutput *StepOutput
 	maxSteps := 50 // Reasonable default, could be configurable
 	for i := 0; i < maxSteps; i++ {
@@ -402,10 +498,28 @@ func (a *DefaultAgent) Run(environment *env.SWEEnv, problemStmt *ProblemStatemen
 		case <-ctx.Done():
 			return nil, fmt.Errorf("agent run timed out after %s", totalTimeout)
 		default:
+			task := a.GetNextTask()
+			if task == nil {
+				break
+			}
+			
+			taskProblem := &ProblemStatement{
+				ID:               task.ID,
+				ProblemStatement: task.Description,
+			}
+			
+			originalProblem := a.problemStatement
+			a.problemStatement = taskProblem
+			
 			stepOutput, err = a.Step(ctx)
+			
+			a.problemStatement = originalProblem
+			
 			if err != nil {
 				return nil, fmt.Errorf("agent step failed: %w", err)
 			}
+			
+			a.CompleteTask(task.ID, stepOutput.Observation)
 			
 			if stepOutput.Done {
 				a.Info.ExitStatus = stepOutput.ExitStatus
