@@ -1,3 +1,4 @@
+// Package commands provides CLI commands for the agent runtime
 package commands
 
 import (
@@ -11,6 +12,7 @@ import (
 	"github.com/spectrumwebco/agent_runtime/pkg/tools"
 )
 
+// NewToolsCommand creates a new command for managing Sam Sepiol tools
 func NewToolsCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tools",

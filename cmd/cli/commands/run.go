@@ -1,3 +1,4 @@
+// Package commands provides CLI commands for the agent runtime
 package commands
 
 import (
@@ -12,6 +13,7 @@ import (
 	"github.com/spectrumwebco/agent_runtime/pkg/config"
 )
 
+// NewRunCommand creates a new command for running tasks with Sam Sepiol
 func NewRunCommand() *cobra.Command {
 	var configPath string
 	var task string
