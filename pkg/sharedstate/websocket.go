@@ -11,7 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
-	"github.com/spectrumwebco/agent_runtime/pkg/eventstream"
+	"github.com/spectrumwebco/agent_runtime/internal/eventstream"
 )
 
 type WebSocketMessage struct {
@@ -280,6 +280,6 @@ func (c *Connection) writePump() {
 	}
 }
 
-func handleClientEvent(eventData map[string]interface{}) {
+var handleClientEvent = func(eventData map[string]interface{}) {
 	log.Printf("Received client event: %v\n", eventData)
 }

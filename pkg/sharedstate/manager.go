@@ -10,7 +10,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/spectrumwebco/agent_runtime/internal/statemanager"
-	"github.com/spectrumwebco/agent_runtime/pkg/eventstream"
+	"github.com/spectrumwebco/agent_runtime/internal/eventstream"
 )
 
 type StateType string

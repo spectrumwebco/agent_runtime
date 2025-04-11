@@ -177,4 +177,4 @@ func (i *Integration) Close() error {
 	return nil
 }
 
-var handleClientEvent func(eventData map[string]interface{})
+// var handleClientEvent func(eventData map[string]interface{})
