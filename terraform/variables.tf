@@ -60,3 +60,10 @@ variable "rocketmq_replicas" {
   type        = number
   default     = 3
 }
+
+variable "dragonfly_password" {
+  description = "Password for DragonflyDB authentication"
+  type        = string
+  sensitive   = true
+  default     = "changeme" 
+}

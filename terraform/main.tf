@@ -48,6 +48,17 @@ module "k8s" {
   vcluster_version = var.vcluster_version
   
   jspolicy_enabled = var.jspolicy_enabled
+
+module "dragonfly" {
+  source = "./modules/dragonfly"
+  
+  namespace = var.namespace
+  replicas  = var.dragonfly_replicas
+  dragonfly_password = var.dragonfly_password # Pass password variable
+  
+  depends_on = [module.k8s]
+}
+
 }
 
 module "kata" {
