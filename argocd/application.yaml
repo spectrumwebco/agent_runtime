@@ -6,9 +6,15 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: https://github.com/spectrumwebco/agent_runtime.git
-    targetRevision: HEAD
+    repoURL: ${GITEA_REPO_URL}
+    targetRevision: main
     path: k8s
+    usernameSecret:
+      name: gitea-auth
+      key: username
+    passwordSecret:
+      name: gitea-auth
+      key: password
   destination:
     server: https://kubernetes.default.svc
     namespace: agent-runtime-system
@@ -18,3 +24,12 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: agent-runtime-mcp-client
+      namespace: agent-runtime-system
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: agent-runtime-mcp-host
+      namespace: agent-runtime-system
