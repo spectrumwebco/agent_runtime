@@ -1,0 +1,42 @@
+# Kata Containers Sandbox for Agent Runtime
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-runtime-sandbox
+  labels:
+    app: agent-runtime-sandbox
+    agent-runtime/sandbox: "true"
+    agent-runtime/critical: "true"
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: agent-runtime-sandbox
+  template:
+    metadata:
+      labels:
+        app: agent-runtime-sandbox
+        agent-runtime/sandbox: "true"
+    spec:
+      runtimeClassName: kata-containers
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      containers:
+      - name: sandbox
+        image: ubuntu:22.04
+        command: ["/bin/bash", "-c", "apt-get update && apt-get install -y openssh-server && service ssh start && sleep infinity"]
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+      volumes:
+      - name: workspace
+        emptyDir: {}

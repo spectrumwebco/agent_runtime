@@ -1,0 +1,15 @@
+{
+    "go.useLanguageServer": true,
+    "go.toolsManagement.go": "go1.24",
+    "go.lintTool": "golangci-lint",
+    "go.formatTool": "gofmt",
+    "go.testFlags": ["-v"],
+    "[go]": {
+        "editor.formatOnSave": true,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        }
+    },
+    "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+    "python.analysis.typeCheckingMode": "basic"
+}

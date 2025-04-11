@@ -10,6 +10,7 @@ import (
 	"github.com/spectrumwebco/agent_runtime/pkg/tools"
 )
 
+
 type Loop struct {
 	agent       *Agent
 	modules     *modules.Registry
@@ -21,12 +22,14 @@ type Loop struct {
 }
 
 type LoopState struct {
-	Phase       string                 `json:"phase"`
-	Task        string                 `json:"task"`
-	StartTime   time.Time              `json:"startTime"`
-	Events      []Event                `json:"events"`
-	Context     map[string]interface{} `json:"context"`
-	CurrentTool string                 `json:"currentTool"`
+	Phase         string                 `json:"phase"` // Current phase (e.g., query_model, execute_action)
+	Task          string                 `json:"task"`  // Description of the overall task
+	StartTime     time.Time              `json:"startTime"`
+	Events        []Event                `json:"events"` // Log of significant events
+	Context       map[string]interface{} `json:"context"` // General context data
+	CurrentAction string                 `json:"currentAction,omitempty"` // The action being executed
+	LastError     string                 `json:"lastError,omitempty"`   // Last error encountered
+	StepCount     int                    `json:"stepCount"`             // Number of steps taken
 }
 
 type Event struct {
@@ -45,6 +48,7 @@ func NewLoop(agent *Agent, moduleRegistry *modules.Registry, toolRegistry *tools
 			StartTime: time.Now(),
 			Events:    make([]Event, 0),
 			Context:   make(map[string]interface{}),
+			StepCount: 0,
 		},
 		stopChan:    make(chan struct{}),
 		stoppedChan: make(chan struct{}),
@@ -112,7 +116,7 @@ func (l *Loop) run(ctx context.Context) {
 	defer close(l.stoppedChan)
 	
 	l.mutex.Lock()
-	l.state.Phase = "task_initiation"
+	l.state.Phase = "setup" // Start with setup phase
 	l.mutex.Unlock()
 	
 	l.AddEvent("task_started", map[string]interface{}{
@@ -150,6 +154,9 @@ func (l *Loop) run(ctx context.Context) {
 			l.state.Phase = "error_handling"
 			l.mutex.Unlock()
 			
+			l.mutex.Lock()
+			l.state.LastError = err.Error()
+			l.mutex.Unlock()
 			l.AddEvent("phase_error", map[string]interface{}{
 				"phase": l.state.Phase,
 				"error": err.Error(),
@@ -190,85 +197,129 @@ func (l *Loop) run(ctx context.Context) {
 	}
 }
 
+func (l *Loop) executeStep(ctx context.Context) (nextPhase string, err error) {
+	l.mutex.Lock()
+	l.state.StepCount++
+	stepNum := l.state.StepCount
+	l.mutex.Unlock()
+
+	l.AddEvent("step_started", map[string]interface{}{"step": stepNum})
+
+	l.AddEvent("query_model_started", map[string]interface{}{"step": stepNum})
+	modelOutput, queryErr := l.agent.QueryModel(ctx, l.agent.History) // Use agent's method
+	if queryErr != nil {
+		l.AddEvent("query_model_failed", map[string]interface{}{"step": stepNum, "error": queryErr.Error()})
+		l.state.LastError = fmt.Sprintf("querying model failed: %v", queryErr)
+		return "error_handling", queryErr
+	}
+	if modelOutput == nil {
+		modelOutput = map[string]interface{}{
+			"message": fmt.Sprintf("Placeholder model output for step %d with thought and action", stepNum),
+		}
+	}
+	l.mutex.Lock()
+	l.state.Context["last_model_output"] = modelOutput
+	l.mutex.Unlock()
+	l.AddEvent("query_model_completed", map[string]interface{}{"step": stepNum, "output_length": len(modelOutput["message"].(string))})
+
+	l.AddEvent("parse_action_started", map[string]interface{}{"step": stepNum})
+	thought, action, parseErr := l.tools.ParseAction(modelOutput["message"].(string))
+	if parseErr != nil {
+		l.AddEvent("parse_action_failed", map[string]interface{}{"step": stepNum, "error": parseErr.Error()})
+		l.state.LastError = fmt.Sprintf("parsing action failed: %v", parseErr)
+		return "error_handling", parseErr // Go to error handling for now
+	}
+	l.mutex.Lock()
+	l.state.Context["current_thought"] = thought
+	l.state.CurrentAction = action
+	l.mutex.Unlock()
+	l.AddEvent("parse_action_completed", map[string]interface{}{"step": stepNum, "action": action})
+
+	l.AddEvent("execute_action_started", map[string]interface{}{"step": stepNum, "action": action})
+
+	if action == "exit" { // Simple exit handling
+		l.AddEvent("exit_command_received", map[string]interface{}{"step": stepNum})
+		return "idle", nil // Task completed by exit command
+	}
+	if action == "submit" { // Simple submit handling
+		l.AddEvent("submit_command_received", map[string]interface{}{"step": stepNum})
+		l.state.Context["submission"] = "Placeholder submission content" // Placeholder
+		return "idle", nil // Task completed by submit command
+	}
+
+	execCtx, cancel := context.WithTimeout(ctx, l.tools.Config.ExecutionTimeout) // Use configured timeout
+	defer cancel()
+	observation, execErr := l.tools.ExecuteAction(execCtx, action, l.agent.Env)
+	if execErr != nil {
+		l.AddEvent("execute_action_failed", map[string]interface{}{"step": stepNum, "action": action, "error": execErr.Error()})
+		l.state.LastError = fmt.Sprintf("executing action '%s' failed: %v", action, execErr)
+		return "error_handling", execErr
+	}
+	l.mutex.Lock()
+	l.state.Context["last_observation"] = observation
+	l.mutex.Unlock()
+	l.AddEvent("execute_action_completed", map[string]interface{}{"step": stepNum, "action": action, "observation_length": len(observation)})
+
+	l.AddEvent("handle_observation_started", map[string]interface{}{"step": stepNum})
+
+	l.agent.AddStepToHistory(thought, action, modelOutput, observation)
+
+	done := false // Placeholder
+
+	l.AddEvent("step_completed", map[string]interface{}{"step": stepNum, "task_done": done})
+	if done {
+		return "idle", nil
+	}
+
+	return "execute_step", nil
+}
+
 func (l *Loop) executePhase(ctx context.Context) (string, error) {
 	l.mutex.RLock()
 	phase := l.state.Phase
 	l.mutex.RUnlock()
-	
+
 	switch phase {
-	case "task_initiation":
-		return l.executeTaskInitiation(ctx)
-	case "analyze_requirements":
-		return l.executeAnalyzeRequirements(ctx)
-	case "tool_discovery":
-		return l.executeToolDiscovery(ctx)
-	case "planning_phase":
-		return l.executePlanningPhase(ctx)
-	case "execution_phase":
-		return l.executeExecutionPhase(ctx)
-	case "tool_transition_evaluation":
-		return l.executeToolTransitionEvaluation(ctx)
-	case "toolbelt_activation":
-		return l.executeToolbeltActivation(ctx)
-	case "completion_verification":
-		return l.executeCompletionVerification(ctx)
-	case "state_cleanup":
-		return l.executeStateCleanup(ctx)
+	case "setup":
+		return l.executeSetup(ctx)
+	case "execute_step": // New phase for the main loop cycle
+		return l.executeStep(ctx)
+	case "error_handling":
+		l.mutex.RLock()
+		lastErr := l.state.LastError
+		l.mutex.RUnlock()
+		return l.handleError(ctx, fmt.Errorf(lastErr)) // Pass the stored error
+	case "idle":
+		return "idle", nil // Stay idle
 	default:
 		return "", fmt.Errorf("unknown phase: %s", phase)
 	}
 }
 
 func (l *Loop) handleError(ctx context.Context, err error) (string, error) {
-	l.AddEvent("error_handling", map[string]interface{}{
+	l.AddEvent("error_handling_started", map[string]interface{}{
 		"error": err.Error(),
 	})
-	
-	
-	return "idle", nil
+
+	fmt.Printf("Error encountered: %v. Stopping loop.\n", err)
+	l.AddEvent("error_handling_failed", map[string]interface{}{"error": err.Error()})
+	return "idle", err // Return the original error to signal failure
 }
 
-func (l *Loop) executeTaskInitiation(ctx context.Context) (string, error) {
-	
-	return "analyze_requirements", nil
-}
+func (l *Loop) executeSetup(ctx context.Context) (string, error) {
+	l.AddEvent("setup_started", nil)
+	l.mutex.Lock()
+	l.agent.History = make([]Message, 0)
+	l.state.StepCount = 0
+	l.state.LastError = ""
+	l.state.CurrentAction = ""
+	delete(l.state.Context, "last_model_output")
+	delete(l.state.Context, "last_observation")
+	delete(l.state.Context, "current_thought")
+	delete(l.state.Context, "submission")
+	l.mutex.Unlock()
 
-func (l *Loop) executeAnalyzeRequirements(ctx context.Context) (string, error) {
-	
-	return "tool_discovery", nil
-}
 
-func (l *Loop) executeToolDiscovery(ctx context.Context) (string, error) {
-	
-	return "planning_phase", nil
-}
-
-func (l *Loop) executePlanningPhase(ctx context.Context) (string, error) {
-	
-	return "execution_phase", nil
-}
-
-func (l *Loop) executeExecutionPhase(ctx context.Context) (string, error) {
-	
-	return "tool_transition_evaluation", nil
-}
-
-func (l *Loop) executeToolTransitionEvaluation(ctx context.Context) (string, error) {
-	
-	return "completion_verification", nil
-}
-
-func (l *Loop) executeToolbeltActivation(ctx context.Context) (string, error) {
-	
-	return "execution_phase", nil
-}
-
-func (l *Loop) executeCompletionVerification(ctx context.Context) (string, error) {
-	
-	return "state_cleanup", nil
-}
-
-func (l *Loop) executeStateCleanup(ctx context.Context) (string, error) {
-	
-	return "idle", nil
+	l.AddEvent("setup_completed", nil)
+	return "execute_step", nil // Start the main execution loop
 }

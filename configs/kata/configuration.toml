@@ -1,0 +1,47 @@
+# Kata Containers Configuration
+[hypervisor.qemu]
+path = "/usr/bin/qemu-system-x86_64"
+kernel = "/usr/share/kata-containers/vmlinux.container"
+initrd = "/usr/share/kata-containers/kata-containers-initrd.img"
+machine_type = "q35"
+default_memory = 2048
+default_vcpus = 2
+block_device_driver = "virtio-scsi"
+enable_iothreads = true
+enable_mem_prealloc = true
+enable_hugepages = true
+enable_swap = true
+enable_debug = false
+
+[agent.kata]
+enable_tracing = false
+enable_debug = false
+
+[runtime]
+enable_cpu_quota = true
+enable_cgroup_swap_control = true
+enable_pprof = false
+enable_metrics = true
+disable_guest_seccomp = false
+disable_new_netns = false
+internetworking_model = "tcfilter"
+sandbox_cgroup_only = false
+
+[factory]
+enable_template = true
+template_path = "/run/vc/vm/template"
+vm_cache_number = 10
+vm_cache_endpoint = "unix:///run/vc/fcache.sock"
+
+[netmon]
+enable_netmon = true
+netmon_path = "/usr/libexec/kata-containers/kata-netmon"
+
+[proxy.kata]
+path = "/usr/libexec/kata-containers/kata-proxy"
+enable_debug = false
+
+[shim.kata]
+path = "/usr/libexec/kata-containers/kata-shim"
+enable_debug = false
+enable_tracing = false
