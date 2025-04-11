@@ -28,7 +28,7 @@ type Message struct {
 	ExtraInfo   map[string]interface{} `json:"extra_info,omitempty"`
 }
 
-type AgentInfo struct {
+type Info struct {
 	Submission      string                 `json:"submission"`
 	ExitStatus      string                 `json:"exit_status"`
 	ModelStats      map[string]interface{} `json:"model_stats"` // Placeholder for model statistics
@@ -107,7 +107,7 @@ type DefaultAgent struct {
 	MaxRequeries         int
 	History              []Message           // Stores the conversation history as Message objects
 	trajectory           []TrajectoryStep    // Stores the execution trajectory
-	Info                 AgentInfo
+	Info                 Info
 	Env                  *env.SWEEnv       // Execution environment (exported for loop.go)
 	problemStatement     *ProblemStatement // Task definition
 	outputDir            string            // Directory for output files
