@@ -67,3 +67,9 @@ variable "dragonfly_password" {
   sensitive   = true
   default     = "changeme" 
 }
+
+variable "librechat_code_api_key" {
+  description = "LibreChat Code Interpreter API key for MCP integration"
+  type        = string
+  sensitive   = true
+}

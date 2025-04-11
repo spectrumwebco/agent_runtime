@@ -1,0 +1,243 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+
+jobs:
+  build-and-push:
+    name: Build and Push
+    runs-on: gitea-runner
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ secrets.CONTAINER_REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ secrets.CONTAINER_REGISTRY }}/agent-runtime
+          tags: |
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=long
+            type=ref,event=branch
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-infrastructure:
+    name: Deploy Infrastructure with ArgoCD
+    runs-on: gitea-runner
+    needs: build-and-push
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.27.0'
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Install ArgoCD CLI
+        run: |
+          curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+          rm argocd-linux-amd64
+
+      - name: Login to ArgoCD
+        run: |
+          argocd login ${{ secrets.ARGOCD_SERVER }} \
+            --username ${{ secrets.ARGOCD_USERNAME }} \
+            --password ${{ secrets.ARGOCD_PASSWORD }} \
+            --insecure
+
+      - name: Deploy Infrastructure Components
+        run: |
+          # Deploy monitoring stack
+          argocd app create monitoring \
+            --repo ${{ github.repository }} \
+            --path k8s/monitoring \
+            --dest-server https://kubernetes.default.svc \
+            --dest-namespace monitoring \
+            --sync-policy automated \
+            --auto-prune \
+            --self-heal \
+            --upsert
+
+          # Deploy Kata Containers
+          argocd app create kata-containers \
+            --repo ${{ github.repository }} \
+            --path k8s/kata-containers \
+            --dest-server https://kubernetes.default.svc \
+            --dest-namespace kata-runtime \
+            --sync-policy automated \
+            --auto-prune \
+            --self-heal \
+            --upsert
+
+          # Deploy vCluster
+          argocd app create vcluster \
+            --repo ${{ github.repository }} \
+            --path k8s/vcluster \
+            --dest-server https://kubernetes.default.svc \
+            --dest-namespace vcluster-system \
+            --sync-policy automated \
+            --auto-prune \
+            --self-heal \
+            --upsert
+
+          # Deploy jsPolicy
+          argocd app create jspolicy \
+            --repo ${{ github.repository }} \
+            --path k8s/jspolicy \
+            --dest-server https://kubernetes.default.svc \
+            --dest-namespace jspolicy-system \
+            --sync-policy automated \
+            --auto-prune \
+            --self-heal \
+            --upsert
+
+          # Deploy MCP components
+          argocd app create mcp \
+            --repo ${{ github.repository }} \
+            --path k8s/mcp \
+            --dest-server https://kubernetes.default.svc \
+            --dest-namespace mcp-system \
+            --sync-policy automated \
+            --auto-prune \
+            --self-heal \
+            --upsert
+
+          # Wait for all applications to be healthy
+          argocd app wait monitoring kata-containers vcluster jspolicy mcp --health
+
+  deploy-software:
+    name: Deploy Software with FluxCD
+    runs-on: gitea-runner
+    needs: deploy-infrastructure
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Flux CLI
+        uses: fluxcd/flux2/action@main
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'v1.27.0'
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBECONFIG }}" > $HOME/.kube/config
+          chmod 600 $HOME/.kube/config
+
+      - name: Check Flux installation
+        run: flux check --pre
+
+      - name: Create Flux manifests
+        run: |
+          mkdir -p ./flux-system
+          flux install --export > ./flux-system/gotk-components.yaml
+          
+          # Create Flux kustomization for agent-runtime
+          cat > ./flux-system/agent-runtime-kustomization.yaml <<EOF
+          apiVersion: kustomize.toolkit.fluxcd.io/v1
+          kind: Kustomization
+          metadata:
+            name: agent-runtime
+            namespace: flux-system
+          spec:
+            interval: 1m0s
+            path: ./k8s
+            prune: true
+            sourceRef:
+              kind: GitRepository
+              name: agent-runtime
+            validation: client
+          EOF
+          
+          # Create Flux GitRepository source
+          cat > ./flux-system/agent-runtime-source.yaml <<EOF
+          apiVersion: source.toolkit.fluxcd.io/v1
+          kind: GitRepository
+          metadata:
+            name: agent-runtime
+            namespace: flux-system
+          spec:
+            interval: 1m0s
+            url: ${{ secrets.GITEA_REPO_URL }}
+            ref:
+              branch: main
+            secretRef:
+              name: gitea-auth
+          EOF
+
+      - name: Apply Flux manifests
+        run: |
+          # Create Gitea auth secret
+          kubectl create secret generic gitea-auth \
+            --namespace=flux-system \
+            --from-literal=username=${{ secrets.GITEA_USERNAME }} \
+            --from-literal=password=${{ secrets.GITEA_PASSWORD }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+          # Apply Flux components
+          kubectl apply -f ./flux-system/gotk-components.yaml
+          kubectl apply -f ./flux-system/agent-runtime-source.yaml
+          kubectl apply -f ./flux-system/agent-runtime-kustomization.yaml
+
+  deploy-cli:
+    name: Deploy CLI with Hydra CD
+    runs-on: gitea-runner
+    needs: deploy-software
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+
+      - name: Build CLI
+        run: |
+          cd cmd/cli
+          go build -o bin/agent-cli
+
+      - name: Package CLI
+        run: |
+          tar czf agent-cli.tar.gz -C cmd/cli/bin agent-cli
+
+      - name: Upload CLI Package
+        uses: actions/upload-artifact@v3
+        with:
+          name: agent-cli
+          path: agent-cli.tar.gz

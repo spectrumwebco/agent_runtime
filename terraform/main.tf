@@ -143,3 +143,12 @@ module "ragflow" {
   
   depends_on = [module.k8s, module.vcluster, module.kata]
 }
+
+module "mcp" {
+  source = "./modules/mcp"
+  
+  namespace = var.namespace
+  librechat_code_api_key = var.librechat_code_api_key
+  
+  depends_on = [module.k8s, module.kata]
+}
