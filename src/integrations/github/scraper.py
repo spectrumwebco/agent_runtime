@@ -29,9 +29,9 @@ class GitHubScraper:
         """
         self.github_integration = github_integration
         self.output_dir = output_dir
-        
+
         os.makedirs(output_dir, exist_ok=True)
-        
+
         self.logger = logging.getLogger("GitHubScraper")
 
     async def scrape_repositories(
@@ -54,18 +54,20 @@ class GitHubScraper:
             List of repositories
         """
         self.logger.info(f"Scraping repositories for topics: {topics}")
-        
+
         repositories = []
-        
+
         for topic in topics:
             query = f"topic:{topic} stars:>={min_stars}"
-            
+
             if languages:
                 for language in languages:
                     language_query = f"{query} language:{language}"
-                    
-                    self.logger.info(f"Searching for repositories with query: {language_query}")
-                    
+
+                    self.logger.info(
+                        f"Searching for repositories with query: {language_query}"
+                    )
+
                     response = await self.github_integration.search_repositories(
                         query=language_query,
                         sort="stars",
@@ -73,14 +75,16 @@ class GitHubScraper:
                         per_page=min(max_repos, 100),
                         page=1,
                     )
-                    
+
                     if "items" in response:
                         repositories.extend(response["items"])
-                        
-                        self.logger.info(f"Found {len(response['items'])} repositories for {topic} in {language}")
+
+                        self.logger.info(
+                            f"Found {len(response['items'])} repositories for {topic} in {language}"
+                        )
             else:
                 self.logger.info(f"Searching for repositories with query: {query}")
-                
+
                 response = await self.github_integration.search_repositories(
                     query=query,
                     sort="stars",
@@ -88,26 +92,28 @@ class GitHubScraper:
                     per_page=min(max_repos, 100),
                     page=1,
                 )
-                
+
                 if "items" in response:
                     repositories.extend(response["items"])
-                    
-                    self.logger.info(f"Found {len(response['items'])} repositories for {topic}")
-        
+
+                    self.logger.info(
+                        f"Found {len(response['items'])} repositories for {topic}"
+                    )
+
         unique_repos = {}
         for repo in repositories:
             repo_id = repo["id"]
             if repo_id not in unique_repos:
                 unique_repos[repo_id] = repo
-        
+
         repositories = list(unique_repos.values())
-        
+
         repositories.sort(key=lambda x: x["stargazers_count"], reverse=True)
-        
+
         repositories = repositories[:max_repos]
-        
+
         self.logger.info(f"Scraped {len(repositories)} unique repositories")
-        
+
         return repositories
 
     async def scrape_issues(
@@ -130,14 +136,14 @@ class GitHubScraper:
             List of issues
         """
         self.logger.info(f"Scraping issues from {len(repositories)} repositories")
-        
+
         all_issues = []
-        
+
         for repo in repositories:
             owner, name = repo["full_name"].split("/")
-            
+
             self.logger.info(f"Scraping issues from {owner}/{name}")
-            
+
             try:
                 issues = await self.github_integration.get_issues(
                     owner=owner,
@@ -148,44 +154,50 @@ class GitHubScraper:
                     per_page=min(max_issues_per_repo, 100),
                     page=1,
                 )
-                
+
                 if not include_pull_requests:
                     issues = [issue for issue in issues if "pull_request" not in issue]
-                
+
                 for issue in issues:
                     issue["repository"] = repo
-                
+
                 all_issues.extend(issues)
-                
+
                 self.logger.info(f"Scraped {len(issues)} issues from {owner}/{name}")
-                
+
                 rate_limit = await self.github_integration.get_rate_limit()
-                
+
                 if "resources" in rate_limit and "core" in rate_limit["resources"]:
                     remaining = rate_limit["resources"]["core"]["remaining"]
-                    
+
                     if remaining < 10:
                         reset_time = rate_limit["resources"]["core"]["reset"]
                         reset_datetime = datetime.fromtimestamp(reset_time)
-                        
-                        self.logger.warning(f"Rate limit low: {remaining} requests remaining")
+
+                        self.logger.warning(
+                            f"Rate limit low: {remaining} requests remaining"
+                        )
                         self.logger.warning(f"Rate limit resets at {reset_datetime}")
-                        
+
                         now = datetime.now()
                         sleep_time = (reset_datetime - now).total_seconds() + 10
-                        
+
                         if sleep_time > 0:
                             self.logger.warning(f"Sleeping for {sleep_time} seconds")
                             await asyncio.sleep(sleep_time)
-            
+
             except Exception as e:
-                self.logger.error(f"Error scraping issues from {owner}/{name}: {str(e)}")
-        
+                self.logger.error(
+                    f"Error scraping issues from {owner}/{name}: {str(e)}"
+                )
+
         self.logger.info(f"Scraped {len(all_issues)} issues in total")
-        
+
         return all_issues
 
-    async def save_issues(self, issues: List[Dict[str, Any]], filename: str = "issues.json") -> str:
+    async def save_issues(
+        self, issues: List[Dict[str, Any]], filename: str = "issues.json"
+    ) -> str:
         """
         Save issues to a file.
 
@@ -197,12 +209,12 @@ class GitHubScraper:
             Path to the saved file
         """
         output_path = os.path.join(self.output_dir, filename)
-        
+
         with open(output_path, "w") as f:
             json.dump(issues, f, indent=2)
-        
+
         self.logger.info(f"Saved {len(issues)} issues to {output_path}")
-        
+
         return output_path
 
     async def format_for_training(
@@ -219,18 +231,18 @@ class GitHubScraper:
             Path to the saved file
         """
         training_data = []
-        
+
         for issue in issues:
             if "repository" not in issue:
                 continue
-            
+
             if not issue.get("body"):
                 continue
-            
+
             repo = issue["repository"]
             repo_name = repo["full_name"]
             repo_topics = repo.get("topics", [])
-            
+
             issue_title = issue["title"]
             issue_body = issue["body"]
             issue_number = issue["number"]
@@ -238,17 +250,17 @@ class GitHubScraper:
             issue_created_at = issue["created_at"]
             issue_closed_at = issue.get("closed_at")
             issue_labels = [label["name"] for label in issue.get("labels", [])]
-            
+
             input_text = f"Repository: {repo_name}\n"
-            
+
             if repo_topics:
                 input_text += f"Topics: {', '.join(repo_topics)}\n"
-            
+
             input_text += f"Issue Title: {issue_title}\n"
             input_text += f"Issue Description:\n{issue_body}\n"
-            
+
             output_text = "Issue resolved successfully."
-            
+
             metadata = {
                 "issue_id": issue["id"],
                 "issue_number": issue_number,
@@ -258,7 +270,7 @@ class GitHubScraper:
                 "closed_at": issue_closed_at,
                 "labels": issue_labels,
             }
-            
+
             trajectory = [
                 {
                     "action": "read_issue",
@@ -281,21 +293,25 @@ class GitHubScraper:
                     "response": "The issue has been resolved successfully.",
                 },
             ]
-            
-            training_data.append({
-                "input": input_text,
-                "output": output_text,
-                "metadata": metadata,
-                "trajectory": trajectory,
-            })
-        
+
+            training_data.append(
+                {
+                    "input": input_text,
+                    "output": output_text,
+                    "metadata": metadata,
+                    "trajectory": trajectory,
+                }
+            )
+
         output_path = os.path.join(self.output_dir, filename)
-        
+
         with open(output_path, "w") as f:
             json.dump(training_data, f, indent=2)
-        
-        self.logger.info(f"Saved {len(training_data)} training examples to {output_path}")
-        
+
+        self.logger.info(
+            f"Saved {len(training_data)} training examples to {output_path}"
+        )
+
         return output_path
 
     async def scrape_and_save(
@@ -327,16 +343,16 @@ class GitHubScraper:
             min_stars=min_stars,
             max_repos=max_repos,
         )
-        
+
         issues = await self.scrape_issues(
             repositories=repositories,
             state="closed",
             max_issues_per_repo=max_issues_per_repo,
             include_pull_requests=include_pull_requests,
         )
-        
+
         issues_path = await self.save_issues(issues)
-        
+
         training_data_path = await self.format_for_training(issues)
-        
+
         return issues_path, training_data_path

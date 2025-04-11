@@ -30,7 +30,11 @@ class GiteeIntegration:
         self.logger = logging.getLogger("GiteeIntegration")
 
     async def _make_request(
-        self, method: str, endpoint: str, params: Optional[Dict[str, Any]] = None, data: Optional[Dict[str, Any]] = None
+        self,
+        method: str,
+        endpoint: str,
+        params: Optional[Dict[str, Any]] = None,
+        data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Make a request to the Gitee API.
@@ -45,12 +49,12 @@ class GiteeIntegration:
             Response data
         """
         url = f"{self.base_url}/{endpoint}"
-        
+
         if params is None:
             params = {}
-        
+
         params["access_token"] = self.api_key
-        
+
         async with aiohttp.ClientSession() as session:
             async with session.request(
                 method=method,
@@ -64,11 +68,13 @@ class GiteeIntegration:
                 except Exception as e:
                     self.logger.error(f"Error parsing response: {str(e)}")
                     response_data = {"error": str(e)}
-                
+
                 if response.status >= 400:
-                    self.logger.error(f"Gitee API error: {response.status} - {response_data}")
+                    self.logger.error(
+                        f"Gitee API error: {response.status} - {response_data}"
+                    )
                     return {"error": response_data, "status_code": response.status}
-                
+
                 return response_data
 
     async def search_repositories(
@@ -96,7 +102,7 @@ class GiteeIntegration:
             "per_page": per_page,
             "order": order,
         }
-        
+
         return await self._make_request("GET", "search/repositories", params=params)
 
     async def get_repository(self, owner: str, repo: str) -> Dict[str, Any]:
@@ -144,10 +150,14 @@ class GiteeIntegration:
             "page": page,
             "per_page": per_page,
         }
-        
-        return await self._make_request("GET", f"repos/{owner}/{repo}/issues", params=params)
 
-    async def get_issue(self, owner: str, repo: str, issue_number: int) -> Dict[str, Any]:
+        return await self._make_request(
+            "GET", f"repos/{owner}/{repo}/issues", params=params
+        )
+
+    async def get_issue(
+        self, owner: str, repo: str, issue_number: int
+    ) -> Dict[str, Any]:
         """
         Get issue details.
 
@@ -159,10 +169,17 @@ class GiteeIntegration:
         Returns:
             Issue details
         """
-        return await self._make_request("GET", f"repos/{owner}/{repo}/issues/{issue_number}")
+        return await self._make_request(
+            "GET", f"repos/{owner}/{repo}/issues/{issue_number}"
+        )
 
     async def get_issue_comments(
-        self, owner: str, repo: str, issue_number: int, page: int = 1, per_page: int = 30
+        self,
+        owner: str,
+        repo: str,
+        issue_number: int,
+        page: int = 1,
+        per_page: int = 30,
     ) -> List[Dict[str, Any]]:
         """
         Get issue comments.
@@ -181,7 +198,7 @@ class GiteeIntegration:
             "page": page,
             "per_page": per_page,
         }
-        
+
         return await self._make_request(
             "GET", f"repos/{owner}/{repo}/issues/{issue_number}/comments", params=params
         )

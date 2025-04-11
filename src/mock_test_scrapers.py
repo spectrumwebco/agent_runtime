@@ -16,7 +16,9 @@ from integrations.gitee.scraper import GiteeScraper
 from integrations.issue_collector.collector import IssueCollector
 
 
-async def mock_test_github_scraper(output_dir: str = "./data/test/github") -> Dict[str, Any]:
+async def mock_test_github_scraper(
+    output_dir: str = "./data/test/github",
+) -> Dict[str, Any]:
     """
     Mock test for GitHub scraper.
 
@@ -27,9 +29,9 @@ async def mock_test_github_scraper(output_dir: str = "./data/test/github") -> Di
         Test results
     """
     logging.info("Mock testing GitHub scraper")
-    
+
     os.makedirs(output_dir, exist_ok=True)
-    
+
     repositories = [
         {
             "id": 1001,
@@ -59,7 +61,7 @@ async def mock_test_github_scraper(output_dir: str = "./data/test/github") -> Di
             "language": "Go",
         },
     ]
-    
+
     issues = [
         {
             "id": 101,
@@ -110,21 +112,21 @@ async def mock_test_github_scraper(output_dir: str = "./data/test/github") -> Di
             "repository": repositories[2],
         },
     ]
-    
+
     with open(os.path.join(output_dir, "repositories.json"), "w") as f:
         json.dump(repositories, f, indent=2)
-    
+
     issues_path = os.path.join(output_dir, "issues.json")
     with open(issues_path, "w") as f:
         json.dump(issues, f, indent=2)
-    
+
     training_data = []
-    
+
     for issue in issues:
         repo = issue["repository"]
         repo_name = repo["full_name"]
         repo_topics = repo.get("topics", [])
-        
+
         issue_title = issue["title"]
         issue_body = issue["body"]
         issue_number = issue["number"]
@@ -132,15 +134,15 @@ async def mock_test_github_scraper(output_dir: str = "./data/test/github") -> Di
         issue_created_at = issue["created_at"]
         issue_closed_at = issue.get("closed_at")
         issue_labels = [label["name"] for label in issue.get("labels", [])]
-        
+
         input_text = f"Repository: {repo_name}\n"
-        
+
         if repo_topics:
             input_text += f"Topics: {', '.join(repo_topics)}\n"
-        
+
         input_text += f"Issue Title: {issue_title}\n"
         input_text += f"Issue Description:\n{issue_body}\n"
-        
+
         if issue_number == 1001:
             output_text = "Fixed by updating the zone anti-affinity logic in scheduler/zone.go. The fix ensures that pods are properly distributed across zones according to the anti-affinity rules."
         elif issue_number == 2001:
@@ -149,7 +151,7 @@ async def mock_test_github_scraper(output_dir: str = "./data/test/github") -> Di
             output_text = "Improved GitOps reconciliation performance by implementing caching for repository metadata and optimizing the diff algorithm."
         else:
             output_text = "Issue resolved successfully."
-        
+
         metadata = {
             "issue_id": issue["id"],
             "issue_number": issue_number,
@@ -159,7 +161,7 @@ async def mock_test_github_scraper(output_dir: str = "./data/test/github") -> Di
             "closed_at": issue_closed_at,
             "labels": issue_labels,
         }
-        
+
         trajectory = [
             {
                 "action": "read_issue",
@@ -178,9 +180,15 @@ async def mock_test_github_scraper(output_dir: str = "./data/test/github") -> Di
             },
             {
                 "action": "read_comment",
-                "observation": "The issue is in the zone.go file. The scheduler is not correctly applying the zone anti-affinity rules when calculating pod placement." if issue_number == 1001 else
-                               "I've implemented a fix by updating the instance type validation in the AWS provider. PR #2002 has the changes." if issue_number == 2001 else
-                               "The performance issue is related to the diff algorithm used for reconciliation.",
+                "observation": (
+                    "The issue is in the zone.go file. The scheduler is not correctly applying the zone anti-affinity rules when calculating pod placement."
+                    if issue_number == 1001
+                    else (
+                        "I've implemented a fix by updating the instance type validation in the AWS provider. PR #2002 has the changes."
+                        if issue_number == 2001
+                        else "The performance issue is related to the diff algorithm used for reconciliation."
+                    )
+                ),
                 "response": "I'm considering this information in my analysis.",
             },
             {
@@ -194,18 +202,20 @@ async def mock_test_github_scraper(output_dir: str = "./data/test/github") -> Di
                 "response": "The issue has been resolved successfully.",
             },
         ]
-        
-        training_data.append({
-            "input": input_text,
-            "output": output_text,
-            "metadata": metadata,
-            "trajectory": trajectory,
-        })
-    
+
+        training_data.append(
+            {
+                "input": input_text,
+                "output": output_text,
+                "metadata": metadata,
+                "trajectory": trajectory,
+            }
+        )
+
     training_data_path = os.path.join(output_dir, "training_data.json")
     with open(training_data_path, "w") as f:
         json.dump(training_data, f, indent=2)
-    
+
     return {
         "repositories": repositories,
         "issues": issues,
@@ -215,7 +225,9 @@ async def mock_test_github_scraper(output_dir: str = "./data/test/github") -> Di
     }
 
 
-async def mock_test_gitee_scraper(output_dir: str = "./data/test/gitee") -> Dict[str, Any]:
+async def mock_test_gitee_scraper(
+    output_dir: str = "./data/test/gitee",
+) -> Dict[str, Any]:
     """
     Mock test for Gitee scraper.
 
@@ -226,9 +238,9 @@ async def mock_test_gitee_scraper(output_dir: str = "./data/test/gitee") -> Dict
         Test results
     """
     logging.info("Mock testing Gitee scraper")
-    
+
     os.makedirs(output_dir, exist_ok=True)
-    
+
     repositories = [
         {
             "id": 2001,
@@ -261,7 +273,7 @@ async def mock_test_gitee_scraper(output_dir: str = "./data/test/gitee") -> Dict
             "language": "Go",
         },
     ]
-    
+
     issues = [
         {
             "id": 201,
@@ -312,21 +324,21 @@ async def mock_test_gitee_scraper(output_dir: str = "./data/test/gitee") -> Dict
             "repository": repositories[2],
         },
     ]
-    
+
     with open(os.path.join(output_dir, "repositories.json"), "w") as f:
         json.dump(repositories, f, indent=2)
-    
+
     issues_path = os.path.join(output_dir, "issues.json")
     with open(issues_path, "w") as f:
         json.dump(issues, f, indent=2)
-    
+
     training_data = []
-    
+
     for issue in issues:
         repo = issue["repository"]
         repo_name = f"{repo['namespace']['path']}/{repo['path']}"
         repo_topics = repo.get("topics", [])
-        
+
         issue_title = issue["title"]
         issue_body = issue["body"]
         issue_number = issue["number"]
@@ -334,15 +346,15 @@ async def mock_test_gitee_scraper(output_dir: str = "./data/test/gitee") -> Dict
         issue_created_at = issue["created_at"]
         issue_closed_at = issue.get("closed_at")
         issue_labels = [label["name"] for label in issue.get("labels", [])]
-        
+
         input_text = f"Repository: {repo_name}\n"
-        
+
         if repo_topics:
             input_text += f"Topics: {', '.join(repo_topics)}\n"
-        
+
         input_text += f"Issue Title: {issue_title}\n"
         input_text += f"Issue Description:\n{issue_body}\n"
-        
+
         if issue_number == 1001:
             output_text = "通过更新 scheduler/zone.go 中的区域反亲和性逻辑来修复。该修复确保根据反亲和性规则正确分配 Pod。"  # Fixed by updating the zone anti-affinity logic in scheduler/zone.go. The fix ensures that pods are properly distributed across zones according to the anti-affinity rules.
         elif issue_number == 2001:
@@ -351,7 +363,7 @@ async def mock_test_gitee_scraper(output_dir: str = "./data/test/gitee") -> Dict
             output_text = "通过为存储库元数据实现缓存并优化差异算法，提高了 GitOps 协调性能。"  # Improved GitOps reconciliation performance by implementing caching for repository metadata and optimizing the diff algorithm.
         else:
             output_text = "问题已成功解决。"  # Issue resolved successfully.
-        
+
         metadata = {
             "issue_id": issue["id"],
             "issue_number": issue_number,
@@ -361,7 +373,7 @@ async def mock_test_gitee_scraper(output_dir: str = "./data/test/gitee") -> Dict
             "closed_at": issue_closed_at,
             "labels": issue_labels,
         }
-        
+
         trajectory = [
             {
                 "action": "read_issue",
@@ -380,9 +392,17 @@ async def mock_test_gitee_scraper(output_dir: str = "./data/test/gitee") -> Dict
             },
             {
                 "action": "read_comment",
-                "observation": "问题出在 zone.go 文件中。调度程序在计算 Pod 放置时没有正确应用区域反亲和性规则。" if issue_number == 1001 else  # The issue is in the zone.go file. The scheduler is not correctly applying the zone anti-affinity rules when calculating pod placement.
-                               "我已经通过更新华为云提供程序中的实例类型验证实现了修复。PR #2002 包含了这些更改。" if issue_number == 2001 else  # I've implemented a fix by updating the instance type validation in the Huawei Cloud provider. PR #2002 has the changes.
-                               "性能问题与协调使用的差异算法有关。",  # The performance issue is related to the diff algorithm used for reconciliation.
+                "observation": (
+                    "问题出在 zone.go 文件中。调度程序在计算 Pod 放置时没有正确应用区域反亲和性规则。"
+                    if issue_number
+                    == 1001  # The issue is in the zone.go file. The scheduler is not correctly applying the zone anti-affinity rules when calculating pod placement.
+                    else (
+                        "我已经通过更新华为云提供程序中的实例类型验证实现了修复。PR #2002 包含了这些更改。"
+                        if issue_number
+                        == 2001  # I've implemented a fix by updating the instance type validation in the Huawei Cloud provider. PR #2002 has the changes.
+                        else "性能问题与协调使用的差异算法有关。"
+                    )
+                ),  # The performance issue is related to the diff algorithm used for reconciliation.
                 "response": "我正在考虑这些信息进行分析。",  # I'm considering this information in my analysis.
             },
             {
@@ -396,18 +416,20 @@ async def mock_test_gitee_scraper(output_dir: str = "./data/test/gitee") -> Dict
                 "response": "问题已成功解决。",  # The issue has been resolved successfully.
             },
         ]
-        
-        training_data.append({
-            "input": input_text,
-            "output": output_text,
-            "metadata": metadata,
-            "trajectory": trajectory,
-        })
-    
+
+        training_data.append(
+            {
+                "input": input_text,
+                "output": output_text,
+                "metadata": metadata,
+                "trajectory": trajectory,
+            }
+        )
+
     training_data_path = os.path.join(output_dir, "training_data.json")
     with open(training_data_path, "w") as f:
         json.dump(training_data, f, indent=2)
-    
+
     return {
         "repositories": repositories,
         "issues": issues,
@@ -417,7 +439,9 @@ async def mock_test_gitee_scraper(output_dir: str = "./data/test/gitee") -> Dict
     }
 
 
-async def mock_test_issue_collector(output_dir: str = "./data/test/collector") -> Dict[str, Any]:
+async def mock_test_issue_collector(
+    output_dir: str = "./data/test/collector",
+) -> Dict[str, Any]:
     """
     Mock test for issue collector.
 
@@ -428,18 +452,22 @@ async def mock_test_issue_collector(output_dir: str = "./data/test/collector") -
         Test results
     """
     logging.info("Mock testing issue collector")
-    
+
     os.makedirs(output_dir, exist_ok=True)
-    
+
     github_results = await mock_test_github_scraper(os.path.join(output_dir, "github"))
     gitee_results = await mock_test_gitee_scraper(os.path.join(output_dir, "gitee"))
-    
-    combined_training_data = github_results["training_data"] + gitee_results["training_data"]
-    
-    combined_training_data_path = os.path.join(output_dir, "combined_training_data.json")
+
+    combined_training_data = (
+        github_results["training_data"] + gitee_results["training_data"]
+    )
+
+    combined_training_data_path = os.path.join(
+        output_dir, "combined_training_data.json"
+    )
     with open(combined_training_data_path, "w") as f:
         json.dump(combined_training_data, f, indent=2)
-    
+
     return {
         "github": github_results,
         "gitee": gitee_results,
@@ -456,17 +484,21 @@ async def main():
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
-    
+
     output_dir = "./data/test"
     os.makedirs(output_dir, exist_ok=True)
-    
+
     try:
-        github_results = await mock_test_github_scraper(os.path.join(output_dir, "github"))
-        
+        github_results = await mock_test_github_scraper(
+            os.path.join(output_dir, "github")
+        )
+
         gitee_results = await mock_test_gitee_scraper(os.path.join(output_dir, "gitee"))
-        
-        collector_results = await mock_test_issue_collector(os.path.join(output_dir, "collector"))
-        
+
+        collector_results = await mock_test_issue_collector(
+            os.path.join(output_dir, "collector")
+        )
+
         test_results = {
             "github": {
                 "repositories_count": len(github_results["repositories"]),
@@ -482,7 +514,9 @@ async def main():
                 "topics": ["kubernetes", "terraform", "gitops"],
                 "languages": ["Go"],
             },
-            "combined_training_data_count": len(collector_results["combined_training_data"]),
+            "combined_training_data_count": len(
+                collector_results["combined_training_data"]
+            ),
             "data_format": {
                 "includes_issue_description": True,
                 "includes_solution": True,
@@ -490,18 +524,20 @@ async def main():
                 "includes_trajectory": True,
             },
         }
-        
+
         with open(os.path.join(output_dir, "test_results.json"), "w") as f:
             json.dump(test_results, f, indent=2)
-        
+
         logging.info("All mock tests completed successfully")
-        
+
         example_data_path = os.path.join(output_dir, "example_training_data.json")
         with open(example_data_path, "w") as f:
             json.dump(collector_results["combined_training_data"][:2], f, indent=2)
-        
-        logging.info(f"Saved example training data to {os.path.abspath(example_data_path)}")
-        
+
+        logging.info(
+            f"Saved example training data to {os.path.abspath(example_data_path)}"
+        )
+
         return {
             "github_results": github_results,
             "gitee_results": gitee_results,
@@ -509,7 +545,7 @@ async def main():
             "test_results": test_results,
             "example_data_path": example_data_path,
         }
-    
+
     except Exception as e:
         logging.error(f"Error running mock tests: {str(e)}")
         raise

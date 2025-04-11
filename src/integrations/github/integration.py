@@ -30,7 +30,11 @@ class GitHubIntegration:
         self.logger = logging.getLogger("GitHubIntegration")
 
     async def _make_request(
-        self, method: str, endpoint: str, params: Optional[Dict[str, Any]] = None, data: Optional[Dict[str, Any]] = None
+        self,
+        method: str,
+        endpoint: str,
+        params: Optional[Dict[str, Any]] = None,
+        data: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
         """
         Make a request to the GitHub API.
@@ -45,7 +49,7 @@ class GitHubIntegration:
             Response data
         """
         url = f"{self.base_url}/{endpoint}"
-        
+
         async with aiohttp.ClientSession() as session:
             async with session.request(
                 method=method,
@@ -55,11 +59,13 @@ class GitHubIntegration:
                 json=data,
             ) as response:
                 response_data = await response.json()
-                
+
                 if response.status >= 400:
-                    self.logger.error(f"GitHub API error: {response.status} - {response_data}")
+                    self.logger.error(
+                        f"GitHub API error: {response.status} - {response_data}"
+                    )
                     return {"error": response_data, "status_code": response.status}
-                
+
                 return response_data
 
     async def search_repositories(
@@ -90,7 +96,7 @@ class GitHubIntegration:
             "per_page": per_page,
             "page": page,
         }
-        
+
         return await self._make_request("GET", "search/repositories", params=params)
 
     async def get_repository(self, owner: str, repo: str) -> Dict[str, Any]:
@@ -138,10 +144,14 @@ class GitHubIntegration:
             "per_page": per_page,
             "page": page,
         }
-        
-        return await self._make_request("GET", f"repos/{owner}/{repo}/issues", params=params)
 
-    async def get_issue(self, owner: str, repo: str, issue_number: int) -> Dict[str, Any]:
+        return await self._make_request(
+            "GET", f"repos/{owner}/{repo}/issues", params=params
+        )
+
+    async def get_issue(
+        self, owner: str, repo: str, issue_number: int
+    ) -> Dict[str, Any]:
         """
         Get issue details.
 
@@ -153,10 +163,17 @@ class GitHubIntegration:
         Returns:
             Issue details
         """
-        return await self._make_request("GET", f"repos/{owner}/{repo}/issues/{issue_number}")
+        return await self._make_request(
+            "GET", f"repos/{owner}/{repo}/issues/{issue_number}"
+        )
 
     async def get_issue_comments(
-        self, owner: str, repo: str, issue_number: int, per_page: int = 30, page: int = 1
+        self,
+        owner: str,
+        repo: str,
+        issue_number: int,
+        per_page: int = 30,
+        page: int = 1,
     ) -> List[Dict[str, Any]]:
         """
         Get issue comments.
@@ -175,7 +192,7 @@ class GitHubIntegration:
             "per_page": per_page,
             "page": page,
         }
-        
+
         return await self._make_request(
             "GET", f"repos/{owner}/{repo}/issues/{issue_number}/comments", params=params
         )

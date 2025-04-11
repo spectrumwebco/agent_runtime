@@ -37,18 +37,18 @@ class IssueCollector:
         self.github_api_key = github_api_key
         self.gitee_api_key = gitee_api_key
         self.output_dir = output_dir
-        
+
         os.makedirs(output_dir, exist_ok=True)
-        
+
         logging.basicConfig(
             level=log_level,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
         self.logger = logging.getLogger("IssueCollector")
-        
+
         self.github_integration = GitHubIntegration(github_api_key)
         self.gitee_integration = GiteeIntegration(gitee_api_key)
-        
+
         self.github_scraper = GitHubScraper(
             self.github_integration,
             output_dir=os.path.join(output_dir, "github"),
@@ -82,32 +82,36 @@ class IssueCollector:
             Collection results
         """
         self.logger.info(f"Collecting issues for topics: {topics}")
-        
+
         self.logger.info("Collecting issues from GitHub")
-        github_issues_path, github_training_data_path = await self.github_scraper.scrape_and_save(
-            topics=topics,
-            languages=languages,
-            min_stars=min_stars,
-            max_repos=max_repos_per_platform,
-            max_issues_per_repo=max_issues_per_repo,
-            include_pull_requests=include_pull_requests,
+        github_issues_path, github_training_data_path = (
+            await self.github_scraper.scrape_and_save(
+                topics=topics,
+                languages=languages,
+                min_stars=min_stars,
+                max_repos=max_repos_per_platform,
+                max_issues_per_repo=max_issues_per_repo,
+                include_pull_requests=include_pull_requests,
+            )
         )
-        
+
         self.logger.info("Collecting issues from Gitee")
-        gitee_issues_path, gitee_training_data_path = await self.gitee_scraper.scrape_and_save(
-            topics=topics,
-            languages=languages,
-            min_stars=min_stars,
-            max_repos=max_repos_per_platform,
-            max_issues_per_repo=max_issues_per_repo,
-            include_pull_requests=include_pull_requests,
+        gitee_issues_path, gitee_training_data_path = (
+            await self.gitee_scraper.scrape_and_save(
+                topics=topics,
+                languages=languages,
+                min_stars=min_stars,
+                max_repos=max_repos_per_platform,
+                max_issues_per_repo=max_issues_per_repo,
+                include_pull_requests=include_pull_requests,
+            )
         )
-        
+
         combined_training_data = await self.combine_training_data(
             github_training_data_path,
             gitee_training_data_path,
         )
-        
+
         return {
             "github_issues_path": github_issues_path,
             "github_training_data_path": github_training_data_path,
@@ -130,20 +134,22 @@ class IssueCollector:
             Path to combined training data
         """
         self.logger.info("Combining training data from GitHub and Gitee")
-        
+
         with open(github_training_data_path, "r") as f:
             github_training_data = json.load(f)
-        
+
         with open(gitee_training_data_path, "r") as f:
             gitee_training_data = json.load(f)
-        
+
         combined_training_data = github_training_data + gitee_training_data
-        
+
         output_path = os.path.join(self.output_dir, "combined_training_data.json")
         with open(output_path, "w") as f:
             json.dump(combined_training_data, f, indent=2)
-        
-        self.logger.info(f"Saved {len(combined_training_data)} combined training examples to {output_path}")
+
+        self.logger.info(
+            f"Saved {len(combined_training_data)} combined training examples to {output_path}"
+        )
         return output_path
 
     async def collect_and_save(
