@@ -29,8 +29,6 @@ type Message struct {
 	ExtraInfo   map[string]interface{} `json:"extra_info,omitempty"`
 }
 // Info contains metadata about the agent's execution and state
-
-// Info contains metadata about the agent's execution and state
 type Info struct {
 	Submission      string                 `json:"submission"`
 	ExitStatus      string                 `json:"exit_status"`
@@ -125,44 +123,44 @@ type DefaultAgent struct {
 	eventStream   interface{} // Connection to the Event Stream system
 }
 
-type AgentOption func(*DefaultAgent) error
+type Option func(*DefaultAgent) error
 
-func WithTools(toolRegistry *tools.ToolRegistry) AgentOption {
+func WithTools(toolRegistry *tools.ToolRegistry) Option {
 	return func(a *DefaultAgent) error {
 		a.Tools = toolRegistry
 		return nil
 	}
 }
 
-func WithParser(p parser.Parser) AgentOption {
+func WithParser(p parser.Parser) Option {
 	return func(a *DefaultAgent) error {
 		a.Parser = p
 		return nil
 	}
 }
 
-func WithModelName(modelName string) AgentOption {
+func WithModelName(modelName string) Option {
 	return func(a *DefaultAgent) error {
 		a.ModelName = modelName
 		return nil
 	}
 }
 
-func WithMaxRequeries(maxRequeries int) AgentOption {
+func WithMaxRequeries(maxRequeries int) Option {
 	return func(a *DefaultAgent) error {
 		a.MaxRequeries = maxRequeries
 		return nil
 	}
 }
 
-func WithConfig(cfg *config.Config) AgentOption {
+func WithConfig(cfg *config.Config) Option {
 	return func(a *DefaultAgent) error {
 		a.Config = cfg
 		return nil
 	}
 }
 
-func NewDefaultAgent(options ...AgentOption) (*DefaultAgent, error) {
+func NewDefaultAgent(options ...Option) (*DefaultAgent, error) {
 	fmt.Println("Initializing DefaultAgent...")
 	agentInfo := AgentInfo{
 		ModelStats:  make(map[string]interface{}),
