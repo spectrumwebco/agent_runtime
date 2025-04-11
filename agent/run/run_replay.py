@@ -34,13 +34,13 @@ from swerex.deployment.abstract import AbstractDeployment
 from swerex.deployment.config import DeploymentConfig, get_deployment
 from typing_extensions import Self
 
-from sweagent.agent.agents import DefaultAgent
-from sweagent.agent.models import ReplayModelConfig
-from sweagent.environment.swe_env import SWEEnv
-from sweagent.run.common import BasicCLI, ConfigHelper
-from sweagent.run.run_single import RunSingle, RunSingleConfig
-from sweagent.utils.config import load_environment_variables
-from sweagent.utils.log import get_logger
+from agent.agent.agents import DefaultAgent
+from agent.agent.models import ReplayModelConfig
+from agent.environment.swe_env import SWEEnv
+from agent.run.common import BasicCLI, ConfigHelper
+from agent.run.run_single import RunSingle, RunSingleConfig
+from agent.utils.config import load_environment_variables
+from agent.utils.log import get_logger
 
 
 class RunReplayConfig(BaseSettings, cli_implicit_flags=False):

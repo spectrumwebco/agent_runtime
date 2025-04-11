@@ -4,14 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from sweagent import CONFIG_DIR, TOOLS_DIR
-from sweagent.agent.agents import DefaultAgentConfig
-from sweagent.agent.models import InstantEmptySubmitModelConfig
-from sweagent.environment.swe_env import EnvironmentConfig
-from sweagent.run.common import BasicCLI
-from sweagent.run.hooks.abstract import RunHook
-from sweagent.run.run_single import RunSingle, RunSingleConfig
-from sweagent.tools.bundle import Bundle
+from agent import CONFIG_DIR, TOOLS_DIR
+from agent.agent.agents import DefaultAgentConfig
+from agent.agent.models import InstantEmptySubmitModelConfig
+from agent.environment.swe_env import EnvironmentConfig
+from agent.run.common import BasicCLI
+from agent.run.hooks.abstract import RunHook
+from agent.run.run_single import RunSingle, RunSingleConfig
+from agent.tools.bundle import Bundle
 
 
 class RaisesExceptionHook(RunHook):

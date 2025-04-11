@@ -5,14 +5,14 @@ import sys
 
 from flask_socketio import SocketIO
 
-from sweagent import PACKAGE_DIR
-from sweagent.agent.hooks.abstract import AbstractAgentHook
-from sweagent.api.utils import strip_ansi_sequences
-from sweagent.environment.hooks.abstract import EnvHook
+from agent import PACKAGE_DIR
+from agent.agent.hooks.abstract import AbstractAgentHook
+from agent.api.utils import strip_ansi_sequences
+from agent.environment.hooks.abstract import EnvHook
 
 # baaaaaaad
 sys.path.append(str(PACKAGE_DIR.parent))
-from sweagent.run.hooks.abstract import RunHook
+from agent.run.hooks.abstract import RunHook
 
 
 class StreamToSocketIO(io.StringIO):

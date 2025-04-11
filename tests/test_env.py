@@ -6,7 +6,7 @@ from unittest import mock
 import pytest
 from swerex.exceptions import CommandTimeoutError
 
-from sweagent.environment.hooks.abstract import EnvHook
+from agent.environment.hooks.abstract import EnvHook
 
 from .conftest import swe_env_context
 

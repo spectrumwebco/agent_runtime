@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from sweagent.run.run import main
+from agent.run.run import main
 
 
 @pytest.mark.slow

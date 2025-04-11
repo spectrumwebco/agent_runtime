@@ -5,8 +5,8 @@ import subprocess
 
 import pytest
 
-from sweagent.run.hooks.open_pr import _remove_triple_backticks, format_trajectory_markdown
-from sweagent.utils.github import (
+from agent.run.hooks.open_pr import _remove_triple_backticks, format_trajectory_markdown
+from agent.utils.github import (
     InvalidGithubURL,
     _get_associated_commit_urls,
     _is_github_issue_url,

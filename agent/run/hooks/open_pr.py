@@ -5,16 +5,16 @@ import shlex
 from ghapi.all import GhApi
 from pydantic import BaseModel
 
-from sweagent.environment.swe_env import SWEEnv
-from sweagent.run.hooks.abstract import RunHook
-from sweagent.types import AgentRunResult
-from sweagent.utils.github import (
+from agent.environment.swe_env import SWEEnv
+from agent.run.hooks.abstract import RunHook
+from agent.types import AgentRunResult
+from agent.utils.github import (
     InvalidGithubURL,
     _get_associated_commit_urls,
     _get_gh_issue_data,
     _parse_gh_issue_url,
 )
-from sweagent.utils.log import get_logger
+from agent.utils.log import get_logger
 
 # NOTE
 # THE IMPLEMENTATION DETAILS HERE WILL CHANGE SOON!

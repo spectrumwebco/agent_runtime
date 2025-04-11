@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from sweagent import TOOLS_DIR
+from agent import TOOLS_DIR
 from tests.utils import make_python_tool_importable
 
 DEFAULT_TOOLS_DIR = TOOLS_DIR / "defaults"

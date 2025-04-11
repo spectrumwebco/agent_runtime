@@ -5,13 +5,13 @@ import rich
 import rich.markdown
 import rich.panel
 
-from sweagent.agent.problem_statement import ProblemStatementConfig
-from sweagent.environment.repo import LocalRepoConfig
-from sweagent.environment.swe_env import SWEEnv
-from sweagent.run.common import _is_promising_patch
-from sweagent.run.hooks.abstract import RunHook
-from sweagent.types import AgentRunResult
-from sweagent.utils.log import get_logger
+from agent.agent.problem_statement import ProblemStatementConfig
+from agent.environment.repo import LocalRepoConfig
+from agent.environment.swe_env import SWEEnv
+from agent.run.common import _is_promising_patch
+from agent.run.hooks.abstract import RunHook
+from agent.types import AgentRunResult
+from agent.utils.log import get_logger
 
 
 class SaveApplyPatchHook(RunHook):

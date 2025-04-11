@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sweagent import __version__
+from agent import __version__
 
 
 def test_version():

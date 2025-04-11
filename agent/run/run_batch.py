@@ -47,22 +47,22 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from rich.live import Live
 from swerex.deployment.hooks.status import SetStatusDeploymentHook
 
-from sweagent import TRAJECTORY_DIR
-from sweagent.agent.agents import AgentConfig, get_agent_from_config
-from sweagent.agent.hooks.status import SetStatusAgentHook
-from sweagent.environment.hooks.status import SetStatusEnvironmentHook
-from sweagent.environment.swe_env import SWEEnv
-from sweagent.exceptions import ModelConfigurationError, TotalCostLimitExceededError
-from sweagent.run._progress import RunBatchProgressManager
-from sweagent.run.batch_instances import BatchInstance, BatchInstanceSourceConfig, SWEBenchInstances
-from sweagent.run.common import BasicCLI, ConfigHelper, save_predictions
-from sweagent.run.hooks.abstract import CombinedRunHooks, RunHook
-from sweagent.run.hooks.apply_patch import SaveApplyPatchHook
-from sweagent.run.merge_predictions import merge_predictions
-from sweagent.run.run_single import RunSingleConfig
-from sweagent.types import AgentRunResult
-from sweagent.utils.config import load_environment_variables
-from sweagent.utils.log import (
+from agent import TRAJECTORY_DIR
+from agent.agent.agents import AgentConfig, get_agent_from_config
+from agent.agent.hooks.status import SetStatusAgentHook
+from agent.environment.hooks.status import SetStatusEnvironmentHook
+from agent.environment.swe_env import SWEEnv
+from agent.exceptions import ModelConfigurationError, TotalCostLimitExceededError
+from agent.run._progress import RunBatchProgressManager
+from agent.run.batch_instances import BatchInstance, BatchInstanceSourceConfig, SWEBenchInstances
+from agent.run.common import BasicCLI, ConfigHelper, save_predictions
+from agent.run.hooks.abstract import CombinedRunHooks, RunHook
+from agent.run.hooks.apply_patch import SaveApplyPatchHook
+from agent.run.merge_predictions import merge_predictions
+from agent.run.run_single import RunSingleConfig
+from agent.types import AgentRunResult
+from agent.utils.config import load_environment_variables
+from agent.utils.log import (
     add_file_handler,
     add_logger_names_to_stream_handlers,
     get_logger,
@@ -221,7 +221,7 @@ class RunBatch:
             random_delay_multiplier=config.random_delay_multiplier,
         )
         if isinstance(config.instances, SWEBenchInstances) and config.instances.evaluate:
-            from sweagent.run.hooks.swe_bench_evaluate import SweBenchEvaluate
+            from agent.run.hooks.swe_bench_evaluate import SweBenchEvaluate
 
             rb.add_hook(
                 SweBenchEvaluate(

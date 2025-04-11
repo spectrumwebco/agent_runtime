@@ -2,9 +2,9 @@ import os
 
 import pytest
 
-from sweagent.agent.problem_statement import GithubIssue
-from sweagent.run.hooks.open_pr import OpenPRConfig, OpenPRHook
-from sweagent.types import AgentRunResult
+from agent.agent.problem_statement import GithubIssue
+from agent.run.hooks.open_pr import OpenPRConfig, OpenPRHook
+from agent.types import AgentRunResult
 
 
 @pytest.fixture

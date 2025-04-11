@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from pydantic import SecretStr
 
-from sweagent.agent.models import GenericAPIModelConfig, get_model
-from sweagent.tools.parsing import Identity
-from sweagent.tools.tools import ToolConfig
-from sweagent.types import History
+from agent.agent.models import GenericAPIModelConfig, get_model
+from agent.tools.parsing import Identity
+from agent.tools.tools import ToolConfig
+from agent.types import History
 
 
 def test_litellm_mock():

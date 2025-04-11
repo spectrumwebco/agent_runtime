@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from sweagent import CONFIG_DIR, TOOLS_DIR
-from sweagent.agent.agents import DefaultAgentConfig
+from agent import CONFIG_DIR, TOOLS_DIR
+from agent.agent.agents import DefaultAgentConfig
 from sweagent.agent.models import InstantEmptySubmitModelConfig
 from sweagent.environment.swe_env import EnvironmentConfig
 from sweagent.run.common import BasicCLI

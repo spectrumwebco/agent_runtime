@@ -13,18 +13,18 @@ import numpy as np
 from jinja2 import Template
 from pydantic import BaseModel, ConfigDict
 
-from sweagent.agent.history_processors import _set_cache_control
-from sweagent.agent.models import (
+from agent.agent.history_processors import _set_cache_control
+from agent.agent.models import (
     AbstractModel,
     InstanceStats,
     ModelConfig,
     get_model,
 )
-from sweagent.agent.problem_statement import ProblemStatement
-from sweagent.tools.parsing import ActionParser
-from sweagent.tools.tools import ToolConfig
-from sweagent.types import AgentInfo, Trajectory, TrajectoryStep
-from sweagent.utils.log import get_logger
+from agent.agent.problem_statement import ProblemStatement
+from agent.tools.parsing import ActionParser
+from agent.tools.tools import ToolConfig
+from agent.types import AgentInfo, Trajectory, TrajectoryStep
+from agent.utils.log import get_logger
 
 
 class ReviewSubmission(BaseModel):

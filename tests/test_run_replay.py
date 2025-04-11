@@ -5,7 +5,7 @@ import subprocess
 import pytest
 from swerex.deployment.config import DockerDeploymentConfig
 
-from sweagent.run.run_replay import RunReplay, RunReplayConfig
+from agent.run.run_replay import RunReplay, RunReplayConfig
 
 
 @pytest.fixture

@@ -15,15 +15,15 @@ from flask import Flask, make_response, render_template, request, session
 from flask_cors import CORS
 from flask_socketio import SocketIO
 
-from sweagent import CONFIG_DIR, PACKAGE_DIR
-from sweagent.agent.problem_statement import problem_statement_from_simplified_input
-from sweagent.api.hooks import AgentUpdateHook, EnvUpdateHook, MainUpdateHook, WebUpdate
-from sweagent.api.utils import AttrDict, ThreadWithExc
-from sweagent.environment.repo import repo_from_simplified_input
+from agent import CONFIG_DIR, PACKAGE_DIR
+from agent.agent.problem_statement import problem_statement_from_simplified_input
+from agent.api.hooks import AgentUpdateHook, EnvUpdateHook, MainUpdateHook, WebUpdate
+from agent.api.utils import AttrDict, ThreadWithExc
+from agent.environment.repo import repo_from_simplified_input
 
 # baaaaaaad
 sys.path.append(str(PACKAGE_DIR.parent))
-from sweagent.run.run_single import RunSingle, RunSingleConfig
+from agent.run.run_single import RunSingle, RunSingleConfig
 
 app = Flask(__name__, template_folder=Path(__file__).parent)
 CORS(app)

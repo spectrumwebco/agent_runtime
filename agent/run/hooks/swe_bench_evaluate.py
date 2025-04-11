@@ -10,10 +10,10 @@ from pathlib import Path
 from threading import Lock
 from time import time
 
-from sweagent.run.hooks.abstract import RunHook
-from sweagent.run.merge_predictions import merge_predictions
-from sweagent.types import AgentRunResult
-from sweagent.utils.log import get_logger
+from agent.run.hooks.abstract import RunHook
+from agent.run.merge_predictions import merge_predictions
+from agent.types import AgentRunResult
+from agent.utils.log import get_logger
 
 
 class SweBenchEvaluate(RunHook):

@@ -11,8 +11,8 @@ from pathlib import Path
 import pytest
 from swerex.deployment.config import DockerDeploymentConfig, DummyDeploymentConfig
 
-from sweagent.environment.repo import LocalRepoConfig
-from sweagent.environment.swe_env import EnvironmentConfig, SWEEnv
+from agent.environment.repo import LocalRepoConfig
+from agent.environment.swe_env import EnvironmentConfig, SWEEnv
 
 # this is a hack and should be removed when we have a better solution
 _this_dir = Path(__file__).resolve().parent

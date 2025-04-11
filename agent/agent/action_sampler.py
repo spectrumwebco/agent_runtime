@@ -5,12 +5,12 @@ from typing import Any, Literal
 from jinja2 import Template
 from pydantic import BaseModel
 
-from sweagent.agent.models import AbstractModel
-from sweagent.agent.problem_statement import ProblemStatement
-from sweagent.exceptions import FormatError
-from sweagent.tools.tools import ToolHandler
-from sweagent.types import Trajectory
-from sweagent.utils.log import get_logger
+from agent.agent.models import AbstractModel
+from agent.agent.problem_statement import ProblemStatement
+from agent.exceptions import FormatError
+from agent.tools.tools import ToolHandler
+from agent.types import Trajectory
+from agent.utils.log import get_logger
 
 
 class ActionSamplerOutput(BaseModel):

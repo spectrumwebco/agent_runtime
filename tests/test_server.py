@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 from flask_socketio import SocketIOTestClient
 
-from sweagent.api.server import app, socketio
+from agent.api.server import app, socketio
 
 
 @pytest.fixture

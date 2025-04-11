@@ -13,11 +13,11 @@ from swerex.deployment.config import (
 )
 from typing_extensions import Self
 
-from sweagent.agent.problem_statement import ProblemStatementConfig, TextProblemStatement
-from sweagent.environment.repo import GithubRepoConfig, LocalRepoConfig, PreExistingRepoConfig
-from sweagent.environment.swe_env import EnvironmentConfig
-from sweagent.utils.files import load_file
-from sweagent.utils.log import get_logger
+from agent.agent.problem_statement import ProblemStatementConfig, TextProblemStatement
+from agent.environment.repo import GithubRepoConfig, LocalRepoConfig, PreExistingRepoConfig
+from agent.environment.swe_env import EnvironmentConfig
+from agent.utils.files import load_file
+from agent.utils.log import get_logger
 
 logger = get_logger("swea-config", emoji="🔧")
 

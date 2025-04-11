@@ -4,13 +4,13 @@ from swerex.exceptions import SwerexException
 from swerex.runtime.abstract import Action, BashObservation, Observation
 from swerex.runtime.dummy import DummyRuntime
 
-from sweagent import CONFIG_DIR
-from sweagent.agent.agents import DefaultAgent, DefaultAgentConfig
-from sweagent.agent.models import InstantEmptySubmitModelConfig, PredeterminedTestModel
-from sweagent.agent.problem_statement import EmptyProblemStatement, TextProblemStatement
-from sweagent.environment.swe_env import SWEEnv
-from sweagent.tools.parsing import FunctionCallingParser, Identity, ThoughtActionParser
-from sweagent.tools.tools import ToolConfig
+from agent import CONFIG_DIR
+from agent.agent.agents import DefaultAgent, DefaultAgentConfig
+from agent.agent.models import InstantEmptySubmitModelConfig, PredeterminedTestModel
+from agent.agent.problem_statement import EmptyProblemStatement, TextProblemStatement
+from agent.environment.swe_env import SWEEnv
+from agent.tools.parsing import FunctionCallingParser, Identity, ThoughtActionParser
+from agent.tools.tools import ToolConfig
 
 
 def test_dummy_env(dummy_env):

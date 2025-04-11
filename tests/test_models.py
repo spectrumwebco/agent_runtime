@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import SecretStr
 
-from sweagent.agent.models import GenericAPIModelConfig, get_model
+from agent.agent.models import GenericAPIModelConfig, get_model
 from sweagent.tools.parsing import Identity
 from sweagent.tools.tools import ToolConfig
 from sweagent.types import History

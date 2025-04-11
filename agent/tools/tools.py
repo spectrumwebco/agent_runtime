@@ -10,12 +10,12 @@ from swerex.runtime.abstract import Command as RexCommand
 from swerex.runtime.abstract import UploadRequest
 from typing_extensions import Self
 
-from sweagent.environment.swe_env import SWEEnv
-from sweagent.tools.bundle import Bundle
-from sweagent.tools.commands import BASH_COMMAND, Command
-from sweagent.tools.parsing import FunctionCallingParser, JsonParser, ParseFunction
-from sweagent.tools.utils import _guard_multiline_input, generate_command_docs
-from sweagent.utils.log import get_logger
+from agent.environment.swe_env import SWEEnv
+from agent.tools.bundle import Bundle
+from agent.tools.commands import BASH_COMMAND, Command
+from agent.tools.parsing import FunctionCallingParser, JsonParser, ParseFunction
+from agent.tools.utils import _guard_multiline_input, generate_command_docs
+from agent.utils.log import get_logger
 
 
 class ToolFilterConfig(BaseModel):

@@ -3,9 +3,9 @@ import json
 import pytest
 from swerex.deployment.config import DockerDeploymentConfig
 
-from sweagent.agent.problem_statement import TextProblemStatement
-from sweagent.environment.repo import PreExistingRepoConfig
-from sweagent.run.batch_instances import BatchInstance, SimpleBatchInstance, SWEBenchInstances, _slice_spec_to_slice
+from agent.agent.problem_statement import TextProblemStatement
+from agent.environment.repo import PreExistingRepoConfig
+from agent.run.batch_instances import BatchInstance, SimpleBatchInstance, SWEBenchInstances, _slice_spec_to_slice
 
 
 def test_simple_batch_from_swe_bench_to_full_batch_instance(test_data_sources_path):

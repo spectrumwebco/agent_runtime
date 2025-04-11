@@ -17,11 +17,11 @@ from tenacity import RetryError
 from typing_extensions import Self
 from unidiff import UnidiffParseError
 
-from sweagent import __version__, get_agent_commit_hash, get_rex_commit_hash, get_rex_version
-from sweagent.agent.action_sampler import AbstractActionSampler, ActionSamplerConfig
-from sweagent.agent.history_processors import DefaultHistoryProcessor, HistoryProcessor
-from sweagent.agent.hooks.abstract import AbstractAgentHook, CombinedAgentHook
-from sweagent.agent.models import (
+from agent import __version__, get_agent_commit_hash, get_rex_commit_hash, get_rex_version
+from agent.agent.action_sampler import AbstractActionSampler, ActionSamplerConfig
+from agent.agent.history_processors import DefaultHistoryProcessor, HistoryProcessor
+from agent.agent.hooks.abstract import AbstractAgentHook, CombinedAgentHook
+from agent.agent.models import (
     AbstractModel,
     HumanModel,
     HumanThoughtModel,
@@ -29,32 +29,32 @@ from sweagent.agent.models import (
     ModelConfig,
     get_model,
 )
-from sweagent.agent.problem_statement import ProblemStatement, ProblemStatementConfig
-from sweagent.agent.reviewer import (
+from agent.agent.problem_statement import ProblemStatement, ProblemStatementConfig
+from agent.agent.reviewer import (
     ChooserRetryLoop,
     RetryLoopConfig,
     ReviewSubmission,
     ScoreRetryLoop,
     get_retry_loop_from_config,
 )
-from sweagent.environment.swe_env import SWEEnv
-from sweagent.exceptions import (
+from agent.environment.swe_env import SWEEnv
+from agent.exceptions import (
     ContentPolicyViolationError,
     ContextWindowExceededError,
     CostLimitExceededError,
     FormatError,
     TotalCostLimitExceededError,
 )
-from sweagent.tools.parsing import (
+from agent.tools.parsing import (
     ActionOnlyParser,
     ThoughtActionParser,
 )
-from sweagent.tools.tools import ToolConfig, ToolHandler
-from sweagent.types import AgentInfo, AgentRunResult, StepOutput, Trajectory, TrajectoryStep
-from sweagent.utils.config import _convert_paths_to_abspath, _strip_abspath_from_dict
-from sweagent.utils.jinja_warnings import _warn_probably_wrong_jinja_syntax
-from sweagent.utils.log import get_logger
-from sweagent.utils.patch_formatter import PatchFormatter
+from agent.tools.tools import ToolConfig, ToolHandler
+from agent.types import AgentInfo, AgentRunResult, StepOutput, Trajectory, TrajectoryStep
+from agent.utils.config import _convert_paths_to_abspath, _strip_abspath_from_dict
+from agent.utils.jinja_warnings import _warn_probably_wrong_jinja_syntax
+from agent.utils.log import get_logger
+from agent.utils.patch_formatter import PatchFormatter
 
 
 class TemplateConfig(BaseModel):
