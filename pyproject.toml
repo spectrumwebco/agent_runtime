@@ -73,7 +73,7 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."] # Search for packages in the root directory
-include = ["sweagent*", "tools*", "tests*", "swerex*"] # Include copied SWE-Agent and SWE-ReX dirs
+include = ["agent*", "tools*", "tests*", "agent_framework*"] # Include copied SWE-Agent and SWE-ReX dirs
 namespaces = false
 
 [tool.pytest.ini_options]
