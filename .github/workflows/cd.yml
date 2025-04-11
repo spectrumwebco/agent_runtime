@@ -1,0 +1,79 @@
+name: CD Pipeline
+
+on:
+  push:
+    branches: [ main, staging ]
+    paths:
+      - 'src/ml_infrastructure/**'
+      - 'terraform/**'
+      - '.github/workflows/cd.yml'
+
+jobs:
+  deploy-to-argocd:
+    name: Deploy to ArgoCD
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install ArgoCD CLI
+        run: |
+          curl -sSL -o argocd-linux-amd64 https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+          rm argocd-linux-amd64
+      - name: Login to ArgoCD
+        run: |
+          argocd login ${{ secrets.ARGOCD_SERVER }} --username ${{ secrets.ARGOCD_USERNAME }} --password ${{ secrets.ARGOCD_PASSWORD }} --insecure
+      - name: Sync ArgoCD Applications
+        run: |
+          argocd app sync ml-infrastructure
+          argocd app wait ml-infrastructure --health
+
+  deploy-to-fly:
+    name: Deploy to Fly.io
+    runs-on: ubuntu-latest
+    needs: [deploy-to-argocd]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Fly CLI
+        run: |
+          curl -L https://fly.io/install.sh | sh
+          export FLYCTL_INSTALL="/home/runner/.fly"
+          export PATH="$FLYCTL_INSTALL/bin:$PATH"
+      - name: Login to Fly
+        run: |
+          flyctl auth token ${{ secrets.FLY_API_TOKEN }}
+      - name: Deploy API to Fly.io
+        run: |
+          cd src/ml_infrastructure/api
+          flyctl deploy --remote-only
+
+  notify-deployment:
+    name: Notify Deployment Status
+    runs-on: ubuntu-latest
+    needs: [deploy-to-argocd, deploy-to-fly]
+    steps:
+      - name: Send Slack Notification
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "text": "ML Infrastructure Deployment Status",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*ML Infrastructure Deployment Completed*\n\nRepository: ${{ github.repository }}\nBranch: ${{ github.ref_name }}\nCommit: ${{ github.sha }}\nDeployed by: ${{ github.actor }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "View deployment: https://argocd.example.com/applications/ml-infrastructure"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
