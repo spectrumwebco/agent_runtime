@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/spectrumwebco/agent_runtime/internal/rex"
+	"github.com/spectrumwebco/agent_runtime/internal/agent_framework"
 )
 
 type EnvironmentConfig struct {

@@ -17,19 +17,28 @@ func LoadConfig(configPath string) (*Config, error) {
 	v.SetDefault("tools.execution_timeout", 60) // 60 seconds
 	v.SetDefault("tools.max_output_size", 10000) // 10000 characters
 	
+	v.SetDefault("rocketmq.name_server_addrs", []string{"127.0.0.1:9876"}) // Default local nameserver
+	v.SetDefault("rocketmq.state_topic", "agent_state_updates")
+	v.SetDefault("rocketmq.producer_group_name", "agent_runtime_producer_group")
+	v.SetDefault("rocketmq.consumer_group_name", "agent_runtime_consumer_group")
+	v.SetDefault("rocketmq.consumer_subscription", "*") // Consume all tags by default
+	v.SetDefault("rocketmq.producer_retry", 2)          // Default retry count for producer
+	v.SetDefault("supabase.main_url", "https://supabase.example.com")
+	v.SetDefault("supabase.readonly_url", "https://readonly.supabase.example.com")
+	v.SetDefault("supabase.rollback_url", "https://rollback.supabase.example.com")
+	v.SetDefault("supabase.api_key", "")
+	v.SetDefault("supabase.auth_token", "")
+
+
+
+
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		fmt.Printf("Config file %s does not exist, using defaults\n", configPath)
-		return &Config{
-			Agent: AgentConfig{
-				Name:                 "default-go-agent",
-				MaxRequeries:         3,
-				AlwaysRequireZeroExit: true,
-			},
-			Tools: ToolsConfig{
-				ExecutionTimeout: 60,
-				MaxOutputSize:    10000,
-			},
-		}, nil
+		var defaultConfig Config
+		if err := v.Unmarshal(&defaultConfig); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal default config: %w", err)
+		}
+		return &defaultConfig, nil
 	}
 	
 	dir, file := filepath.Split(configPath)

@@ -1,0 +1,223 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rocketmq-nameserver
+  labels:
+    app: rocketmq
+    component: nameserver
+spec:
+  serviceName: rocketmq-nameserver
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rocketmq
+      component: nameserver
+  template:
+    metadata:
+      labels:
+        app: rocketmq
+        component: nameserver
+      annotations:
+        io.kata-containers.config: "agent-runtime"
+    spec:
+      runtimeClassName: kata-containers
+      containers:
+      - name: nameserver
+        image: apache/rocketmq:4.9.4
+        command: ["sh", "-c", "cd /home/rocketmq/rocketmq-4.9.4/bin && ./mqnamesrv"]
+        ports:
+        - containerPort: 9876
+          name: nameserver
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        volumeMounts:
+        - name: logs
+          mountPath: /home/rocketmq/logs
+        - name: store
+          mountPath: /home/rocketmq/store
+        livenessProbe:
+          tcpSocket:
+            port: 9876
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 9876
+          initialDelaySeconds: 15
+          periodSeconds: 5
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "echo 'NameServer started' > /home/rocketmq/logs/startup.log"]
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "cd /home/rocketmq/rocketmq-4.9.4/bin && ./mqshutdown namesrv"]
+      volumes:
+      - name: logs
+        emptyDir: {}
+  volumeClaimTemplates:
+  - metadata:
+      name: store
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 8Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: rocketmq-broker
+  labels:
+    app: rocketmq
+    component: broker
+spec:
+  serviceName: rocketmq-broker
+  replicas: 2
+  selector:
+    matchLabels:
+      app: rocketmq
+      component: broker
+  template:
+    metadata:
+      labels:
+        app: rocketmq
+        component: broker
+      annotations:
+        io.kata-containers.config: "agent-runtime"
+    spec:
+      runtimeClassName: kata-containers
+      containers:
+      - name: broker
+        image: apache/rocketmq:4.9.4
+        command: ["sh", "-c", "cd /home/rocketmq/rocketmq-4.9.4/bin && ./mqbroker -n rocketmq-nameserver:9876"]
+        ports:
+        - containerPort: 10909
+          name: vip
+        - containerPort: 10911
+          name: main
+        env:
+        - name: JAVA_OPT
+          value: "-Xms1g -Xmx1g -Xmn512m"
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: logs
+          mountPath: /home/rocketmq/logs
+        - name: store
+          mountPath: /home/rocketmq/store
+        - name: broker-config
+          mountPath: /home/rocketmq/rocketmq-4.9.4/conf/broker.conf
+          subPath: broker.conf
+        livenessProbe:
+          tcpSocket:
+            port: 10911
+          initialDelaySeconds: 60
+          periodSeconds: 10
+        readinessProbe:
+          tcpSocket:
+            port: 10911
+          initialDelaySeconds: 30
+          periodSeconds: 5
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "echo 'Broker started' > /home/rocketmq/logs/startup.log"]
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "cd /home/rocketmq/rocketmq-4.9.4/bin && ./mqshutdown broker"]
+      volumes:
+      - name: logs
+        emptyDir: {}
+      - name: broker-config
+        configMap:
+          name: rocketmq-broker-config
+  volumeClaimTemplates:
+  - metadata:
+      name: store
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 20Gi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rocketmq-broker-config
+data:
+  broker.conf: |
+    brokerClusterName=DefaultCluster
+    brokerName=broker
+    brokerId=0
+    deleteWhen=04
+    fileReservedTime=48
+    brokerRole=ASYNC_MASTER
+    flushDiskType=ASYNC_FLUSH
+    storePathRootDir=/home/rocketmq/store
+    storePathCommitLog=/home/rocketmq/store/commitlog
+    enableDLegerCommitLog=false
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rocketmq-nameserver
+  labels:
+    app: rocketmq
+    component: nameserver
+spec:
+  ports:
+  - port: 9876
+    targetPort: 9876
+    name: nameserver
+  selector:
+    app: rocketmq
+    component: nameserver
+  clusterIP: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rocketmq-broker
+  labels:
+    app: rocketmq
+    component: broker
+spec:
+  ports:
+  - port: 10909
+    targetPort: 10909
+    name: vip
+  - port: 10911
+    targetPort: 10911
+    name: main
+  selector:
+    app: rocketmq
+    component: broker
+  clusterIP: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rocketmq-broker-external
+  labels:
+    app: rocketmq
+    component: broker
+spec:
+  type: ClusterIP
+  ports:
+  - port: 10911
+    targetPort: 10911
+    name: main
+  selector:
+    app: rocketmq
+    component: broker
