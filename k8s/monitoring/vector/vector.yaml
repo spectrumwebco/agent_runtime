@@ -1,0 +1,236 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vector-config
+  namespace: monitoring
+data:
+  vector.yaml: |
+    data_dir: /vector-data-dir
+    api:
+      enabled: true
+      address: 0.0.0.0:8686
+    
+    sources:
+      kubernetes_logs:
+        type: kubernetes_logs
+        pod_annotation_fields:
+          container_image: container_image
+          container_name: container_name
+          pod_labels: pod_labels
+          pod_name: pod_name
+          pod_namespace: pod_namespace
+          pod_node_name: pod_node_name
+          pod_owner: pod_owner
+      
+      internal_metrics:
+        type: internal_metrics
+    
+      host_metrics:
+        type: host_metrics
+        collectors:
+          - cpu
+          - disk
+          - filesystem
+          - load
+          - memory
+          - network
+          - swap
+    
+      kubernetes_events:
+        type: kubernetes_events
+    
+    transforms:
+      kubernetes_logs_remap:
+        type: remap
+        inputs:
+          - kubernetes_logs
+        source: |
+          .timestamp = parse_timestamp(.timestamp) ?? now()
+          .kubernetes = object!(
+            pod_name: .pod_name,
+            pod_namespace: .pod_namespace,
+            pod_node_name: .pod_node_name,
+            container_name: .container_name,
+            container_image: .container_image,
+            pod_labels: .pod_labels,
+            pod_owner: .pod_owner
+          )
+          del(.pod_name)
+          del(.pod_namespace)
+          del(.pod_node_name)
+          del(.container_name)
+          del(.container_image)
+          del(.pod_labels)
+          del(.pod_owner)
+    
+      kubernetes_events_remap:
+        type: remap
+        inputs:
+          - kubernetes_events
+        source: |
+          .timestamp = parse_timestamp(.timestamp) ?? now()
+          .kubernetes_event = object!(
+            name: .metadata.name,
+            namespace: .metadata.namespace,
+            reason: .reason,
+            message: .message,
+            type: .type,
+            count: .count,
+            kind: .involvedObject.kind,
+            object_name: .involvedObject.name
+          )
+    
+    sinks:
+      prometheus:
+        type: prometheus_exporter
+        inputs:
+          - internal_metrics
+          - host_metrics
+        address: 0.0.0.0:9598
+    
+      loki:
+        type: loki
+        inputs:
+          - kubernetes_logs_remap
+          - kubernetes_events_remap
+        endpoint: http://loki.monitoring.svc.cluster.local:3100
+        encoding:
+          codec: json
+        labels:
+          app: '{{ kubernetes.pod_labels.app }}'
+          namespace: '{{ kubernetes.pod_namespace }}'
+          pod: '{{ kubernetes.pod_name }}'
+          container: '{{ kubernetes.container_name }}'
+          level: '{{ level }}'
+          node: '{{ kubernetes.pod_node_name }}'
+    
+      jaeger:
+        type: jaeger
+        inputs:
+          - kubernetes_logs_remap
+        endpoint: http://jaeger-collector.monitoring.svc.cluster.local:14268/api/traces
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: vector
+  namespace: monitoring
+  labels:
+    app: vector
+spec:
+  selector:
+    matchLabels:
+      app: vector
+  template:
+    metadata:
+      labels:
+        app: vector
+    spec:
+      serviceAccountName: vector
+      containers:
+      - name: vector
+        image: timberio/vector:0.33.0-debian
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+        ports:
+        - containerPort: 8686
+          name: api
+        - containerPort: 9598
+          name: prometheus
+        volumeMounts:
+        - name: config
+          mountPath: /etc/vector
+          readOnly: true
+        - name: data
+          mountPath: /vector-data-dir
+        - name: var-log
+          mountPath: /var/log/
+          readOnly: true
+        - name: var-lib
+          mountPath: /var/lib
+          readOnly: true
+        - name: docker-containers
+          mountPath: /var/lib/docker/containers
+          readOnly: true
+      volumes:
+      - name: config
+        configMap:
+          name: vector-config
+      - name: data
+        emptyDir: {}
+      - name: var-log
+        hostPath:
+          path: /var/log/
+      - name: var-lib
+        hostPath:
+          path: /var/lib
+      - name: docker-containers
+        hostPath:
+          path: /var/lib/docker/containers
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vector
+  namespace: monitoring
+  labels:
+    app: vector
+spec:
+  ports:
+  - port: 8686
+    targetPort: 8686
+    name: api
+  - port: 9598
+    targetPort: 9598
+    name: prometheus
+  selector:
+    app: vector
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vector
+  namespace: monitoring
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vector
+rules:
+- apiGroups: [""]
+  resources:
+    - nodes
+    - namespaces
+    - pods
+    - events
+  verbs: ["list", "watch"]
+- apiGroups: ["apps"]
+  resources:
+    - daemonsets
+    - deployments
+    - replicasets
+    - statefulsets
+  verbs: ["list", "watch"]
+- apiGroups: ["batch"]
+  resources:
+    - jobs
+    - cronjobs
+  verbs: ["list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vector
+subjects:
+- kind: ServiceAccount
+  name: vector
+  namespace: monitoring

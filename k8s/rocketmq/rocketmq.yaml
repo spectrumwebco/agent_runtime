@@ -1,0 +1,299 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rocketmq-config
+  namespace: messaging
+data:
+  broker.conf: |
+    brokerClusterName = agent-runtime-cluster
+    brokerName = broker-a
+    brokerId = 0
+    deleteWhen = 04
+    fileReservedTime = 48
+    brokerRole = ASYNC_MASTER
+    flushDiskType = ASYNC_FLUSH
+    storePathRootDir = /data/rocketmq/store
+    storePathCommitLog = /data/rocketmq/store/commitlog
+    enableDLegerCommitLog = true
+    dLegerGroup = agent-runtime-broker
+    dLegerPeers = n0-broker-a.rocketmq.messaging.svc.cluster.local:40911;n1-broker-a.rocketmq.messaging.svc.cluster.local:40911;n2-broker-a.rocketmq.messaging.svc.cluster.local:40911
+    dLegerSelfId = n0
+    sendMessageThreadPoolNums = 16
+    autoCreateTopicEnable = true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: namesrv
+  namespace: messaging
+  labels:
+    app: rocketmq
+    component: namesrv
+spec:
+  ports:
+  - port: 9876
+    targetPort: 9876
+    name: namesrv
+  selector:
+    app: rocketmq
+    component: namesrv
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: namesrv
+  namespace: messaging
+  labels:
+    app: rocketmq
+    component: namesrv
+spec:
+  serviceName: namesrv
+  replicas: 3
+  selector:
+    matchLabels:
+      app: rocketmq
+      component: namesrv
+  template:
+    metadata:
+      labels:
+        app: rocketmq
+        component: namesrv
+    spec:
+      containers:
+      - name: namesrv
+        image: apache/rocketmq:5.1.4
+        command: ["sh", "-c", "cd bin && ./mqnamesrv"]
+        ports:
+        - containerPort: 9876
+          name: namesrv
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        volumeMounts:
+        - name: namesrv-storage
+          mountPath: /home/rocketmq/logs
+        - name: namesrv-config
+          mountPath: /home/rocketmq/rocketmq-5.1.4/conf
+        env:
+        - name: JAVA_OPT
+          value: "-Duser.home=/home/rocketmq -Xms1g -Xmx1g -Xmn512m"
+        - name: NAMESRV_ADDR
+          value: "namesrv-0.namesrv.messaging.svc.cluster.local:9876;namesrv-1.namesrv.messaging.svc.cluster.local:9876;namesrv-2.namesrv.messaging.svc.cluster.local:9876"
+      volumes:
+      - name: namesrv-config
+        emptyDir: {}
+  volumeClaimTemplates:
+  - metadata:
+      name: namesrv-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: broker-a
+  namespace: messaging
+  labels:
+    app: rocketmq
+    component: broker
+spec:
+  ports:
+  - port: 10911
+    targetPort: 10911
+    name: broker
+  - port: 40911
+    targetPort: 40911
+    name: dleger
+  selector:
+    app: rocketmq
+    component: broker
+    broker: broker-a
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: broker-a
+  namespace: messaging
+  labels:
+    app: rocketmq
+    component: broker
+    broker: broker-a
+spec:
+  serviceName: broker-a
+  replicas: 3
+  selector:
+    matchLabels:
+      app: rocketmq
+      component: broker
+      broker: broker-a
+  template:
+    metadata:
+      labels:
+        app: rocketmq
+        component: broker
+        broker: broker-a
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - rocketmq
+              - key: component
+                operator: In
+                values:
+                - broker
+              - key: broker
+                operator: In
+                values:
+                - broker-a
+            topologyKey: "kubernetes.io/hostname"
+      containers:
+      - name: broker
+        image: apache/rocketmq:5.1.4
+        command: ["sh", "-c", "cd bin && ./mqbroker -c /etc/rocketmq/broker.conf"]
+        ports:
+        - containerPort: 10911
+          name: broker
+        - containerPort: 40911
+          name: dleger
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        volumeMounts:
+        - name: broker-storage
+          mountPath: /data/rocketmq/store
+        - name: broker-logs
+          mountPath: /home/rocketmq/logs
+        - name: broker-config
+          mountPath: /etc/rocketmq
+        env:
+        - name: JAVA_OPT
+          value: "-Duser.home=/home/rocketmq -Xms2g -Xmx2g -Xmn1g"
+        - name: NAMESRV_ADDR
+          value: "namesrv-0.namesrv.messaging.svc.cluster.local:9876;namesrv-1.namesrv.messaging.svc.cluster.local:9876;namesrv-2.namesrv.messaging.svc.cluster.local:9876"
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "sed -i \"s/n0-broker-a/${POD_NAME}/g\" /etc/rocketmq/broker.conf && sed -i \"s/n0/${POD_NAME}/g\" /etc/rocketmq/broker.conf"]
+      volumes:
+      - name: broker-config
+        configMap:
+          name: rocketmq-config
+      - name: broker-logs
+        emptyDir: {}
+  volumeClaimTemplates:
+  - metadata:
+      name: broker-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 50Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rocketmq-dashboard
+  namespace: messaging
+  labels:
+    app: rocketmq
+    component: dashboard
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: dashboard
+  selector:
+    app: rocketmq
+    component: dashboard
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rocketmq-dashboard
+  namespace: messaging
+  labels:
+    app: rocketmq
+    component: dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rocketmq
+      component: dashboard
+  template:
+    metadata:
+      labels:
+        app: rocketmq
+        component: dashboard
+    spec:
+      containers:
+      - name: dashboard
+        image: apacherocketmq/rocketmq-dashboard:1.0.0
+        ports:
+        - containerPort: 8080
+          name: dashboard
+        env:
+        - name: JAVA_OPTS
+          value: "-Drocketmq.namesrv.addr=namesrv-0.namesrv.messaging.svc.cluster.local:9876;namesrv-1.namesrv.messaging.svc.cluster.local:9876;namesrv-2.namesrv.messaging.svc.cluster.local:9876 -Dserver.port=8080"
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: messaging
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: rocketmq-go-client-config
+  namespace: messaging
+data:
+  client.json: |
+    {
+      "NameServer": "namesrv-0.namesrv.messaging.svc.cluster.local:9876;namesrv-1.namesrv.messaging.svc.cluster.local:9876;namesrv-2.namesrv.messaging.svc.cluster.local:9876",
+      "ClientIP": "",
+      "InstanceName": "DEFAULT",
+      "Credentials": {
+        "AccessKey": "",
+        "SecretKey": ""
+      },
+      "NamespaceV2": "",
+      "Namespace": "",
+      "GroupName": "agent-runtime-client",
+      "UnitName": "",
+      "UnitMode": false,
+      "VIPChannelEnabled": false,
+      "RetryTimes": 3,
+      "ClientCallbackExecutorThreads": 16,
+      "PollNameServerInterval": 30000,
+      "HeartbeatBrokerInterval": 30000,
+      "PersistConsumerOffsetInterval": 5000
+    }
