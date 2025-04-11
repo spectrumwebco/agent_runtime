@@ -30,24 +30,49 @@ type ToolConfig struct {
 }
 
 type ToolRegistry struct {
-	config    *ToolConfig
-	commands  []*Command
-	toolsPath string
+	config       *ToolConfig
+	commands     []*Command
+	toolsPath    string
+	scriptRunner *python.ScriptRunner // Added script runner for FFI
 }
 
-func NewToolRegistry(config *ToolConfig) (*ToolRegistry, error) {
+func NewToolRegistry(config *ToolConfig, scriptRunner *python.ScriptRunner) (*ToolRegistry, error) {
 	if config == nil {
 		config = &ToolConfig{
 			ExecutionTimeout: 60 * time.Second,
 			MaxOutputSize:    10000,
-			ToolsDir:        "tools",
+			ToolsDir:        "tools", // Default, should be configurable
+		}
+	}
+	if scriptRunner == nil {
+		projectRoot, _ := os.Getwd() // Or determine project root differently
+		toolsFullPath := filepath.Join(projectRoot, config.ToolsDir)
+		var err error
+		scriptRunner, err = python.NewScriptRunner(toolsFullPath)
+		if err != nil {
+			fmt.Printf("Warning: Failed to create default script runner: %v. Python tools might not work.\n", err)
+			// return nil, fmt.Errorf("failed to create default script runner: %w", err)
+		} else {
+			fmt.Println("Warning: No script runner provided, created default.")
 		}
 	}
 
 	registry := &ToolRegistry{
-		config:   config,
-		commands: make([]*Command, 0),
+		config:       config,
+		commands:     make([]*Command, 0),
+		scriptRunner: scriptRunner, // Assign even if nil (indicates FFI issues)
 	}
+
+	if config.ToolsDir != "" {
+		projectRoot, _ := os.Getwd() // Or determine project root differently
+		toolsFullPath := filepath.Join(projectRoot, config.ToolsDir)
+		if err := registry.LoadTools(toolsFullPath); err != nil {
+			fmt.Printf("Warning: Failed to load tools from %s during initialization: %v\n", toolsFullPath, err)
+		} else {
+			fmt.Printf("Successfully loaded tools from %s\n", toolsFullPath)
+		}
+	}
+
 
 	return registry, nil
 }
@@ -86,45 +111,55 @@ func (r *ToolRegistry) ListCommands() []*Command {
 }
 
 func (r *ToolRegistry) ExecuteAction(action string, env interface{}) (string, error) {
-	cmd, args, err := r.parseAction(action)
+	parser := parsing.NewCmdParser() // Assuming CmdParser exists and is ported
+	parsedCmd, err := parser.Parse(action)
 	if err != nil {
-		return "", fmt.Errorf("failed to parse action: %w", err)
+		return "", fmt.Errorf("failed to parse action '%s': %w", action, err)
 	}
 
-	command, err := r.GetCommand(cmd)
+	cmdName := parsedCmd.Name
+	args := parsedCmd.Args // Args should be map[string]interface{}
+
+	commandDef, err := r.GetCommand(cmdName)
 	if err != nil {
-		return "", err
+		fmt.Printf("Warning: Command definition for '%s' not found in tools.json\n", cmdName)
+	} else {
+		if err := r.validateArguments(commandDef, args); err != nil {
+			return "", fmt.Errorf("argument validation failed for command '%s': %w", cmdName, err)
+		}
 	}
 
-	if err := r.validateArguments(command, args); err != nil {
-		return "", err
+	if r.scriptRunner == nil {
+		return "", fmt.Errorf("script runner is not initialized or failed to initialize")
 	}
 
-	scriptPath := filepath.Join(r.toolsPath, cmd, "run.py")
-	if _, err := os.Stat(scriptPath); os.IsNotExist(err) {
-		return "", fmt.Errorf("command implementation not found: %s", cmd)
-	}
-
-	argsJSON, err := json.Marshal(args)
+	resultInterface, err := r.scriptRunner.RunToolScript(cmdName, args)
 	if err != nil {
-		return "", fmt.Errorf("failed to marshal arguments: %w", err)
+		return "", fmt.Errorf("failed to execute tool '%s' via FFI: %w", cmdName, err)
 	}
 
-	return fmt.Sprintf("Executed %s with args %s", cmd, string(argsJSON)), nil
+	var resultStr string
+	switch v := resultInterface.(type) {
+	case string:
+		resultStr = v
+	case []byte:
+		resultStr = string(v)
+	default:
+		jsonBytes, jsonErr := json.MarshalIndent(v, "", "  ")
+		if jsonErr != nil {
+			resultStr = fmt.Sprintf("%+v", v) // Fallback
+		} else {
+			resultStr = string(jsonBytes)
+		}
+	}
+
+	if len(resultStr) > r.config.MaxOutputSize {
+		resultStr = resultStr[:r.config.MaxOutputSize] + "\n... (output truncated)"
+	}
+
+	return resultStr, nil
 }
 
-func (r *ToolRegistry) parseAction(action string) (string, map[string]interface{}, error) {
-	var result struct {
-		Command string                 `json:"command"`
-		Args    map[string]interface{} `json:"args"`
-	}
-
-	if err := json.Unmarshal([]byte(action), &result); err != nil {
-		return "", nil, fmt.Errorf("invalid action format: %w", err)
-	}
-
-	return result.Command, result.Args, nil
-}
 
 func (r *ToolRegistry) validateArguments(cmd *Command, args map[string]interface{}) error {
 	for _, arg := range cmd.Arguments {

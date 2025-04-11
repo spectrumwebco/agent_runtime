@@ -83,7 +83,7 @@ type DefaultAgent struct {
 	Name                 string
 	Config               *config.Config // Placeholder for agent config (needs definition)
 	Templates            interface{}    // Placeholder for template config (e.g., TemplateConfig struct)
-	Tools                *tools.Handler // Placeholder for tool handler (needs definition)
+	Tools                *tools.Registry // Use ToolRegistry directly for now
 	HistoryProcessors    []interface{}  // Placeholder for history processors
 	Model                interface{}    // Placeholder for the language model interface
 	MaxRequeries         int
@@ -142,10 +142,25 @@ func (a *DefaultAgent) Setup(environment *env.SWEEnv, problemStmt *ProblemStatem
 
 	fmt.Println("Placeholder: Installing tools...")
 	if a.Tools == nil {
-		toolRegistry, _ := tools.NewRegistry(a.Config) // Assuming a.Config is initialized
-		toolDefs := []tools.ToolDefinition{} // Load from config
-		toolConf := tools.ToolConfig{} // Load from config
-		a.Tools, _ = tools.NewHandler(toolConf, toolDefs, toolRegistry)
+		toolConf := &tools.ToolConfig{
+			ToolsDir: "tools", // Default path, should be configurable
+		}
+		var err error
+		projectRoot, _ := os.Getwd() // Or determine project root differently
+		toolsFullPath := filepath.Join(projectRoot, toolConf.ToolsDir)
+		scriptRunner, runnerErr := python.NewScriptRunner(toolsFullPath)
+		if runnerErr != nil {
+			fmt.Printf("Warning: Failed to initialize Python script runner: %v. Python tools will not be available.\n", runnerErr)
+			scriptRunner = nil // Explicitly set to nil if initialization fails
+		}
+
+		a.Tools, err = tools.NewToolRegistry(toolConf, scriptRunner) // Pass scriptRunner
+		if err != nil {
+			return fmt.Errorf("failed to initialize tool registry: %w", err)
+		}
+		// if err != nil {
+		// }
+		fmt.Println("Warning: Tools handler was nil, initialized with placeholder ToolRegistry.")
 		fmt.Println("Warning: Tools handler was nil, initialized with placeholder.")
 	}
 
@@ -157,7 +172,7 @@ func (a *DefaultAgent) Setup(environment *env.SWEEnv, problemStmt *ProblemStatem
 		ModelStats:      make(map[string]interface{}), // Initialize maps
 		EditedFiles:     make(map[string]string),
 	}
-	a.History = make([]map[string]string, 0) // Reset history
+	a.History = make([]Message, 0) // Reset history
 	a.trajectory = make([]TrajectoryStep, 0) // Reset trajectory
 	a.nConsecutiveTimeouts = 0
 	a.totalExecutionTime = 0
@@ -229,10 +244,77 @@ func (a *DefaultAgent) AddStepToHistory(thought, action string, modelOutput map[
 }
 
 
-func (a *DefaultAgent) Step() (*StepOutput, error) {
-	fmt.Println("Placeholder: Executing agent step...")
-	stepOutput := &StepOutput{Done: true} // Placeholder to stop loop for now
-	a.addStepToTrajectory(stepOutput)     // Add placeholder step
+func (a *DefaultAgent) Step(ctx context.Context) (*StepOutput, error) {
+	startTime := time.Now()
+	fmt.Printf("\n--- Step %d ---\n", len(a.trajectory)+1)
+
+	modelOutput, err := a.QueryModel(ctx, a.History)
+	if err != nil {
+		return nil, fmt.Errorf("failed to query model: %w", err)
+	}
+	fmt.Printf("Model Output: %+v\n", modelOutput)
+
+	parser := parser.NewThoughtActionParser() // Using ThoughtActionParser as default for now
+	thought, action, err := parser.Parse(modelOutput, a.Tools.ListCommands()) // Assuming Tools has ListCommands
+	if err != nil {
+		fmt.Printf("Warning: Failed to parse model output: %v. Attempting recovery...\n", err)
+		thought = "Parsing failed, attempting raw output as action."
+		action = modelOutput["message"].(string)
+	}
+	fmt.Printf("Thought: %s\nAction: %s\n", thought, action)
+
+	observation, execErr := a.Tools.ExecuteAction(action, a.Env) // Assuming Tools has ExecuteAction
+	executionTime := time.Since(startTime)
+	a.totalExecutionTime += executionTime
+
+	if execErr != nil {
+		fmt.Printf("Execution Error: %v\n", execErr)
+		observation = fmt.Sprintf("Error executing action: %v", execErr)
+		// 	a.nConsecutiveTimeouts = 0
+		// }
+	} else {
+		// a.nConsecutiveTimeouts = 0
+		fmt.Printf("Observation: %s\n", observation)
+	}
+
+	done := false
+	exitStatus := "incomplete"
+	submission := ""
+	if strings.HasPrefix(action, "submit") {
+		done = true
+		exitStatus = "submitted"
+		submission = strings.TrimSpace(strings.TrimPrefix(action, "submit"))
+		fmt.Println("Submit action detected.")
+	}
+
+	currentState, stateErr := a.Tools.GetState(a.Env) // Assuming Tools has GetState
+	if stateErr != nil {
+		fmt.Printf("Warning: Failed to get environment state: %v\n", stateErr)
+		currentState = make(map[string]interface{}) // Use empty state on error
+	}
+
+	stepOutput := &StepOutput{
+		Thought:       thought,
+		Action:        action,
+		Observation:   observation,
+		Output:        modelOutput["message"].(string), // Raw model output
+		State:         currentState,
+		Submission:    submission,
+		ExitStatus:    exitStatus,
+		Done:          done,
+		ExecutionTime: executionTime,
+		ExtraInfo:     make(map[string]interface{}), // Initialize ExtraInfo
+	}
+
+	a.AddStepToHistory(thought, action, modelOutput, observation)
+
+	a.addStepToTrajectory(stepOutput)
+
+	// }
+
+	fmt.Printf("Step execution time: %s\n", executionTime)
+	fmt.Printf("Total execution time: %s\n", a.totalExecutionTime)
+
 	return stepOutput, nil
 }
 
