@@ -1,0 +1,119 @@
+/* Devin-inspired flipped layout styles */
+.devin-flipped-layout {
+  display: grid;
+  height: 65vh;
+  grid-template-columns: 3fr 2fr;
+  grid-template-rows: 3fr 1fr;
+  gap: 0.5rem;
+}
+
+.devin-flipped-layout .envFeed {
+  grid-column: 1;
+  grid-row: 1;
+  height: 100%;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.devin-flipped-layout .agentFeed {
+  grid-column: 2;
+  grid-row: 1;
+  height: 100%;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.devin-flipped-layout .logPanel {
+  grid-column: 1 / 3;
+  grid-row: 2;
+  height: 100%;
+  border-radius: 0.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+  .devin-flipped-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+  }
+
+  .devin-flipped-layout .envFeed {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .devin-flipped-layout .agentFeed {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .devin-flipped-layout .logPanel {
+    grid-column: 1;
+    grid-row: 3;
+  }
+}
+
+/* Enhanced styling for panels */
+.devin-flipped-layout .scrollableDiv {
+  background-color: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 0 0 0.5rem 0.5rem;
+}
+
+.devin-flipped-layout .mac-window-top-bar {
+  background: linear-gradient(to right, #f8f9fa, #e9ecef);
+  border-radius: 0.5rem 0.5rem 0 0;
+  border: 1px solid #e9ecef;
+  border-bottom: none;
+}
+
+.devin-flipped-layout .mac-window-top-bar.dark {
+  background: linear-gradient(to right, #343a40, #212529);
+  color: white;
+}
+
+/* Panel header styling */
+.ide-panel-header {
+  font-weight: 600;
+}
+
+.agent-panel-header {
+  font-weight: 600;
+}
+
+/* Tailwind-inspired utility classes */
+.devin-flipped-layout .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.devin-flipped-layout .rounded-lg {
+  border-radius: 0.5rem;
+}
+
+.devin-flipped-layout .bg-white {
+  background-color: #ffffff;
+}
+
+.devin-flipped-layout .bg-gray-100 {
+  background-color: #f3f4f6;
+}
+
+.devin-flipped-layout .text-gray-800 {
+  color: #1f2937;
+}
+
+.devin-flipped-layout .border-gray-200 {
+  border-color: #e5e7eb;
+}
+
+.devin-flipped-layout .border {
+  border-width: 1px;
+}
+
+/* Transition effects */
+.devin-flipped-layout .transition {
+  transition-property: background-color, border-color, color, fill, stroke, opacity, box-shadow, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
