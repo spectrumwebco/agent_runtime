@@ -3,12 +3,15 @@ package agent
 import (
 	"context"
 	"fmt"
-	"os" // Added for file system operations
-	"path/filepath" // Added for path manipulation
+	"os"
+	"path/filepath"
+	"strings"
 	"time"
 
-	"github.com/spectrumwebco/agent_runtime/internal/config" // Assuming config is internal
-	"github.com/spectrumwebco/agent_runtime/internal/env"   // Assuming env is internal
+	"github.com/spectrumwebco/agent_runtime/internal/config"
+	"github.com/spectrumwebco/agent_runtime/internal/env"
+	"github.com/spectrumwebco/agent_runtime/internal/ffi/python"
+	"github.com/spectrumwebco/agent_runtime/internal/parser"
 	"github.com/spectrumwebco/agent_runtime/pkg/tools"
 )
 
@@ -83,9 +86,11 @@ type DefaultAgent struct {
 	Name                 string
 	Config               *config.Config // Placeholder for agent config (needs definition)
 	Templates            interface{}    // Placeholder for template config (e.g., TemplateConfig struct)
-	Tools                *tools.Registry // Use ToolRegistry directly for now
+	Tools                *tools.ToolRegistry // Use ToolRegistry directly for now
 	HistoryProcessors    []interface{}  // Placeholder for history processors
 	Model                interface{}    // Placeholder for the language model interface
+	Parser               parser.Parser  // Parser for model output
+	ModelName            string         // Name of the model to use
 	MaxRequeries         int
 	History              []Message           // Stores the conversation history as Message objects
 	trajectory           []TrajectoryStep    // Stores the execution trajectory
@@ -99,19 +104,67 @@ type DefaultAgent struct {
 	totalExecutionTime   time.Duration
 }
 
-func NewDefaultAgent(/* TODO: Add parameters based on SWE-Agent __init__ */) (*DefaultAgent, error) {
-	fmt.Println("Placeholder: Initializing DefaultAgent...")
+type AgentOption func(*DefaultAgent) error
+
+func WithTools(toolRegistry *tools.ToolRegistry) AgentOption {
+	return func(a *DefaultAgent) error {
+		a.Tools = toolRegistry
+		return nil
+	}
+}
+
+func WithParser(p parser.Parser) AgentOption {
+	return func(a *DefaultAgent) error {
+		a.Parser = p
+		return nil
+	}
+}
+
+func WithModelName(modelName string) AgentOption {
+	return func(a *DefaultAgent) error {
+		a.ModelName = modelName
+		return nil
+	}
+}
+
+func WithMaxRequeries(maxRequeries int) AgentOption {
+	return func(a *DefaultAgent) error {
+		a.MaxRequeries = maxRequeries
+		return nil
+	}
+}
+
+func WithConfig(cfg *config.Config) AgentOption {
+	return func(a *DefaultAgent) error {
+		a.Config = cfg
+		return nil
+	}
+}
+
+func NewDefaultAgent(options ...AgentOption) (*DefaultAgent, error) {
+	fmt.Println("Initializing DefaultAgent...")
 	agentInfo := AgentInfo{
 		ModelStats:  make(map[string]interface{}),
 		EditedFiles: make(map[string]string),
 	}
-	return &DefaultAgent{
+	
+	agent := &DefaultAgent{
 		Name:              "default-go-agent",
 		MaxRequeries:      3, // Default from Python
 		History:           make([]Message, 0),
 		trajectory:        make([]TrajectoryStep, 0),
-		Info:              agentInfo, // Use initialized AgentInfo
-	}, nil
+		Info:              agentInfo,
+		ModelName:         "gpt-4", // Default model
+		Parser:            parser.NewThoughtActionParser(), // Default parser
+	}
+	
+	for _, option := range options {
+		if err := option(agent); err != nil {
+			return nil, fmt.Errorf("failed to apply agent option: %w", err)
+		}
+	}
+	
+	return agent, nil
 }
 
 func (a *DefaultAgent) Setup(environment *env.SWEEnv, problemStmt *ProblemStatement, outputDirPath string) error {
@@ -254,8 +307,15 @@ func (a *DefaultAgent) Step(ctx context.Context) (*StepOutput, error) {
 	}
 	fmt.Printf("Model Output: %+v\n", modelOutput)
 
-	parser := parser.NewThoughtActionParser() // Using ThoughtActionParser as default for now
-	thought, action, err := parser.Parse(modelOutput, a.Tools.ListCommands()) // Assuming Tools has ListCommands
+	var parser parser.Parser
+	if a.Parser != nil {
+		parser = a.Parser
+	} else {
+		parser = parser.NewThoughtActionParser()
+		fmt.Println("Warning: Using default ThoughtActionParser")
+	}
+
+	thought, action, err := parser.Parse(modelOutput, a.Tools.ListCommands())
 	if err != nil {
 		fmt.Printf("Warning: Failed to parse model output: %v. Attempting recovery...\n", err)
 		thought = "Parsing failed, attempting raw output as action."
@@ -263,17 +323,19 @@ func (a *DefaultAgent) Step(ctx context.Context) (*StepOutput, error) {
 	}
 	fmt.Printf("Thought: %s\nAction: %s\n", thought, action)
 
-	observation, execErr := a.Tools.ExecuteAction(action, a.Env) // Assuming Tools has ExecuteAction
+	observation, execErr := a.Tools.ExecuteAction(action, a.Env)
 	executionTime := time.Since(startTime)
 	a.totalExecutionTime += executionTime
 
 	if execErr != nil {
 		fmt.Printf("Execution Error: %v\n", execErr)
 		observation = fmt.Sprintf("Error executing action: %v", execErr)
-		// 	a.nConsecutiveTimeouts = 0
-		// }
+		a.nConsecutiveTimeouts++
+		if a.nConsecutiveTimeouts >= a.Tools.GetConfig().MaxConsecutiveTimeouts {
+			return nil, fmt.Errorf("too many consecutive timeouts (%d)", a.nConsecutiveTimeouts)
+		}
 	} else {
-		// a.nConsecutiveTimeouts = 0
+		a.nConsecutiveTimeouts = 0
 		fmt.Printf("Observation: %s\n", observation)
 	}
 
@@ -287,7 +349,7 @@ func (a *DefaultAgent) Step(ctx context.Context) (*StepOutput, error) {
 		fmt.Println("Submit action detected.")
 	}
 
-	currentState, stateErr := a.Tools.GetState(a.Env) // Assuming Tools has GetState
+	currentState, stateErr := a.Tools.GetState(a.Env)
 	if stateErr != nil {
 		fmt.Printf("Warning: Failed to get environment state: %v\n", stateErr)
 		currentState = make(map[string]interface{}) // Use empty state on error
@@ -307,10 +369,13 @@ func (a *DefaultAgent) Step(ctx context.Context) (*StepOutput, error) {
 	}
 
 	a.AddStepToHistory(thought, action, modelOutput, observation)
-
 	a.addStepToTrajectory(stepOutput)
 
-	// }
+	if a.trajPath != "" {
+		if err := a.saveTrajectory(); err != nil {
+			fmt.Printf("Warning: Failed to save trajectory: %v\n", err)
+		}
+	}
 
 	fmt.Printf("Step execution time: %s\n", executionTime)
 	fmt.Printf("Total execution time: %s\n", a.totalExecutionTime)
@@ -319,25 +384,42 @@ func (a *DefaultAgent) Step(ctx context.Context) (*StepOutput, error) {
 }
 
 func (a *DefaultAgent) Run(environment *env.SWEEnv, problemStmt *ProblemStatement, outputDirPath string) (*AgentRunResult, error) {
-	fmt.Println("Placeholder: Starting agent run...")
+	fmt.Println("Starting agent run...")
 
 	err := a.Setup(environment, problemStmt, outputDirPath)
 	if err != nil {
 		return nil, fmt.Errorf("agent setup failed: %w", err)
 	}
 
+	totalTimeout := time.Duration(a.Tools.GetConfig().TotalExecutionTimeout) * time.Second
+	ctx, cancel := context.WithTimeout(context.Background(), totalTimeout)
+	defer cancel()
+
 	var stepOutput *StepOutput
-	for i := 0; i < 1; i++ { // Limit steps for now
-		stepOutput, err = a.Step()
-		if err != nil {
-			return nil, fmt.Errorf("agent step failed: %w", err)
-		}
-		if stepOutput.Done {
-			break
+	maxSteps := 50 // Reasonable default, could be configurable
+	for i := 0; i < maxSteps; i++ {
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("agent run timed out after %s", totalTimeout)
+		default:
+			stepOutput, err = a.Step(ctx)
+			if err != nil {
+				return nil, fmt.Errorf("agent step failed: %w", err)
+			}
+			
+			if stepOutput.Done {
+				a.Info.ExitStatus = stepOutput.ExitStatus
+				a.Info.Submission = stepOutput.Submission
+				break
+			}
 		}
 	}
 
-	fmt.Println("Placeholder: Agent run finished.")
+	if err := a.saveTrajectory(); err != nil {
+		fmt.Printf("Warning: Failed to save final trajectory: %v\n", err)
+	}
+
+	fmt.Println("Agent run finished.")
 	return &AgentRunResult{
 		Info:       a.Info,
 		Trajectory: a.trajectory,
