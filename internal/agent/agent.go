@@ -30,6 +30,7 @@ type Message struct {
 }
 // Info contains metadata about the agent's execution and state
 
+// Info contains metadata about the agent's execution and state
 type Info struct {
 	Submission      string                 `json:"submission"`
 	ExitStatus      string                 `json:"exit_status"`

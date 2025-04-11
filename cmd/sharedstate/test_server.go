@@ -24,6 +24,7 @@ type WebSocketMessage struct {
 }
 // Connection represents a WebSocket client connection
 
+// Connection represents a WebSocket client connection
 type Connection struct {
 	conn      *websocket.Conn
 	send      chan WebSocketMessage
@@ -34,6 +35,7 @@ type Connection struct {
 // WebSocketManager manages WebSocket connections and topic subscriptions
 }
 
+// WebSocketManager manages WebSocket connections and topic subscriptions
 type WebSocketManager struct {
 	upgrader    websocket.Upgrader
 	connections map[string]*Connection
@@ -42,6 +44,7 @@ type WebSocketManager struct {
 	mutex       sync.RWMutex
 }
 
+// NewWebSocketManager creates a new WebSocketManager instance
 func NewWebSocketManager() *WebSocketManager {
 	return &WebSocketManager{
 		upgrader: websocket.Upgrader{
@@ -57,6 +60,7 @@ func NewWebSocketManager() *WebSocketManager {
 	}
 }
 
+// SubscribeToTopic subscribes a client to a specific topic
 func (m *WebSocketManager) SubscribeToTopic(clientID, topic string) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -77,6 +81,7 @@ func (m *WebSocketManager) SubscribeToTopic(clientID, topic string) {
 	log.Printf("Client %s subscribed to topic: %s\n", clientID, topic)
 }
 
+// UnsubscribeFromTopic unsubscribes a client from a specific topic
 func (m *WebSocketManager) UnsubscribeFromTopic(clientID, topic string) {
 	m.mutex.Lock()
 	defer m.mutex.Unlock()
@@ -99,6 +104,7 @@ func (m *WebSocketManager) UnsubscribeFromTopic(clientID, topic string) {
 	log.Printf("Client %s unsubscribed from topic: %s\n", clientID, topic)
 }
 
+// PublishToTopic publishes a message to all clients subscribed to a topic
 func (m *WebSocketManager) PublishToTopic(topic string, data interface{}) {
 	message := WebSocketMessage{
 		Type:      "message",
@@ -126,6 +132,7 @@ func (m *WebSocketManager) PublishToTopic(topic string, data interface{}) {
 	m.mutex.RUnlock()
 }
 
+// HandleConnection handles new WebSocket connection requests
 func (m *WebSocketManager) HandleConnection(w http.ResponseWriter, r *http.Request) {
 	clientID := r.URL.Query().Get("client_id")
 	if clientID == "" {
