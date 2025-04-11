@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"context"
 	"fmt"
 	"os" // Added for file system operations
 	"path/filepath" // Added for path manipulation
@@ -10,6 +11,17 @@ import (
 	"github.com/spectrumwebco/agent_runtime/internal/env"   // Assuming env is internal
 	"github.com/spectrumwebco/agent_runtime/pkg/tools"
 )
+
+type Message struct {
+	Role        string                 `json:"role"`         // system, assistant, user
+	Content     string                 `json:"content"`      // The actual message content
+	Agent       string                 `json:"agent"`        // Name of the agent that generated this message
+	MessageType string                 `json:"message_type"` // Type of message (e.g., system_prompt, observation)
+	Thought     string                 `json:"thought,omitempty"`
+	Action      string                 `json:"action,omitempty"`
+	RawOutput   string                 `json:"raw_output,omitempty"`
+	ExtraInfo   map[string]interface{} `json:"extra_info,omitempty"`
+}
 
 type AgentInfo struct {
 	Submission      string                 `json:"submission"`
@@ -75,10 +87,10 @@ type DefaultAgent struct {
 	HistoryProcessors    []interface{}  // Placeholder for history processors
 	Model                interface{}    // Placeholder for the language model interface
 	MaxRequeries         int
-	History              []map[string]string // Stores the conversation history
+	History              []Message           // Stores the conversation history as Message objects
 	trajectory           []TrajectoryStep    // Stores the execution trajectory
 	Info                 AgentInfo
-	env                  *env.SWEEnv       // Execution environment
+	Env                  *env.SWEEnv       // Execution environment (exported for loop.go)
 	problemStatement     *ProblemStatement // Task definition
 	outputDir            string            // Directory for output files
 	trajPath             string            // Path to save trajectory file
@@ -96,7 +108,7 @@ func NewDefaultAgent(/* TODO: Add parameters based on SWE-Agent __init__ */) (*D
 	return &DefaultAgent{
 		Name:              "default-go-agent",
 		MaxRequeries:      3, // Default from Python
-		History:           make([]map[string]string, 0),
+		History:           make([]Message, 0),
 		trajectory:        make([]TrajectoryStep, 0),
 		Info:              agentInfo, // Use initialized AgentInfo
 	}, nil
@@ -120,7 +132,7 @@ func (a *DefaultAgent) Setup(environment *env.SWEEnv, problemStmt *ProblemStatem
 
 	a.outputDir = outputDirPath
 	a.problemStatement = problemStmt
-	a.env = environment
+	a.Env = environment
 	instanceID := a.problemStatement.GetID()
 
 	fmt.Printf("Setting up agent for instance %s\n", instanceID)
@@ -150,7 +162,7 @@ func (a *DefaultAgent) Setup(environment *env.SWEEnv, problemStmt *ProblemStatem
 	a.nConsecutiveTimeouts = 0
 	a.totalExecutionTime = 0
 
-	err = a.env.SetEnvVariables(map[string]string{
+	err = a.Env.SetEnvVariables(map[string]string{
 		"PROBLEM_STATEMENT": a.problemStatement.GetProblemStatement(),
 	})
 	if err != nil {
@@ -166,7 +178,7 @@ func (a *DefaultAgent) Setup(environment *env.SWEEnv, problemStmt *ProblemStatem
 		return fmt.Errorf("failed to add demonstrations: %w", err)
 	}
 
-	initialState, err := a.Tools.GetState(a.env)
+	initialState, err := a.Tools.GetState(a.Env)
 	if err != nil {
 		fmt.Printf("Warning: Failed to get initial state: %v\n", err)
 		initialState = make(map[string]interface{}) // Use empty state
@@ -180,6 +192,42 @@ func (a *DefaultAgent) Setup(environment *env.SWEEnv, problemStmt *ProblemStatem
 	fmt.Println("Agent setup complete.")
 	return nil
 }
+
+func (a *DefaultAgent) QueryModel(ctx context.Context, history []Message) (map[string]interface{}, error) {
+	fmt.Println("Placeholder: Querying model...")
+	
+	return map[string]interface{}{
+		"message": fmt.Sprintf("Placeholder model output for step %d with thought and action", len(history)),
+	}, nil
+}
+
+func (a *DefaultAgent) AddStepToHistory(thought, action string, modelOutput map[string]interface{}, observation string) {
+	assistantContent := ""
+	if thought != "" {
+		assistantContent += thought + "\n"
+	}
+	assistantContent += fmt.Sprintf("```tool\n%s\n```", action) // Basic tool format
+
+	assistantMsg := Message{
+		Role:        "assistant",
+		Content:     assistantContent,
+		Thought:     thought,
+		Action:      action,
+		RawOutput:   modelOutput["message"].(string), // Store raw model output
+		Agent:       a.Name,
+		MessageType: "assistant_response",
+	}
+	a._appendHistory(assistantMsg)
+
+	observationMsg := Message{
+		Role:        "user", // Observations are treated as user input for the next turn
+		Content:     fmt.Sprintf("Observation:\n%s", observation),
+		Agent:       a.Name,
+		MessageType: "observation",
+	}
+	a._appendHistory(observationMsg)
+}
+
 
 func (a *DefaultAgent) Step() (*StepOutput, error) {
 	fmt.Println("Placeholder: Executing agent step...")
@@ -217,9 +265,20 @@ func (a *DefaultAgent) Run(environment *env.SWEEnv, problemStmt *ProblemStatemen
 func (a *DefaultAgent) addStepToTrajectory(step *StepOutput) {
 	histCopy := make([]map[string]string, len(a.History))
 	for i, msg := range a.History {
-		msgCopy := make(map[string]string)
-		for k, v := range msg {
-			msgCopy[k] = v
+		msgCopy := map[string]string{
+			"role":         msg.Role,
+			"content":      msg.Content,
+			"agent":        msg.Agent,
+			"message_type": msg.MessageType,
+		}
+		if msg.Thought != "" {
+			msgCopy["thought"] = msg.Thought
+		}
+		if msg.Action != "" {
+			msgCopy["action"] = msg.Action
+		}
+		if msg.RawOutput != "" {
+			msgCopy["raw_output"] = msg.RawOutput
 		}
 		histCopy[i] = msgCopy
 	}
@@ -248,41 +307,69 @@ type AgentRunResult struct {
 	Trajectory []TrajectoryStep `json:"trajectory"`
 }
 
-func (a *DefaultAgent) _appendHistory(item map[string]string) {
-	histItem := make(map[string]string)
-	for k, v := range item {
-		histItem[k] = v
+func (a *DefaultAgent) _appendHistory(item Message) {
+	msgCopy := Message{
+		Role:        item.Role,
+		Content:     item.Content,
+		Agent:       item.Agent,
+		MessageType: item.MessageType,
+		Thought:     item.Thought,
+		Action:      item.Action,
+		RawOutput:   item.RawOutput,
 	}
-	a.History = append(a.History, histItem)
+	
+	if item.ExtraInfo != nil {
+		msgCopy.ExtraInfo = make(map[string]interface{})
+		for k, v := range item.ExtraInfo {
+			msgCopy.ExtraInfo[k] = v
+		}
+	}
+	
+	a.History = append(a.History, msgCopy)
 }
 
 func (a *DefaultAgent) addSystemMessageToHistory() error {
-	fmt.Println("Placeholder: Adding system message to history...")
-	systemMsg := "Placeholder System Message for " + a.problemStatement.GetID() // Placeholder
-	fmt.Printf("SYSTEM (%s)\n%s\n", a.Name, systemMsg)
-	a._appendHistory(map[string]string{
-		"role":         "system",
-		"content":      systemMsg,
-		"agent":        a.Name,
-		"message_type": "system_prompt",
+	fmt.Println("Adding system message to history...")
+	systemTemplate := "You are SWE-Agent, an autonomous software development agent. Follow the instructions carefully and use the provided tools to solve the task." // Placeholder template
+	
+	systemMsg := systemTemplate // Use raw template for now
+
+	if systemMsg != "" {
+		fmt.Printf("SYSTEM (%s)\n%s\n", a.Name, systemMsg)
+	a._appendHistory(Message{
+		Role:        "system",
+		Content:     systemMsg,
+		Agent:       a.Name,
+		MessageType: "system_prompt",
 	})
+	}
 	return nil
 }
 
 func (a *DefaultAgent) addDemonstrationsToHistory() error {
-	fmt.Println("Placeholder: Adding demonstrations to history...")
+	fmt.Println("Adding demonstrations to history...")
+
+	// 		}
+	// 	}
+	// }
+
 	return nil
 }
 
-func (a *DefaultAgent) addInstanceTemplateToHistory(state map[string]interface{}) error {
-	fmt.Println("Placeholder: Adding instance template to history...")
-	instanceMsg := fmt.Sprintf("Placeholder Instance Template for %s\nInitial State: %+v", a.problemStatement.GetID(), state) // Placeholder
-	fmt.Printf("USER (%s)\n%s\n", a.Name, instanceMsg)
-	a._appendHistory(map[string]string{
-		"role":         "user",
-		"content":      instanceMsg,
-		"agent":        a.Name,
-		"message_type": "instance_prompt",
+func (a *DefaultAgent) addInstanceTemplateToHistory(initialState map[string]interface{}) error {
+	fmt.Println("Adding instance template to history...")
+	instanceTemplate := "Solve the following task:\n{{problem_statement}}\n\nAvailable tools:\n{{command_docs}}\n\nInitial State:\n{{initial_state}}" // Placeholder template
+
+	instanceMsg := fmt.Sprintf("Solve the following task:\n%s\n\nInitial State: %+v", a.problemStatement.GetProblemStatement(), initialState) // Basic placeholder rendering
+
+	if instanceMsg != "" {
+		fmt.Printf("USER (%s)\n%s\n", a.Name, instanceMsg)
+	a._appendHistory(Message{
+		Role:        "user",
+		Content:     instanceMsg,
+		Agent:       a.Name,
+		MessageType: "instance_prompt",
 	})
+	}
 	return nil
 }

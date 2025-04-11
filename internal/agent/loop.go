@@ -10,6 +10,7 @@ import (
 	"github.com/spectrumwebco/agent_runtime/pkg/tools"
 )
 
+
 type Loop struct {
 	agent       *Agent
 	modules     *modules.Registry
@@ -196,106 +197,129 @@ func (l *Loop) run(ctx context.Context) {
 	}
 }
 
+func (l *Loop) executeStep(ctx context.Context) (nextPhase string, err error) {
+	l.mutex.Lock()
+	l.state.StepCount++
+	stepNum := l.state.StepCount
+	l.mutex.Unlock()
+
+	l.AddEvent("step_started", map[string]interface{}{"step": stepNum})
+
+	l.AddEvent("query_model_started", map[string]interface{}{"step": stepNum})
+	modelOutput, queryErr := l.agent.QueryModel(ctx, l.agent.History) // Use agent's method
+	if queryErr != nil {
+		l.AddEvent("query_model_failed", map[string]interface{}{"step": stepNum, "error": queryErr.Error()})
+		l.state.LastError = fmt.Sprintf("querying model failed: %v", queryErr)
+		return "error_handling", queryErr
+	}
+	if modelOutput == nil {
+		modelOutput = map[string]interface{}{
+			"message": fmt.Sprintf("Placeholder model output for step %d with thought and action", stepNum),
+		}
+	}
+	l.mutex.Lock()
+	l.state.Context["last_model_output"] = modelOutput
+	l.mutex.Unlock()
+	l.AddEvent("query_model_completed", map[string]interface{}{"step": stepNum, "output_length": len(modelOutput["message"].(string))})
+
+	l.AddEvent("parse_action_started", map[string]interface{}{"step": stepNum})
+	thought, action, parseErr := l.tools.ParseAction(modelOutput["message"].(string))
+	if parseErr != nil {
+		l.AddEvent("parse_action_failed", map[string]interface{}{"step": stepNum, "error": parseErr.Error()})
+		l.state.LastError = fmt.Sprintf("parsing action failed: %v", parseErr)
+		return "error_handling", parseErr // Go to error handling for now
+	}
+	l.mutex.Lock()
+	l.state.Context["current_thought"] = thought
+	l.state.CurrentAction = action
+	l.mutex.Unlock()
+	l.AddEvent("parse_action_completed", map[string]interface{}{"step": stepNum, "action": action})
+
+	l.AddEvent("execute_action_started", map[string]interface{}{"step": stepNum, "action": action})
+
+	if action == "exit" { // Simple exit handling
+		l.AddEvent("exit_command_received", map[string]interface{}{"step": stepNum})
+		return "idle", nil // Task completed by exit command
+	}
+	if action == "submit" { // Simple submit handling
+		l.AddEvent("submit_command_received", map[string]interface{}{"step": stepNum})
+		l.state.Context["submission"] = "Placeholder submission content" // Placeholder
+		return "idle", nil // Task completed by submit command
+	}
+
+	execCtx, cancel := context.WithTimeout(ctx, l.tools.Config.ExecutionTimeout) // Use configured timeout
+	defer cancel()
+	observation, execErr := l.tools.ExecuteAction(execCtx, action, l.agent.Env)
+	if execErr != nil {
+		l.AddEvent("execute_action_failed", map[string]interface{}{"step": stepNum, "action": action, "error": execErr.Error()})
+		l.state.LastError = fmt.Sprintf("executing action '%s' failed: %v", action, execErr)
+		return "error_handling", execErr
+	}
+	l.mutex.Lock()
+	l.state.Context["last_observation"] = observation
+	l.mutex.Unlock()
+	l.AddEvent("execute_action_completed", map[string]interface{}{"step": stepNum, "action": action, "observation_length": len(observation)})
+
+	l.AddEvent("handle_observation_started", map[string]interface{}{"step": stepNum})
+
+	l.agent.AddStepToHistory(thought, action, modelOutput, observation)
+
+	done := false // Placeholder
+
+	l.AddEvent("step_completed", map[string]interface{}{"step": stepNum, "task_done": done})
+	if done {
+		return "idle", nil
+	}
+
+	return "execute_step", nil
+}
+
 func (l *Loop) executePhase(ctx context.Context) (string, error) {
 	l.mutex.RLock()
 	phase := l.state.Phase
 	l.mutex.RUnlock()
-	
+
 	switch phase {
 	case "setup":
 		return l.executeSetup(ctx)
-	case "query_model":
-		return l.executeQueryModel(ctx)
-	case "parse_action":
-		return l.executeParseAction(ctx)
-	case "execute_action":
-		return l.executeExecuteAction(ctx)
-	case "handle_observation":
-		return l.executeHandleObservation(ctx)
+	case "execute_step": // New phase for the main loop cycle
+		return l.executeStep(ctx)
 	case "error_handling":
-		return l.state.Phase, nil // Stay in error handling until resolved
+		l.mutex.RLock()
+		lastErr := l.state.LastError
+		l.mutex.RUnlock()
+		return l.handleError(ctx, fmt.Errorf(lastErr)) // Pass the stored error
 	case "idle":
-		return "idle", nil // Should not execute phase when idle
+		return "idle", nil // Stay idle
 	default:
 		return "", fmt.Errorf("unknown phase: %s", phase)
 	}
 }
 
 func (l *Loop) handleError(ctx context.Context, err error) (string, error) {
-	l.AddEvent("error_handling", map[string]interface{}{
+	l.AddEvent("error_handling_started", map[string]interface{}{
 		"error": err.Error(),
 	})
-	
-	
-	return "idle", nil
-}
 
+	fmt.Printf("Error encountered: %v. Stopping loop.\n", err)
+	l.AddEvent("error_handling_failed", map[string]interface{}{"error": err.Error()})
+	return "idle", err // Return the original error to signal failure
+}
 
 func (l *Loop) executeSetup(ctx context.Context) (string, error) {
 	l.AddEvent("setup_started", nil)
-	l.agent.History = []Message{} // Reset history
+	l.mutex.Lock()
+	l.agent.History = make([]Message, 0)
+	l.state.StepCount = 0
+	l.state.LastError = ""
+	l.state.CurrentAction = ""
+	delete(l.state.Context, "last_model_output")
+	delete(l.state.Context, "last_observation")
+	delete(l.state.Context, "current_thought")
+	delete(l.state.Context, "submission")
+	l.mutex.Unlock()
+
+
 	l.AddEvent("setup_completed", nil)
-	return "query_model", nil // Move to querying the model first
-}
-
-func (l *Loop) executeQueryModel(ctx context.Context) (string, error) {
-	l.AddEvent("query_model_started", nil)
-	l.state.Context["last_model_output"] = map[string]string{
-		"message": "placeholder model output with thought and action", // Placeholder
-	}
-	l.AddEvent("query_model_completed", map[string]interface{}{"output_length": len("placeholder...")})
-	return "parse_action", nil
-}
-
-func (l *Loop) executeParseAction(ctx context.Context) (string, error) {
-	l.AddEvent("parse_action_started", nil)
-	modelOutput := l.state.Context["last_model_output"].(map[string]string)["message"]
-	thought, action, err := l.tools.ParseAction(modelOutput) // Assuming ParseAction exists
-	if err != nil {
-		l.AddEvent("parse_action_failed", map[string]interface{}{"error": err.Error()})
-		return "error_handling", fmt.Errorf("parsing action failed: %w", err) // Let main loop handle error phase
-	}
-	l.state.Context["current_thought"] = thought
-	l.state.CurrentAction = action
-	l.AddEvent("parse_action_completed", map[string]interface{}{"action": action})
-	return "execute_action", nil
-}
-
-func (l *Loop) executeExecuteAction(ctx context.Context) (string, error) {
-	l.mutex.Lock()
-	action := l.state.CurrentAction
-	l.mutex.Unlock()
-
-	l.AddEvent("execute_action_started", map[string]interface{}{"action": action})
-
-	if action == "exit" {
-		l.AddEvent("exit_command_received", nil)
-		return "idle", nil // Task completed by exit command
-	}
-
-	observation, err := l.tools.Execute(ctx, action, l.agent.Env) // Assuming Execute exists
-	if err != nil {
-		l.AddEvent("execute_action_failed", map[string]interface{}{"action": action, "error": err.Error()})
-		return "error_handling", fmt.Errorf("executing action '%s' failed: %w", action, err)
-	}
-
-	l.mutex.Lock()
-	l.state.Context["last_observation"] = observation
-	l.state.StepCount++ // Increment step count after successful execution
-	l.mutex.Unlock()
-
-	l.AddEvent("execute_action_completed", map[string]interface{}{"action": action, "observation_length": len(observation)})
-	return "handle_observation", nil
-}
-
-func (l *Loop) executeHandleObservation(ctx context.Context) (string, error) {
-	l.AddEvent("handle_observation_started", nil)
-
-	done := false // Check step output or other conditions
-
-	l.AddEvent("handle_observation_completed", map[string]interface{}{"task_done": done})
-	if done {
-		return "idle", nil
-	}
-	return "query_model", nil // Loop back to query model for next step
+	return "execute_step", nil // Start the main execution loop
 }
