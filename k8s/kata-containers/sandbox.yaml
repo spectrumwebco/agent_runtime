@@ -111,12 +111,26 @@ spec:
         command: ["/bin/bash", "-c"]
         args:
         - |
+          apt-get update && \
+          apt-get install -y golang git
+          
+          git clone https://github.com/mark3labs/mcp-go.git /opt/mcp-go
+          cd /opt/mcp-go
+          go build -o /usr/local/bin/mcp-server ./cmd/server
+          
           service xrdp start
           service ssh start
-          
           systemctl start e2b-surf
           
-          tail -f /dev/null
+          MCP_SERVER_PORT=8081 \
+          LIBRECHAT_CODE_API_KEY=${LIBRECHAT_CODE_API_KEY} \
+          /usr/local/bin/mcp-server
+        env:
+        - name: LIBRECHAT_CODE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: agent-runtime-secrets
+              key: librechat_code_api_key
         ports:
         - containerPort: 3389
           name: rdp
