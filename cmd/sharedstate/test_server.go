@@ -15,12 +15,14 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// WebSocketMessage represents a message sent over WebSocket connection
 type WebSocketMessage struct {
 	Type      string      `json:"type"`
 	Topic     string      `json:"topic,omitempty"`
 	Data      interface{} `json:"data"`
 	Timestamp time.Time   `json:"timestamp"`
 }
+// Connection represents a WebSocket client connection
 
 type Connection struct {
 	conn      *websocket.Conn
@@ -29,12 +31,14 @@ type Connection struct {
 	clientID  string
 	closed    bool
 	closeLock sync.RWMutex
+// WebSocketManager manages WebSocket connections and topic subscriptions
 }
 
 type WebSocketManager struct {
 	upgrader    websocket.Upgrader
 	connections map[string]*Connection
 	topicConns  map[string]map[string]*Connection
+// NewWebSocketManager creates a new WebSocketManager instance
 	mutex       sync.RWMutex
 }
 
@@ -48,6 +52,7 @@ func NewWebSocketManager() *WebSocketManager {
 			},
 		},
 		connections: make(map[string]*Connection),
+// SubscribeToTopic subscribes a client to a specific topic
 		topicConns:  make(map[string]map[string]*Connection),
 	}
 }
@@ -66,8 +71,9 @@ func (m *WebSocketManager) SubscribeToTopic(clientID, topic string) {
 	if _, exists = m.topicConns[topic]; !exists {
 		m.topicConns[topic] = make(map[string]*Connection)
 	}
+// UnsubscribeFromTopic unsubscribes a client from a specific topic
 	m.topicConns[topic][clientID] = conn
-	
+
 	log.Printf("Client %s subscribed to topic: %s\n", clientID, topic)
 }
 
@@ -86,9 +92,10 @@ func (m *WebSocketManager) UnsubscribeFromTopic(clientID, topic string) {
 		delete(conns, clientID)
 		if len(conns) == 0 {
 			delete(m.topicConns, topic)
+// PublishToTopic publishes a message to all clients subscribed to a topic
 		}
 	}
-	
+
 	log.Printf("Client %s unsubscribed from topic: %s\n", clientID, topic)
 }
 
@@ -99,7 +106,7 @@ func (m *WebSocketManager) PublishToTopic(topic string, data interface{}) {
 		Data:      data,
 		Timestamp: time.Now().UTC(),
 	}
-	
+
 	m.mutex.RLock()
 	if conns, exists := m.topicConns[topic]; exists {
 		for _, conn := range conns {
@@ -111,6 +118,7 @@ func (m *WebSocketManager) PublishToTopic(topic string, data interface{}) {
 					close(conn.send)
 					conn.closed = true
 				}
+// HandleConnection handles new WebSocket connection requests
 				conn.closeLock.Unlock()
 			}
 		}
@@ -123,13 +131,13 @@ func (m *WebSocketManager) HandleConnection(w http.ResponseWriter, r *http.Reque
 	if clientID == "" {
 		clientID = fmt.Sprintf("client-%d", time.Now().UnixNano())
 	}
-	
+
 	conn, err := m.upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Printf("Failed to upgrade connection: %v", err)
 		return
 	}
-	
+
 	client := &Connection{
 		conn:     conn,
 		send:     make(chan WebSocketMessage, 256),
@@ -137,13 +145,13 @@ func (m *WebSocketManager) HandleConnection(w http.ResponseWriter, r *http.Reque
 		clientID: clientID,
 		closed:   false,
 	}
-	
+
 	m.mutex.Lock()
 	m.connections[clientID] = client
 	m.mutex.Unlock()
-	
+
 	log.Printf("Client connected: %s", clientID)
-	
+
 	go m.readPump(client)
 	go m.writePump(client)
 }
@@ -163,24 +171,24 @@ func (m *WebSocketManager) readPump(c *Connection) {
 			}
 		}
 		m.mutex.Unlock()
-		
+
 		c.closeLock.Lock()
 		if !c.closed {
 			c.conn.Close()
 			c.closed = true
 		}
 		c.closeLock.Unlock()
-		
+
 		log.Printf("Client disconnected: %s", c.clientID)
 	}()
-	
+
 	c.conn.SetReadLimit(4096)
 	c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 	c.conn.SetPongHandler(func(string) error {
 		c.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
 		return nil
 	})
-	
+
 	welcomeMsg := WebSocketMessage{
 		Type: "welcome",
 		Data: map[string]interface{}{
@@ -190,7 +198,7 @@ func (m *WebSocketManager) readPump(c *Connection) {
 		Timestamp: time.Now().UTC(),
 	}
 	c.send <- welcomeMsg
-	
+
 	for {
 		_, message, err := c.conn.ReadMessage()
 		if err != nil {
@@ -199,43 +207,43 @@ func (m *WebSocketManager) readPump(c *Connection) {
 			}
 			break
 		}
-		
+
 		var msg WebSocketMessage
 		if err := json.Unmarshal(message, &msg); err != nil {
 			log.Printf("error unmarshalling message: %v", err)
 			continue
 		}
-		
+
 		log.Printf("Received message from client %s: %v", c.clientID, msg)
-		
+
 		switch msg.Type {
 		case "subscribe":
 			if topic, ok := msg.Data.(string); ok {
 				m.SubscribeToTopic(c.clientID, topic)
-				
+
 				c.send <- WebSocketMessage{
-					Type: "subscribed",
-					Data: topic,
+					Type:      "subscribed",
+					Data:      topic,
 					Timestamp: time.Now().UTC(),
 				}
 			}
 		case "unsubscribe":
 			if topic, ok := msg.Data.(string); ok {
 				m.UnsubscribeFromTopic(c.clientID, topic)
-				
+
 				c.send <- WebSocketMessage{
-					Type: "unsubscribed",
-					Data: topic,
+					Type:      "unsubscribed",
+					Data:      topic,
 					Timestamp: time.Now().UTC(),
 				}
 			}
 		case "event":
 			c.send <- WebSocketMessage{
-				Type: "event_received",
-				Data: msg.Data,
+				Type:      "event_received",
+				Data:      msg.Data,
 				Timestamp: time.Now().UTC(),
 			}
-			
+
 			if eventData, ok := msg.Data.(map[string]interface{}); ok {
 				if eventType, ok := eventData["type"].(string); ok && eventType == "state_update" {
 					if stateType, ok := eventData["state_type"].(string); ok {
@@ -263,7 +271,7 @@ func (m *WebSocketManager) writePump(c *Connection) {
 		}
 		c.closeLock.Unlock()
 	}()
-	
+
 	for {
 		select {
 		case message, ok := <-c.send:
@@ -272,7 +280,7 @@ func (m *WebSocketManager) writePump(c *Connection) {
 				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			
+
 			if err := c.conn.WriteJSON(message); err != nil {
 				return
 			}
@@ -288,47 +296,47 @@ func (m *WebSocketManager) writePump(c *Connection) {
 func main() {
 	port := flag.Int("port", 8080, "Port to listen on")
 	flag.Parse()
-	
+
 	wsManager := NewWebSocketManager()
-	
+
 	http.HandleFunc("/ws", wsManager.HandleConnection)
-	
+
 	http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"ok"}`))
 	})
-	
+
 	http.HandleFunc("/api/publish", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		
+
 		var req struct {
 			Topic string      `json:"topic"`
 			Data  interface{} `json:"data"`
 		}
-		
+
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			http.Error(w, "Invalid request body", http.StatusBadRequest)
 			return
 		}
-		
+
 		wsManager.PublishToTopic(req.Topic, req.Data)
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		w.Write([]byte(`{"status":"ok"}`))
 	})
-	
+
 	http.HandleFunc("/api/state", func(w http.ResponseWriter, r *http.Request) {
 		stateType := r.URL.Query().Get("type")
 		stateID := r.URL.Query().Get("id")
-		
+
 		if stateType == "" || stateID == "" {
 			http.Error(w, "Missing type or id parameter", http.StatusBadRequest)
 			return
 		}
-		
+
 		state := map[string]interface{}{
 			"state_type": stateType,
 			"state_id":   stateID,
@@ -338,11 +346,11 @@ func main() {
 				"value": fmt.Sprintf("Mock state for %s:%s", stateType, stateID),
 			},
 		}
-		
+
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(state)
 	})
-	
+
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
@@ -350,7 +358,7 @@ func main() {
 		log.Println("Shutting down...")
 		os.Exit(0)
 	}()
-	
+
 	addr := fmt.Sprintf(":%d", *port)
 	log.Printf("Starting shared state test server on %s", addr)
 	if err := http.ListenAndServe(addr, nil); err != nil {

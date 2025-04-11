@@ -17,6 +17,7 @@ import (
 	"github.com/spectrumwebco/agent_runtime/pkg/tools"
 )
 
+// Message represents a communication between the agent and its environment
 type Message struct {
 	Role        string                 `json:"role"`         // system, assistant, user
 	Content     string                 `json:"content"`      // The actual message content
@@ -27,12 +28,13 @@ type Message struct {
 	RawOutput   string                 `json:"raw_output,omitempty"`
 	ExtraInfo   map[string]interface{} `json:"extra_info,omitempty"`
 }
+// Info contains metadata about the agent's execution and state
 
 type Info struct {
 	Submission      string                 `json:"submission"`
 	ExitStatus      string                 `json:"exit_status"`
-	ModelStats      map[string]interface{} `json:"model_stats"` // Placeholder for model statistics
-	EditedFiles     map[string]string      `json:"edited_files"`  // Placeholder for edited files context
+	ModelStats      map[string]interface{} `json:"model_stats"`       // Placeholder for model statistics
+	EditedFiles     map[string]string      `json:"edited_files"`      // Placeholder for edited files context
 	SweAgentHash    string                 `json:"swe_agent_hash"`    // Go equivalent placeholder
 	SweAgentVersion string                 `json:"swe_agent_version"` // Go equivalent placeholder
 	SweRexVersion   string                 `json:"swe_rex_version"`   // Go equivalent placeholder
@@ -89,37 +91,37 @@ type Task struct {
 	Description string                 `json:"description"`
 	Priority    int                    `json:"priority"` // Higher number = higher priority
 	CreatedAt   time.Time              `json:"created_at"`
-	State       map[string]interface{} `json:"state"`    // Task-specific state
+	State       map[string]interface{} `json:"state"`     // Task-specific state
 	ParentID    string                 `json:"parent_id"` // ID of parent task if this is a subtask
 	Completed   bool                   `json:"completed"`
 	Result      string                 `json:"result"`
 }
 
 type DefaultAgent struct {
-	Name                 string
-	Config               *config.Config // Placeholder for agent config (needs definition)
-	Templates            interface{}    // Placeholder for template config (e.g., TemplateConfig struct)
-	Tools                *tools.ToolRegistry // Use ToolRegistry directly for now
-	HistoryProcessors    []interface{}  // Placeholder for history processors
-	Model                interface{}    // Placeholder for the language model interface
-	Parser               parser.Parser  // Parser for model output
-	ModelName            string         // Name of the model to use
-	MaxRequeries         int
-	History              []Message           // Stores the conversation history as Message objects
-	trajectory           []TrajectoryStep    // Stores the execution trajectory
-	Info                 Info
-	Env                  *env.SWEEnv       // Execution environment (exported for loop.go)
-	problemStatement     *ProblemStatement // Task definition
-	outputDir            string            // Directory for output files
-	trajPath             string            // Path to save trajectory file
+	Name                  string
+	Config                *config.Config      // Placeholder for agent config (needs definition)
+	Templates             interface{}         // Placeholder for template config (e.g., TemplateConfig struct)
+	Tools                 *tools.ToolRegistry // Use ToolRegistry directly for now
+	HistoryProcessors     []interface{}       // Placeholder for history processors
+	Model                 interface{}         // Placeholder for the language model interface
+	Parser                parser.Parser       // Parser for model output
+	ModelName             string              // Name of the model to use
+	MaxRequeries          int
+	History               []Message        // Stores the conversation history as Message objects
+	trajectory            []TrajectoryStep // Stores the execution trajectory
+	Info                  Info
+	Env                   *env.SWEEnv       // Execution environment (exported for loop.go)
+	problemStatement      *ProblemStatement // Task definition
+	outputDir             string            // Directory for output files
+	trajPath              string            // Path to save trajectory file
 	alwaysRequireZeroExit bool
-	nConsecutiveTimeouts int
-	totalExecutionTime   time.Duration
-	
-	taskQueue            []*Task            // LIFO queue of tasks
-	taskMutex            sync.Mutex         // Mutex for thread-safe task queue operations
-	currentTaskID        string             // ID of the currently executing task
-	eventStream          interface{}        // Connection to the Event Stream system
+	nConsecutiveTimeouts  int
+	totalExecutionTime    time.Duration
+
+	taskQueue     []*Task     // LIFO queue of tasks
+	taskMutex     sync.Mutex  // Mutex for thread-safe task queue operations
+	currentTaskID string      // ID of the currently executing task
+	eventStream   interface{} // Connection to the Event Stream system
 }
 
 type AgentOption func(*DefaultAgent) error
@@ -165,23 +167,23 @@ func NewDefaultAgent(options ...AgentOption) (*DefaultAgent, error) {
 		ModelStats:  make(map[string]interface{}),
 		EditedFiles: make(map[string]string),
 	}
-	
+
 	agent := &DefaultAgent{
-		Name:              "default-go-agent",
-		MaxRequeries:      3, // Default from Python
-		History:           make([]Message, 0),
-		trajectory:        make([]TrajectoryStep, 0),
-		Info:              agentInfo,
-		ModelName:         "gpt-4", // Default model
-		Parser:            parser.NewThoughtActionParser(), // Default parser
+		Name:         "default-go-agent",
+		MaxRequeries: 3, // Default from Python
+		History:      make([]Message, 0),
+		trajectory:   make([]TrajectoryStep, 0),
+		Info:         agentInfo,
+		ModelName:    "gpt-4",                         // Default model
+		Parser:       parser.NewThoughtActionParser(), // Default parser
 	}
-	
+
 	for _, option := range options {
 		if err := option(agent); err != nil {
 			return nil, fmt.Errorf("failed to apply agent option: %w", err)
 		}
 	}
-	
+
 	return agent, nil
 }
 
@@ -243,7 +245,7 @@ func (a *DefaultAgent) Setup(environment *env.SWEEnv, problemStmt *ProblemStatem
 		ModelStats:      make(map[string]interface{}), // Initialize maps
 		EditedFiles:     make(map[string]string),
 	}
-	a.History = make([]Message, 0) // Reset history
+	a.History = make([]Message, 0)           // Reset history
 	a.trajectory = make([]TrajectoryStep, 0) // Reset trajectory
 	a.nConsecutiveTimeouts = 0
 	a.totalExecutionTime = 0
@@ -281,7 +283,7 @@ func (a *DefaultAgent) Setup(environment *env.SWEEnv, problemStmt *ProblemStatem
 
 func (a *DefaultAgent) QueryModel(ctx context.Context, history []Message) (map[string]interface{}, error) {
 	fmt.Println("Placeholder: Querying model...")
-	
+
 	return map[string]interface{}{
 		"message": fmt.Sprintf("Placeholder model output for step %d with thought and action", len(history)),
 	}, nil
@@ -313,7 +315,6 @@ func (a *DefaultAgent) AddStepToHistory(thought, action string, modelOutput map[
 	}
 	a._appendHistory(observationMsg)
 }
-
 
 func (a *DefaultAgent) Step(ctx context.Context) (*StepOutput, error) {
 	startTime := time.Now()
@@ -404,9 +405,9 @@ func (a *DefaultAgent) Step(ctx context.Context) (*StepOutput, error) {
 func (a *DefaultAgent) AddTask(description string, priority int, state map[string]interface{}, parentID string) string {
 	a.taskMutex.Lock()
 	defer a.taskMutex.Unlock()
-	
+
 	taskID := fmt.Sprintf("task-%d", time.Now().UnixNano())
-	
+
 	task := &Task{
 		ID:          taskID,
 		Description: description,
@@ -416,13 +417,13 @@ func (a *DefaultAgent) AddTask(description string, priority int, state map[strin
 		ParentID:    parentID,
 		Completed:   false,
 	}
-	
+
 	a.taskQueue = append(a.taskQueue, task)
-	
+
 	sort.Slice(a.taskQueue, func(i, j int) bool {
 		return a.taskQueue[i].Priority > a.taskQueue[j].Priority
 	})
-	
+
 	if a.eventStream != nil {
 		taskData := map[string]interface{}{
 			"task_id":     task.ID,
@@ -431,46 +432,46 @@ func (a *DefaultAgent) AddTask(description string, priority int, state map[strin
 			"created_at":  task.CreatedAt,
 			"parent_id":   task.ParentID,
 		}
-		
+
 		// }
 	}
-	
+
 	return taskID
 }
 
 func (a *DefaultAgent) GetNextTask() *Task {
 	a.taskMutex.Lock()
 	defer a.taskMutex.Unlock()
-	
+
 	if len(a.taskQueue) == 0 {
 		return nil
 	}
-	
+
 	task := a.taskQueue[len(a.taskQueue)-1]
 	a.taskQueue = a.taskQueue[:len(a.taskQueue)-1]
 	a.currentTaskID = task.ID
-	
+
 	return task
 }
 
 func (a *DefaultAgent) CompleteTask(taskID string, result string) {
 	a.taskMutex.Lock()
 	defer a.taskMutex.Unlock()
-	
+
 	for i, task := range a.taskQueue {
 		if task.ID == taskID {
 			task.Completed = true
 			task.Result = result
-			
+
 			a.taskQueue = append(a.taskQueue[:i], a.taskQueue[i+1:]...)
 			break
 		}
 	}
-	
+
 	if a.currentTaskID == taskID {
 		a.currentTaskID = ""
 	}
-	
+
 	if a.eventStream != nil {
 		// }
 	}
@@ -502,25 +503,25 @@ func (a *DefaultAgent) Run(environment *env.SWEEnv, problemStmt *ProblemStatemen
 			if task == nil {
 				break
 			}
-			
+
 			taskProblem := &ProblemStatement{
 				ID:               task.ID,
 				ProblemStatement: task.Description,
 			}
-			
+
 			originalProblem := a.problemStatement
 			a.problemStatement = taskProblem
-			
+
 			stepOutput, err = a.Step(ctx)
-			
+
 			a.problemStatement = originalProblem
-			
+
 			if err != nil {
 				return nil, fmt.Errorf("agent step failed: %w", err)
 			}
-			
+
 			a.CompleteTask(task.ID, stepOutput.Observation)
-			
+
 			if stepOutput.Done {
 				a.Info.ExitStatus = stepOutput.ExitStatus
 				a.Info.Submission = stepOutput.Submission
@@ -574,7 +575,7 @@ func (a *DefaultAgent) addStepToTrajectory(step *StepOutput) {
 		Thought:       step.Thought,
 		ExecutionTime: step.ExecutionTime,
 		State:         stateCopy,
-		Messages:      histCopy, // Use the deep copied history
+		Messages:      histCopy,       // Use the deep copied history
 		ExtraInfo:     step.ExtraInfo, // Assuming ExtraInfo is okay with shallow copy
 	}
 	a.trajectory = append(a.trajectory, trajectoryStep)
@@ -595,31 +596,31 @@ func (a *DefaultAgent) _appendHistory(item Message) {
 		Action:      item.Action,
 		RawOutput:   item.RawOutput,
 	}
-	
+
 	if item.ExtraInfo != nil {
 		msgCopy.ExtraInfo = make(map[string]interface{})
 		for k, v := range item.ExtraInfo {
 			msgCopy.ExtraInfo[k] = v
 		}
 	}
-	
+
 	a.History = append(a.History, msgCopy)
 }
 
 func (a *DefaultAgent) addSystemMessageToHistory() error {
 	fmt.Println("Adding system message to history...")
 	systemTemplate := "You are SWE-Agent, an autonomous software development agent. Follow the instructions carefully and use the provided tools to solve the task." // Placeholder template
-	
+
 	systemMsg := systemTemplate // Use raw template for now
 
 	if systemMsg != "" {
 		fmt.Printf("SYSTEM (%s)\n%s\n", a.Name, systemMsg)
-	a._appendHistory(Message{
-		Role:        "system",
-		Content:     systemMsg,
-		Agent:       a.Name,
-		MessageType: "system_prompt",
-	})
+		a._appendHistory(Message{
+			Role:        "system",
+			Content:     systemMsg,
+			Agent:       a.Name,
+			MessageType: "system_prompt",
+		})
 	}
 	return nil
 }
@@ -642,12 +643,12 @@ func (a *DefaultAgent) addInstanceTemplateToHistory(initialState map[string]inte
 
 	if instanceMsg != "" {
 		fmt.Printf("USER (%s)\n%s\n", a.Name, instanceMsg)
-	a._appendHistory(Message{
-		Role:        "user",
-		Content:     instanceMsg,
-		Agent:       a.Name,
-		MessageType: "instance_prompt",
-	})
+		a._appendHistory(Message{
+			Role:        "user",
+			Content:     instanceMsg,
+			Agent:       a.Name,
+			MessageType: "instance_prompt",
+		})
 	}
 	return nil
 }
