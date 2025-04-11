@@ -1,0 +1,44 @@
+# vCluster Configuration for Agent Runtime
+vcluster:
+  image: rancher/k3s:v1.27.3-k3s1
+  extraArgs:
+    - --disable=traefik
+    - --disable=servicelb
+  resources:
+    requests:
+      memory: "1Gi"
+      cpu: "500m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+
+# High Availability Configuration
+highAvailability:
+  enabled: true
+  replicas: 3
+
+# Persistent Storage for etcd
+persistence:
+  enabled: true
+  size: 10Gi
+  storageClass: "standard"
+
+# Networking Configuration
+syncer:
+  extraArgs:
+    - --sync-all-nodes=true
+  nodeSelector:
+    node-role.kubernetes.io/control-plane: "true"
+
+# Service Account Configuration
+rbac:
+  clusterRole:
+    create: true
+  role:
+    create: true
+
+# Disaster Recovery Configuration
+backup:
+  enabled: true
+  schedule: "0 */6 * * *"  # Every 6 hours
+  retention: 5  # Keep last 5 backups

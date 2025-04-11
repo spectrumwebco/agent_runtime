@@ -1,0 +1,115 @@
+# jsPolicy Configuration for Agent Runtime
+apiVersion: policy.jspolicy.com/v1beta1
+kind: JsPolicy
+metadata:
+  name: agent-runtime-policies
+spec:
+  operations:
+    - CREATE
+    - UPDATE
+  resources:
+    - pods
+    - deployments
+    - services
+    - configmaps
+    - secrets
+  javascript: |
+    function validateResources(request) {
+      const resource = request.object;
+      
+      // Ensure all pods have resource limits
+      if (resource.kind === "Pod" || resource.kind === "Deployment") {
+        const containers = resource.kind === "Pod" ? 
+          resource.spec.containers : 
+          resource.spec.template.spec.containers;
+        
+        for (const container of containers) {
+          if (!container.resources || !container.resources.limits) {
+            return {
+              valid: false,
+              message: `Container ${container.name} must have resource limits defined`
+            };
+          }
+        }
+      }
+      
+      return { valid: true };
+    }
+
+    function validateSecurityContext(request) {
+      const resource = request.object;
+      
+      // Ensure pods run as non-root
+      if (resource.kind === "Pod" || resource.kind === "Deployment") {
+        const spec = resource.kind === "Pod" ? 
+          resource.spec : 
+          resource.spec.template.spec;
+        
+        if (!spec.securityContext || !spec.securityContext.runAsNonRoot) {
+          return {
+            valid: false,
+            message: "Pods must run as non-root user"
+          };
+        }
+      }
+      
+      return { valid: true };
+    }
+
+    function validateKataContainers(request) {
+      const resource = request.object;
+      
+      // Ensure sandbox pods use kata-containers runtime class
+      if ((resource.kind === "Pod" || resource.kind === "Deployment") && 
+          resource.metadata.labels && 
+          resource.metadata.labels["agent-runtime/sandbox"] === "true") {
+        
+        const spec = resource.kind === "Pod" ? 
+          resource.spec : 
+          resource.spec.template.spec;
+        
+        if (!spec.runtimeClassName || spec.runtimeClassName !== "kata-containers") {
+          return {
+            valid: false,
+            message: "Sandbox pods must use kata-containers runtime class"
+          };
+        }
+      }
+      
+      return { valid: true };
+    }
+
+    function validateHighAvailability(request) {
+      const resource = request.object;
+      
+      // Ensure critical deployments have multiple replicas
+      if (resource.kind === "Deployment" && 
+          resource.metadata.labels && 
+          resource.metadata.labels["agent-runtime/critical"] === "true") {
+        
+        if (!resource.spec.replicas || resource.spec.replicas < 2) {
+          return {
+            valid: false,
+            message: "Critical deployments must have at least 2 replicas for high availability"
+          };
+        }
+      }
+      
+      return { valid: true };
+    }
+
+    function validate(request) {
+      const resourceValidation = validateResources(request);
+      if (!resourceValidation.valid) return resourceValidation;
+      
+      const securityValidation = validateSecurityContext(request);
+      if (!securityValidation.valid) return securityValidation;
+      
+      const kataValidation = validateKataContainers(request);
+      if (!kataValidation.valid) return kataValidation;
+      
+      const haValidation = validateHighAvailability(request);
+      if (!haValidation.valid) return haValidation;
+      
+      return { valid: true };
+    }
