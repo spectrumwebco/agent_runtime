@@ -20,23 +20,123 @@ spec:
     spec:
       runtimeClassName: kata-containers
       securityContext:
-        runAsNonRoot: true
-        runAsUser: 1000
-        fsGroup: 1000
-      containers:
-      - name: sandbox
+        runAsNonRoot: false
+        runAsUser: 0
+        fsGroup: 0
+      initContainers:
+      - name: setup-desktop
         image: ubuntu:22.04
-        command: ["/bin/bash", "-c", "apt-get update && apt-get install -y openssh-server && service ssh start && sleep infinity"]
-        resources:
-          requests:
-            memory: "1Gi"
-            cpu: "500m"
-          limits:
-            memory: "2Gi"
-            cpu: "1000m"
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          apt-get update && \
+          DEBIAN_FRONTEND=noninteractive apt-get install -y \
+            ubuntu-desktop-minimal \
+            xrdp \
+            firefox \
+            curl \
+            wget \
+            git \
+            build-essential \
+            nodejs \
+            npm \
+            python3 \
+            python3-pip
+          
+          systemctl enable xrdp
+          
+          wget -q https://packages.microsoft.com/keys/microsoft.asc -O- | apt-key add -
+          add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main"
+          apt-get update
+          apt-get install -y code
+          
+          TOOLBOX_VERSION=$(curl -s "https://data.services.jetbrains.com/products/releases?code=TBA&latest=true&type=release" | grep -Po '"version":"\K[^"]+')
+          wget -q "https://download.jetbrains.com/toolbox/jetbrains-toolbox-$TOOLBOX_VERSION.tar.gz"
+          tar -xzf "jetbrains-toolbox-$TOOLBOX_VERSION.tar.gz"
+          mv jetbrains-toolbox-*/jetbrains-toolbox /usr/local/bin/
+          rm -rf jetbrains-toolbox-*
+          
+          git clone https://github.com/e2b-dev/surf.git /opt/e2b-surf
+          
+          cd /opt/e2b-surf
+          npm install
+          
+          cat > /opt/e2b-surf/config.json <<EOF
+          {
+            "browser": {
+              "headless": false,
+              "defaultViewport": null,
+              "args": [
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage",
+                "--disable-accelerated-2d-canvas",
+                "--disable-gpu",
+                "--window-size=1920,1080"
+              ]
+            },
+            "server": {
+              "port": 3000,
+              "host": "0.0.0.0"
+            }
+          }
+          EOF
+          
+          cat > /etc/systemd/system/e2b-surf.service <<EOF
+          [Unit]
+          Description=E2B Surf Browser Agent
+          After=network.target
+          
+          [Service]
+          Type=simple
+          User=root
+          WorkingDirectory=/opt/e2b-surf
+          ExecStart=/usr/bin/node /opt/e2b-surf/src/index.js
+          Restart=always
+          
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          
+          mkdir -p /workspace
+          chmod 777 /workspace
+        securityContext:
+          privileged: true
         volumeMounts:
         - name: workspace
           mountPath: /workspace
+      containers:
+      - name: sandbox
+        image: ubuntu:22.04
+        command: ["/bin/bash", "-c"]
+        args:
+        - |
+          service xrdp start
+          service ssh start
+          
+          systemctl start e2b-surf
+          
+          tail -f /dev/null
+        ports:
+        - containerPort: 3389
+          name: rdp
+        - containerPort: 3000
+          name: e2b-surf
+        - containerPort: 22
+          name: ssh
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+        volumeMounts:
+        - name: workspace
+          mountPath: /workspace
+        securityContext:
+          privileged: true
       volumes:
       - name: workspace
-        emptyDir: {}
+        persistentVolumeClaim:
+          claimName: agent-runtime-workspace
