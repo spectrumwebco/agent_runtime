@@ -10,8 +10,10 @@ from swerex.deployment.abstract import AbstractDeployment
 from swerex.runtime.abstract import Command, UploadRequest
 from typing_extensions import Self
 
-from sweagent.utils.github import _parse_gh_repo_url
-from sweagent.utils.log import get_logger
+from agent.utils.github import _parse_gh_repo_url
+from agent.utils.gitee import InvalidGiteeURL
+
+from agent.utils.log import get_logger
 
 logger = get_logger("swea-config", emoji="🔧")
 
@@ -181,16 +183,87 @@ class GithubRepoConfig(BaseModel):
         return _get_git_reset_commands(self.base_commit)
 
 
-RepoConfig = LocalRepoConfig | GithubRepoConfig | PreExistingRepoConfig
+
+class GiteeRepoConfig(BaseModel):
+    gitee_url: str
+
+    base_commit: str = Field(default="HEAD")
+    """The commit to reset the repository to. The default is HEAD,
+    i.e., the latest commit. You can also set this to a branch name (e.g., `dev`),
+    a tag (e.g., `v0.1.0`), or a commit hash (e.g., `a4464baca1f`).
+    SWE-agent will then start from this commit when trying to solve the problem.
+    """
+
+    clone_timeout: float = 500
+    """Timeout for git clone operation."""
+
+    type: Literal["gitee"] = "gitee"
+    """Discriminator for (de)serialization/CLI. Do not change."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    @property
+    def repo_name(self) -> str:
+        from agent.utils.gitee import GiteeClient
+        try:
+            parsed = GiteeClient.parse_gitee_url(self.gitee_url)
+            return f"{parsed['owner']}__{parsed['repo']}"
+        except InvalidGiteeURL as e:
+            logger.error(f"Failed to parse Gitee URL {self.gitee_url}: {e}")
+            return "gitee_repo"
+
+
+    def _get_url_with_token(self, token: str) -> str:
+        """Prepend Gitee token to URL"""
+        if not token:
+            return self.gitee_url
+        if "@" in self.gitee_url:
+            logger.warning("Cannot prepend token to URL. '@' found in URL")
+            return self.gitee_url
+        _, _, url_no_protocol = self.gitee_url.partition("://")
+        return f"https://{token}@{url_no_protocol}"
+
+    def copy(self, deployment: AbstractDeployment):
+        """Clones the repository to the sandbox."""
+        base_commit = self.base_commit
+        gitee_token = os.getenv("GITEE_ACCESS_TOKEN", "") # Use GITEE_ACCESS_TOKEN
+        url = self._get_url_with_token(gitee_token)
+        asyncio.run(
+            deployment.runtime.execute(
+                Command(
+                    command=" && ".join(
+                        (
+                            f"mkdir {self.repo_name}",
+                            f"cd {self.repo_name}",
+                            "git init",
+                            f"git remote add origin {url}",
+                            f"git fetch --depth 1 origin {base_commit}",
+                            "git checkout FETCH_HEAD",
+                            "cd ..",
+                        )
+                    ),
+                    timeout=self.clone_timeout,
+                    shell=True,
+                    check=True,
+                )
+            ),
+        )
+
+    def get_reset_commands(self) -> list[str]:
+        """Issued after the copy operation or when the environment is reset."""
+        return _get_git_reset_commands(self.base_commit)
+
+
+RepoConfig = LocalRepoConfig | GithubRepoConfig | GiteeRepoConfig | PreExistingRepoConfig
 
 
 def repo_from_simplified_input(
-    *, input: str, base_commit: str = "HEAD", type: Literal["local", "github", "preexisting", "auto"] = "auto"
+    *, input: str, base_commit: str = "HEAD", type: Literal["local", "github", "gitee", "preexisting", "auto"] = "auto"
 ) -> RepoConfig:
     """Get repo config from a simplified input.
 
     Args:
-        input: Local path or GitHub URL
+        input: Local path, GitHub URL, or Gitee URL
         type: The type of repo. Set to "auto" to automatically detect the type
             (does not work for preexisting repos).
     """
@@ -198,12 +271,30 @@ def repo_from_simplified_input(
         return LocalRepoConfig(path=Path(input), base_commit=base_commit)
     if type == "github":
         return GithubRepoConfig(github_url=input, base_commit=base_commit)
+    if type == "gitee":
+        return GiteeRepoConfig(gitee_url=input, base_commit=base_commit)
     if type == "preexisting":
         return PreExistingRepoConfig(repo_name=input, base_commit=base_commit)
     if type == "auto":
-        if input.startswith("https://github.com/"):
+        from agent.environment.repo_provider import detect_provider_from_url, RepoProviderType
+        detected_type = detect_provider_from_url(input)
+        if detected_type == RepoProviderType.GITHUB:
             return GithubRepoConfig(github_url=input, base_commit=base_commit)
-        else:
-            return LocalRepoConfig(path=Path(input), base_commit=base_commit)
+        elif detected_type == RepoProviderType.GITEE:
+            return GiteeRepoConfig(gitee_url=input, base_commit=base_commit)
+        elif detected_type == RepoProviderType.LOCAL:
+            if Path(input).exists():
+                 return LocalRepoConfig(path=Path(input), base_commit=base_commit)
+            else:
+                 if '/' in input and not input.startswith(('http', '.', '/')):
+                     logger.info(f"Assuming '{input}' is a GitHub repository shorthand.")
+                     return GithubRepoConfig(github_url=f"https://github.com/{input}", base_commit=base_commit)
+                 else:
+                     msg = f"Could not automatically determine repository type for input: {input}"
+                     raise ValueError(msg)
+        else: # UNKNOWN
+            msg = f"Could not automatically determine repository type for input: {input}"
+            raise ValueError(msg)
+
     msg = f"Unknown repo type: {type}"
     raise ValueError(msg)

@@ -16,9 +16,9 @@ from swerex.runtime.abstract import (
 )
 from swerex.runtime.abstract import Command as RexCommand
 
-from sweagent.environment.hooks.abstract import CombinedEnvHooks, EnvHook
-from sweagent.environment.repo import Repo, RepoConfig
-from sweagent.utils.log import get_logger
+from agent.environment.hooks.abstract import CombinedEnvHooks, EnvHook
+from agent.environment.repo import Repo, RepoConfig
+from agent.utils.log import get_logger
 
 
 class EnvironmentConfig(BaseModel):
