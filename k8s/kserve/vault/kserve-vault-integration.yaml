@@ -75,7 +75,7 @@ metadata:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
   rules:
-  - host: kserve.example.com
+  - host: ${KSERVE_HOST}
     http:
       paths:
       - path: /

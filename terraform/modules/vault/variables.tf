@@ -25,7 +25,7 @@ variable "vault_k8s_version" {
 variable "vault_token" {
   description = "Root token for Vault"
   type        = string
-  default     = "vault-token-secret-key"
+  default     = null # Token should be provided via environment variable VAULT_TOKEN
   sensitive   = true
 }
 

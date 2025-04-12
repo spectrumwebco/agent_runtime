@@ -131,12 +131,12 @@ spec:
         - name: AWS_ACCESS_KEY_ID
           valueFrom:
             secretKeyRef:
-              name: minio-credentials
+              name: ${MINIO_CREDENTIALS_SECRET_NAME}
               key: accesskey
         - name: AWS_SECRET_ACCESS_KEY
           valueFrom:
             secretKeyRef:
-              name: minio-credentials
+              name: ${MINIO_CREDENTIALS_SECRET_NAME}
               key: secretkey
         resources:
           limits:
