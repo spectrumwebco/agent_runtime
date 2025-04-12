@@ -1,301 +1,420 @@
 """
-Llama 4 Training Script
-
-This script provides functionality for fine-tuning Llama 4 models on
-GitOps, Terraform, and Kubernetes issue data.
+Script for fine-tuning Llama 4 models.
 """
 
 import os
+import sys
 import json
 import logging
 import argparse
-from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, Any, List, Optional, Union
 
 import torch
-import mlflow
-import numpy as np
+import transformers
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
-    Trainer,
+    HfArgumentParser,
     TrainingArguments,
-    DataCollatorForLanguageModeling,
+    Trainer,
+    DataCollatorForSeq2Seq,
     set_seed,
 )
-from datasets import load_dataset
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
+from datasets import load_dataset
 
-import sys
-sys.path.append(str(Path(__file__).parent.parent.parent))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from training.config.llama4_maverick_config import Llama4MaverickConfig, Llama4MaverickTrainingArguments
-from training.config.llama4_scout_config import Llama4ScoutConfig, Llama4ScoutTrainingArguments
-from training.evaluation.metrics import ModelEvaluationMetrics, calculate_metrics
-from training.registry.model_registry import ModelRegistry, ModelRegistryConfig
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-logger = logging.getLogger(__name__)
+from config import (
+    Llama4MaverickConfig,
+    Llama4ScoutConfig,
+    DataConfig,
+    get_config_for_model,
+    get_data_config_for_dataset,
+)
 
 
 def parse_args():
-    """Parse command line arguments."""
+    """
+    Parse command line arguments.
+
+    Returns:
+        Parsed arguments
+    """
     parser = argparse.ArgumentParser(description="Fine-tune Llama 4 models")
-    
     parser.add_argument(
         "--model_type",
         type=str,
-        required=True,
-        choices=["maverick", "scout"],
-        help="Type of Llama 4 model to fine-tune",
+        default="llama4-maverick",
+        choices=["llama4-maverick", "llama4-scout"],
+        help="Model type",
     )
-    
     parser.add_argument(
-        "--dataset_path",
+        "--dataset_type",
         type=str,
-        required=True,
-        help="Path to the dataset",
+        default="github_issues",
+        choices=["default", "github_issues"],
+        help="Dataset type",
     )
-    
+    parser.add_argument(
+        "--config_file",
+        type=str,
+        help="Path to configuration file",
+    )
+    parser.add_argument(
+        "--data_config_file",
+        type=str,
+        help="Path to data configuration file",
+    )
+    parser.add_argument(
+        "--train_file",
+        type=str,
+        help="Path to training file",
+    )
+    parser.add_argument(
+        "--validation_file",
+        type=str,
+        help="Path to validation file",
+    )
+    parser.add_argument(
+        "--test_file",
+        type=str,
+        help="Path to test file",
+    )
     parser.add_argument(
         "--output_dir",
         type=str,
-        default=None,
-        help="Directory to save the fine-tuned model",
+        help="Output directory",
     )
-    
     parser.add_argument(
-        "--config_path",
-        type=str,
-        default=None,
-        help="Path to the configuration file",
+        "--learning_rate",
+        type=float,
+        help="Learning rate",
     )
-    
     parser.add_argument(
-        "--mlflow_tracking_uri",
-        type=str,
-        default=None,
-        help="MLflow tracking URI",
+        "--num_train_epochs",
+        type=int,
+        help="Number of training epochs",
     )
-    
     parser.add_argument(
-        "--mlflow_experiment_name",
-        type=str,
-        default=None,
-        help="MLflow experiment name",
+        "--per_device_train_batch_size",
+        type=int,
+        help="Per device training batch size",
     )
-    
     parser.add_argument(
-        "--register_model",
+        "--per_device_eval_batch_size",
+        type=int,
+        help="Per device evaluation batch size",
+    )
+    parser.add_argument(
+        "--gradient_accumulation_steps",
+        type=int,
+        help="Gradient accumulation steps",
+    )
+    parser.add_argument(
+        "--max_seq_length",
+        type=int,
+        help="Maximum sequence length",
+    )
+    parser.add_argument(
+        "--use_lora",
         action="store_true",
-        help="Register the model with MLflow Model Registry",
+        help="Use LoRA",
     )
-    
+    parser.add_argument(
+        "--no_lora",
+        action="store_true",
+        help="Do not use LoRA",
+    )
+    parser.add_argument(
+        "--use_8bit_quantization",
+        action="store_true",
+        help="Use 8-bit quantization",
+    )
+    parser.add_argument(
+        "--use_4bit_quantization",
+        action="store_true",
+        help="Use 4-bit quantization",
+    )
     parser.add_argument(
         "--seed",
         type=int,
-        default=42,
         help="Random seed",
     )
-    
     parser.add_argument(
         "--debug",
         action="store_true",
         help="Enable debug mode",
     )
-    
+
     return parser.parse_args()
 
 
-def load_config(model_type: str, config_path: Optional[str] = None) -> Dict[str, Any]:
-    """Load the configuration for the specified model type."""
-    if config_path and os.path.exists(config_path):
-        with open(config_path, "r") as f:
-            config_dict = json.load(f)
-        
-        if model_type == "maverick":
-            config = Llama4MaverickConfig.from_dict(config_dict)
+def load_config(args):
+    """
+    Load configuration.
+
+    Args:
+        args: Command line arguments
+
+    Returns:
+        Model configuration, data configuration
+    """
+    if args.config_file:
+        if args.model_type == "llama4-maverick":
+            model_config = Llama4MaverickConfig.from_json(args.config_file)
         else:
-            config = Llama4ScoutConfig.from_dict(config_dict)
+            model_config = Llama4ScoutConfig.from_json(args.config_file)
     else:
-        if model_type == "maverick":
-            config = Llama4MaverickConfig()
-        else:
-            config = Llama4ScoutConfig()
-    
-    return config
+        model_config = get_config_for_model(args.model_type)
+
+    if args.output_dir:
+        model_config.output_dir = args.output_dir
+    if args.learning_rate:
+        model_config.learning_rate = args.learning_rate
+    if args.num_train_epochs:
+        model_config.num_train_epochs = args.num_train_epochs
+    if args.per_device_train_batch_size:
+        model_config.per_device_train_batch_size = args.per_device_train_batch_size
+    if args.per_device_eval_batch_size:
+        model_config.per_device_eval_batch_size = args.per_device_eval_batch_size
+    if args.gradient_accumulation_steps:
+        model_config.gradient_accumulation_steps = args.gradient_accumulation_steps
+    if args.seed:
+        model_config.seed = args.seed
+    if args.no_lora:
+        model_config.use_lora = False
+    elif args.use_lora:
+        model_config.use_lora = True
+    if args.use_8bit_quantization:
+        model_config.use_8bit_quantization = True
+        model_config.use_4bit_quantization = False
+    if args.use_4bit_quantization:
+        model_config.use_4bit_quantization = True
+        model_config.use_8bit_quantization = False
+
+    if args.data_config_file:
+        data_config = DataConfig.from_json(args.data_config_file)
+    else:
+        data_config = get_data_config_for_dataset(args.dataset_type)
+
+    if args.train_file:
+        data_config.train_file = args.train_file
+    if args.validation_file:
+        data_config.validation_file = args.validation_file
+    if args.test_file:
+        data_config.test_file = args.test_file
+    if args.max_seq_length:
+        data_config.max_seq_length = args.max_seq_length
+        model_config.max_seq_length = args.max_seq_length
+
+    return model_config, data_config
 
 
-def prepare_dataset(dataset_path: str, tokenizer, max_length: int = 2048):
-    """Prepare the dataset for fine-tuning."""
-    dataset = load_dataset("json", data_files=dataset_path)
+def setup_logging(debug=False):
+    """
+    Set up logging.
+
+    Args:
+        debug: Enable debug mode
+    """
+    log_level = logging.DEBUG if debug else logging.INFO
+    logging.basicConfig(
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        level=log_level,
+    )
+    transformers.utils.logging.set_verbosity_info()
+    if debug:
+        transformers.utils.logging.set_verbosity_debug()
+
+
+def load_datasets(data_config):
+    """
+    Load datasets.
+
+    Args:
+        data_config: Data configuration
+
+    Returns:
+        Datasets
+    """
+    data_files = {
+        "train": data_config.train_file,
+        "validation": data_config.validation_file,
+    }
+
+    if data_config.test_file:
+        data_files["test"] = data_config.test_file
+
+    extension = data_config.train_file.split(".")[-1]
+    raw_datasets = load_dataset(
+        extension,
+        data_files=data_files,
+        use_auth_token=data_config.use_auth_token,
+    )
+
+    if data_config.max_train_samples is not None:
+        max_train_samples = min(len(raw_datasets["train"]), data_config.max_train_samples)
+        raw_datasets["train"] = raw_datasets["train"].select(range(max_train_samples))
+
+    if data_config.max_eval_samples is not None:
+        max_eval_samples = min(len(raw_datasets["validation"]), data_config.max_eval_samples)
+        raw_datasets["validation"] = raw_datasets["validation"].select(range(max_eval_samples))
+
+    if "test" in raw_datasets and data_config.max_predict_samples is not None:
+        max_predict_samples = min(len(raw_datasets["test"]), data_config.max_predict_samples)
+        raw_datasets["test"] = raw_datasets["test"].select(range(max_predict_samples))
+
+    return raw_datasets
+
+
+def preprocess_function(examples, tokenizer, data_config):
+    """
+    Preprocess examples.
+
+    Args:
+        examples: Examples
+        tokenizer: Tokenizer
+        data_config: Data configuration
+
+    Returns:
+        Preprocessed examples
+    """
+    inputs = examples[data_config.input_column]
+    targets = examples[data_config.output_column]
     
-    def preprocess_function(examples):
-        inputs = []
-        for repo, title, desc in zip(
-            examples["repository"], examples["issue_title"], examples["issue_description"]
-        ):
-            inputs.append(f"Repository: {repo}\nTitle: {title}\nDescription: {desc}")
-        
-        model_inputs = tokenizer(
-            inputs,
-            max_length=max_length,
-            truncation=True,
-            padding="max_length",
-        )
-        
-        labels = tokenizer(
-            examples["solution"],
-            max_length=max_length,
-            truncation=True,
-            padding="max_length",
-        ).input_ids
-        
-        model_inputs["labels"] = labels
-        
-        return model_inputs
-    
-    processed_dataset = dataset.map(
-        preprocess_function,
-        batched=True,
-        remove_columns=dataset["train"].column_names,
+    model_inputs = tokenizer(
+        inputs,
+        max_length=data_config.max_seq_length,
+        padding="max_length" if data_config.pad_to_max_length else False,
+        truncation=True,
     )
     
-    return processed_dataset
-
-
-def setup_mlflow(tracking_uri: Optional[str], experiment_name: str):
-    """Set up MLflow tracking."""
-    if tracking_uri:
-        mlflow.set_tracking_uri(tracking_uri)
-    
-    experiment = mlflow.get_experiment_by_name(experiment_name)
-    if experiment is None:
-        experiment_id = mlflow.create_experiment(experiment_name)
-    else:
-        experiment_id = experiment.experiment_id
-    
-    return experiment_id
-
-
-def train_model(args):
-    """Train the Llama 4 model."""
-    set_seed(args.seed)
-    
-    config = load_config(args.model_type, args.config_path)
-    
-    if args.output_dir:
-        config.output_dir = args.output_dir
-    if args.mlflow_tracking_uri:
-        config.mlflow_tracking_uri = args.mlflow_tracking_uri
-    if args.mlflow_experiment_name:
-        config.mlflow_experiment_name = args.mlflow_experiment_name
-    
-    experiment_id = setup_mlflow(config.mlflow_tracking_uri, config.mlflow_experiment_name)
-    
-    with mlflow.start_run(experiment_id=experiment_id) as run:
-        run_id = run.info.run_id
-        logger.info(f"Started MLflow run: {run_id}")
-        
-        mlflow.log_params(config.to_dict())
-        
-        tokenizer = AutoTokenizer.from_pretrained(
-            config.tokenizer_name,
-            revision=config.tokenizer_revision,
-            use_fast=True,
+    with tokenizer.as_target_tokenizer():
+        labels = tokenizer(
+            targets,
+            max_length=data_config.max_seq_length,
+            padding="max_length" if data_config.pad_to_max_length else False,
+            truncation=True,
         )
+    
+    model_inputs["labels"] = labels["input_ids"]
+    
+    return model_inputs
+
+
+def main():
+    """
+    Main function.
+    """
+    args = parse_args()
+
+    setup_logging(args.debug)
+    logger = logging.getLogger(__name__)
+    logger.info(f"Starting fine-tuning for {args.model_type}")
+
+    model_config, data_config = load_config(args)
+    logger.info(f"Model configuration: {model_config.to_dict()}")
+    logger.info(f"Data configuration: {data_config.to_dict()}")
+
+    set_seed(model_config.seed)
+
+    logger.info(f"Loading tokenizer for {model_config.model_id}")
+    tokenizer = AutoTokenizer.from_pretrained(
+        model_config.model_id,
+        use_auth_token=data_config.use_auth_token,
+    )
+
+    logger.info("Loading datasets")
+    raw_datasets = load_datasets(data_config)
+    logger.info(f"Loaded {len(raw_datasets['train'])} training examples")
+    logger.info(f"Loaded {len(raw_datasets['validation'])} validation examples")
+    if "test" in raw_datasets:
+        logger.info(f"Loaded {len(raw_datasets['test'])} test examples")
+
+    logger.info("Preprocessing datasets")
+    tokenized_datasets = raw_datasets.map(
+        lambda examples: preprocess_function(examples, tokenizer, data_config),
+        batched=True,
+        num_proc=data_config.preprocessing_num_workers,
+        remove_columns=raw_datasets["train"].column_names,
+        load_from_cache_file=not data_config.overwrite_cache,
+        desc="Running tokenizer on datasets",
+    )
+
+    logger.info(f"Loading model {model_config.model_id}")
+    
+    quantization_config = model_config.get_quantization_config()
+    
+    model = AutoModelForCausalLM.from_pretrained(
+        model_config.model_id,
+        use_auth_token=data_config.use_auth_token,
+        **quantization_config,
+    )
+
+    if model_config.use_lora:
+        logger.info("Applying LoRA")
         
-        dataset = prepare_dataset(args.dataset_path, tokenizer, config.max_seq_length)
+        if model_config.use_8bit_quantization or model_config.use_4bit_quantization:
+            model = prepare_model_for_kbit_training(model)
         
-        model = AutoModelForCausalLM.from_pretrained(
-            config.model_name,
-            revision=config.model_revision,
-            torch_dtype=torch.float16 if config.fp16 else torch.float32,
-            device_map="auto",
-        )
+        lora_config = LoraConfig(**model_config.get_lora_config())
         
-        model = prepare_model_for_kbit_training(model)
+        model = get_peft_model(model, lora_config)
         
-        if config.use_lora:
-            lora_config = LoraConfig(
-                r=config.lora_r,
-                lora_alpha=config.lora_alpha,
-                target_modules=config.lora_target_modules,
-                lora_dropout=config.lora_dropout,
-                bias="none",
-                task_type="CAUSAL_LM",
-            )
-            model = get_peft_model(model, lora_config)
-            
-            mlflow.log_params({
-                "lora_r": config.lora_r,
-                "lora_alpha": config.lora_alpha,
-                "lora_dropout": config.lora_dropout,
-                "lora_target_modules": str(config.lora_target_modules),
-            })
-        
-        if args.model_type == "maverick":
-            training_args = Llama4MaverickTrainingArguments(config).to_transformers_training_arguments()
-        else:
-            training_args = Llama4ScoutTrainingArguments(config).to_transformers_training_arguments()
-        
-        training_args["output_dir"] = os.path.join(training_args["output_dir"], run_id)
-        
-        trainer = Trainer(
-            model=model,
-            args=TrainingArguments(**training_args),
-            train_dataset=dataset["train"],
-            eval_dataset=dataset["validation"] if "validation" in dataset else None,
-            tokenizer=tokenizer,
-            data_collator=DataCollatorForLanguageModeling(tokenizer=tokenizer, mlm=False),
-        )
-        
-        logger.info("Starting training...")
-        train_result = trainer.train()
-        
-        metrics = train_result.metrics
-        trainer.log_metrics("train", metrics)
-        
-        logger.info(f"Saving model to {training_args['output_dir']}")
-        trainer.save_model()
-        
-        if "test" in dataset:
-            logger.info("Evaluating model...")
-            eval_results = trainer.evaluate(dataset["test"])
-            trainer.log_metrics("eval", eval_results)
-            
-            mlflow.log_metrics(eval_results)
-        
-        if args.register_model:
-            logger.info("Registering model...")
-            model_registry = ModelRegistry()
-            registry_result = model_registry.register_model(
-                model_type=args.model_type,
-                run_id=run_id,
-                model_path="model",
-                metrics=metrics,
-                tags={
-                    "model_type": args.model_type,
-                    "dataset": os.path.basename(args.dataset_path),
-                    "run_id": run_id,
-                },
-            )
-            
-            logger.info(f"Model registered: {registry_result}")
-        
-        logger.info(f"Training completed. MLflow run ID: {run_id}")
-        
-        return {
-            "run_id": run_id,
-            "metrics": metrics,
-            "model_path": training_args["output_dir"],
-        }
+        logger.info(f"LoRA configuration: {lora_config}")
+
+    logger.info("Creating training arguments")
+    training_args = TrainingArguments(
+        **model_config.get_training_args(),
+    )
+
+    logger.info("Creating data collator")
+    data_collator = DataCollatorForSeq2Seq(
+        tokenizer,
+        model=model,
+        label_pad_token_id=-100 if data_config.ignore_pad_token_for_loss else tokenizer.pad_token_id,
+        pad_to_multiple_of=8 if training_args.fp16 else None,
+    )
+
+    logger.info("Creating trainer")
+    trainer = Trainer(
+        model=model,
+        args=training_args,
+        train_dataset=tokenized_datasets["train"],
+        eval_dataset=tokenized_datasets["validation"],
+        tokenizer=tokenizer,
+        data_collator=data_collator,
+    )
+
+    logger.info("Training model")
+    train_result = trainer.train()
+    
+    logger.info(f"Saving model to {model_config.output_dir}")
+    trainer.save_model()
+    
+    tokenizer.save_pretrained(model_config.output_dir)
+    
+    trainer.save_args()
+    
+    trainer.state.save_to_json(os.path.join(model_config.output_dir, "trainer_state.json"))
+    
+    metrics = train_result.metrics
+    trainer.log_metrics("train", metrics)
+    trainer.save_metrics("train", metrics)
+    
+    logger.info("Evaluating model")
+    eval_metrics = trainer.evaluate()
+    trainer.log_metrics("eval", eval_metrics)
+    trainer.save_metrics("eval", eval_metrics)
+    
+    model_config.save_to_json(os.path.join(model_config.output_dir, "model_config.json"))
+    
+    data_config.save_to_json(os.path.join(model_config.output_dir, "data_config.json"))
+    
+    logger.info("Fine-tuning completed successfully")
 
 
 if __name__ == "__main__":
-    args = parse_args()
-    
-    if args.debug:
-        logging.getLogger().setLevel(logging.DEBUG)
-    
-    train_model(args)
+    main()

@@ -75,6 +75,7 @@ venv.bak/
 # Data files
 data/
 !data/examples/
+!src/ml_infrastructure/data/
 
 # API keys
 .env.local

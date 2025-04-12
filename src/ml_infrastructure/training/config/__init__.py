@@ -1,15 +1,31 @@
 """
-Training Configuration
-
-This package provides configuration classes for fine-tuning Llama 4 models.
+Configuration module for training.
 """
 
-from .llama4_maverick_config import Llama4MaverickConfig, get_default_config as get_maverick_config
-from .llama4_scout_config import Llama4ScoutConfig, get_default_config as get_scout_config
+from .llama4_maverick_config import (
+    Llama4MaverickConfig,
+    Llama4ScoutConfig,
+    get_default_maverick_config,
+    get_default_scout_config,
+    get_config_for_model,
+)
+from .data_config import (
+    DataConfig,
+    GitHubIssueDataConfig,
+    get_default_data_config,
+    get_github_issue_data_config,
+    get_data_config_for_dataset,
+)
 
 __all__ = [
     "Llama4MaverickConfig",
     "Llama4ScoutConfig",
-    "get_maverick_config",
-    "get_scout_config",
+    "get_default_maverick_config",
+    "get_default_scout_config",
+    "get_config_for_model",
+    "DataConfig",
+    "GitHubIssueDataConfig",
+    "get_default_data_config",
+    "get_github_issue_data_config",
+    "get_data_config_for_dataset",
 ]
