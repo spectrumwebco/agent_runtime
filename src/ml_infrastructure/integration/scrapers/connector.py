@@ -1,407 +1,477 @@
 """
-Connector module for integrating GitHub and Gitee issue scrapers with ML pipeline.
-
-This module provides functionality to connect the issue scrapers with the ML pipeline,
-enabling data collection from GitHub and Gitee repositories focused on GitOps, Terraform,
-and Kubernetes for fine-tuning Llama 4 models.
+Connector for integrating GitHub and Gitee scrapers with ML infrastructure.
 """
 
 import os
 import json
 import logging
 import asyncio
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Any, Optional, Union
+import pandas as pd
 from datetime import datetime
 
-from integrations.github.scraper import GitHubIssueScraper
-from integrations.gitee.scraper import GiteeIssueScraper
-from integrations.issue_collector.collector import IssueCollector
-
-import mlflow
-from mlflow.tracking import MlflowClient
-
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-logger = logging.getLogger(__name__)
+from integrations.github import GitHubScraper, GitHubIntegration
+from integrations.gitee import GiteeScraper, GiteeIntegration
+from integrations.issue_collector import IssueCollector
 
 
-class ScraperConnector:
+class ScraperMLConnector:
     """
-    Connector class for integrating GitHub and Gitee issue scrapers with ML pipeline.
+    Connector for integrating GitHub and Gitee scrapers with ML infrastructure.
     """
 
     def __init__(
         self,
-        github_token: Optional[str] = None,
-        gitee_token: Optional[str] = None,
+        output_dir: str = "./data/ml_pipeline",
         mlflow_tracking_uri: Optional[str] = None,
-        output_dir: str = "data",
+        feast_feature_server_url: Optional[str] = None,
     ):
         """
-        Initialize the ScraperConnector.
+        Initialize the scraper-ML connector.
 
         Args:
-            github_token: GitHub API token for authentication
-            gitee_token: Gitee API token for authentication
-            mlflow_tracking_uri: MLflow tracking URI for dataset versioning
-            output_dir: Directory to store collected data
+            output_dir: Directory for output files
+            mlflow_tracking_uri: MLFlow tracking URI
+            feast_feature_server_url: Feast feature server URL
         """
-        self.github_token = github_token or os.environ.get("GITHUB_TOKEN")
-        self.gitee_token = gitee_token or os.environ.get("GITEE_TOKEN")
         self.output_dir = output_dir
+        self.mlflow_tracking_uri = mlflow_tracking_uri
+        self.feast_feature_server_url = feast_feature_server_url
         
-        self.github_scraper = GitHubIssueScraper(token=self.github_token)
-        self.gitee_scraper = GiteeIssueScraper(token=self.gitee_token)
-        self.issue_collector = IssueCollector()
+        os.makedirs(output_dir, exist_ok=True)
         
-        if mlflow_tracking_uri:
-            mlflow.set_tracking_uri(mlflow_tracking_uri)
-        self.mlflow_client = MlflowClient()
-        
-        os.makedirs(self.output_dir, exist_ok=True)
-        
-        logger.info("ScraperConnector initialized")
-
-    async def collect_github_issues(
-        self,
-        repositories: List[str],
-        topics: List[str] = ["gitops", "terraform", "kubernetes"],
-        state: str = "closed",
-        limit: int = 100,
-    ) -> List[Dict[str, Any]]:
-        """
-        Collect issues from GitHub repositories.
-
-        Args:
-            repositories: List of GitHub repositories to collect issues from
-            topics: List of topics to filter repositories by
-            state: State of issues to collect (open, closed, all)
-            limit: Maximum number of issues to collect per repository
-
-        Returns:
-            List of collected issues
-        """
-        logger.info(f"Collecting GitHub issues from {len(repositories)} repositories")
-        
-        all_issues = []
-        for repo in repositories:
-            try:
-                issues = await self.github_scraper.get_issues(
-                    repo=repo, state=state, limit=limit
-                )
-                
-                filtered_issues = []
-                for issue in issues:
-                    repo_topics = await self.github_scraper.get_repository_topics(repo)
-                    if any(topic in repo_topics for topic in topics):
-                        filtered_issues.append(issue)
-                
-                all_issues.extend(filtered_issues)
-                logger.info(f"Collected {len(filtered_issues)} issues from {repo}")
-            except Exception as e:
-                logger.error(f"Error collecting issues from {repo}: {e}")
-        
-        return all_issues
-
-    async def collect_gitee_issues(
-        self,
-        repositories: List[str],
-        topics: List[str] = ["gitops", "terraform", "kubernetes"],
-        state: str = "closed",
-        limit: int = 100,
-    ) -> List[Dict[str, Any]]:
-        """
-        Collect issues from Gitee repositories.
-
-        Args:
-            repositories: List of Gitee repositories to collect issues from
-            topics: List of topics to filter repositories by
-            state: State of issues to collect (open, closed, all)
-            limit: Maximum number of issues to collect per repository
-
-        Returns:
-            List of collected issues
-        """
-        logger.info(f"Collecting Gitee issues from {len(repositories)} repositories")
-        
-        all_issues = []
-        for repo in repositories:
-            try:
-                issues = await self.gitee_scraper.get_issues(
-                    repo=repo, state=state, limit=limit
-                )
-                
-                filtered_issues = []
-                for issue in issues:
-                    repo_topics = await self.gitee_scraper.get_repository_topics(repo)
-                    if any(topic in repo_topics for topic in topics):
-                        filtered_issues.append(issue)
-                
-                all_issues.extend(filtered_issues)
-                logger.info(f"Collected {len(filtered_issues)} issues from {repo}")
-            except Exception as e:
-                logger.error(f"Error collecting issues from {repo}: {e}")
-        
-        return all_issues
-
-    async def collect_issues(
-        self,
-        github_repositories: List[str] = [],
-        gitee_repositories: List[str] = [],
-        topics: List[str] = ["gitops", "terraform", "kubernetes"],
-        state: str = "closed",
-        limit: int = 100,
-    ) -> Dict[str, List[Dict[str, Any]]]:
-        """
-        Collect issues from both GitHub and Gitee repositories.
-
-        Args:
-            github_repositories: List of GitHub repositories to collect issues from
-            gitee_repositories: List of Gitee repositories to collect issues from
-            topics: List of topics to filter repositories by
-            state: State of issues to collect (open, closed, all)
-            limit: Maximum number of issues to collect per repository
-
-        Returns:
-            Dictionary containing collected issues from GitHub and Gitee
-        """
-        logger.info("Collecting issues from GitHub and Gitee repositories")
-        
-        github_task = self.collect_github_issues(
-            repositories=github_repositories, topics=topics, state=state, limit=limit
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
         )
-        gitee_task = self.collect_gitee_issues(
-            repositories=gitee_repositories, topics=topics, state=state, limit=limit
+        self.logger = logging.getLogger("ScraperMLConnector")
+
+    async def collect_training_data(
+        self,
+        github_api_key: Optional[str] = None,
+        gitee_api_key: Optional[str] = None,
+        topics: List[str] = ["gitops", "terraform", "kubernetes", "k8s"],
+        languages: Optional[List[str]] = None,
+        min_stars: int = 100,
+        max_repos_per_platform: int = 25,
+        max_issues_per_repo: int = 50,
+    ) -> Dict[str, Any]:
+        """
+        Collect training data from GitHub and Gitee.
+
+        Args:
+            github_api_key: GitHub API key
+            gitee_api_key: Gitee API key
+            topics: List of topics to search for
+            languages: List of languages to filter by
+            min_stars: Minimum number of stars
+            max_repos_per_platform: Maximum number of repositories to scrape per platform
+            max_issues_per_repo: Maximum number of issues to scrape per repository
+
+        Returns:
+            Collection results
+        """
+        self.logger.info("Collecting training data from GitHub and Gitee")
+        
+        collector = IssueCollector(
+            github_api_key=github_api_key,
+            gitee_api_key=gitee_api_key,
+            output_dir=os.path.join(self.output_dir, "raw_data"),
         )
         
-        github_issues, gitee_issues = await asyncio.gather(github_task, gitee_task)
+        results = await collector.collect_and_save(
+            topics=topics,
+            languages=languages,
+            min_stars=min_stars,
+            max_repos_per_platform=max_repos_per_platform,
+            max_issues_per_repo=max_issues_per_repo,
+        )
+        
+        self.logger.info(f"Collected {len(results['combined_training_data'])} training examples")
+        
+        return results
+
+    def preprocess_training_data(
+        self,
+        training_data_path: str,
+        output_path: Optional[str] = None,
+        train_ratio: float = 0.8,
+        validation_ratio: float = 0.1,
+        test_ratio: float = 0.1,
+        seed: int = 42,
+    ) -> Dict[str, str]:
+        """
+        Preprocess training data for ML pipeline.
+
+        Args:
+            training_data_path: Path to training data
+            output_path: Path for output files
+            train_ratio: Ratio of training data
+            validation_ratio: Ratio of validation data
+            test_ratio: Ratio of test data
+            seed: Random seed
+
+        Returns:
+            Paths to preprocessed data files
+        """
+        self.logger.info(f"Preprocessing training data from {training_data_path}")
+        
+        if output_path is None:
+            output_path = os.path.join(self.output_dir, "preprocessed_data")
+        
+        os.makedirs(output_path, exist_ok=True)
+        
+        with open(training_data_path, "r") as f:
+            training_data = json.load(f)
+        
+        self.logger.info(f"Loaded {len(training_data)} training examples")
+        
+        df = pd.DataFrame(training_data)
+        
+        df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
+        
+        train_end = int(len(df) * train_ratio)
+        val_end = train_end + int(len(df) * validation_ratio)
+        
+        train_df = df[:train_end]
+        val_df = df[train_end:val_end]
+        test_df = df[val_end:]
+        
+        self.logger.info(f"Split data into {len(train_df)} training, {len(val_df)} validation, and {len(test_df)} test examples")
+        
+        train_path = os.path.join(output_path, "train.json")
+        val_path = os.path.join(output_path, "validation.json")
+        test_path = os.path.join(output_path, "test.json")
+        
+        train_df.to_json(train_path, orient="records", indent=2)
+        val_df.to_json(val_path, orient="records", indent=2)
+        test_df.to_json(test_path, orient="records", indent=2)
+        
+        metadata = {
+            "dataset_name": "llama4-fine-tuning",
+            "dataset_description": "Training data for fine-tuning Llama 4 models on software engineering tasks",
+            "dataset_version": datetime.now().strftime("%Y%m%d"),
+            "dataset_size": len(df),
+            "train_size": len(train_df),
+            "validation_size": len(val_df),
+            "test_size": len(test_df),
+            "topics": list(set([topic for example in training_data for topic in example.get("metadata", {}).get("topics", [])])),
+            "languages": list(set([example.get("metadata", {}).get("language") for example in training_data if example.get("metadata", {}).get("language")])),
+            "repositories": list(set([example.get("metadata", {}).get("repository") for example in training_data])),
+            "created_at": datetime.now().isoformat(),
+        }
+        
+        metadata_path = os.path.join(output_path, "metadata.json")
+        with open(metadata_path, "w") as f:
+            json.dump(metadata, f, indent=2)
+        
+        self.logger.info(f"Saved preprocessed data to {output_path}")
         
         return {
-            "github": github_issues,
-            "gitee": gitee_issues,
+            "train_path": train_path,
+            "validation_path": val_path,
+            "test_path": test_path,
+            "metadata_path": metadata_path,
         }
 
-    def format_issues_for_training(
-        self, issues: Dict[str, List[Dict[str, Any]]]
-    ) -> List[Dict[str, Any]]:
+    def create_feature_store_data(
+        self,
+        training_data_path: str,
+        output_path: Optional[str] = None,
+    ) -> Dict[str, str]:
         """
-        Format collected issues for training.
+        Create feature store data from training data.
 
         Args:
-            issues: Dictionary containing collected issues from GitHub and Gitee
+            training_data_path: Path to training data
+            output_path: Path for output files
 
         Returns:
-            List of formatted issues for training
+            Paths to feature store data files
         """
-        logger.info("Formatting issues for training")
+        self.logger.info(f"Creating feature store data from {training_data_path}")
         
-        formatted_issues = []
+        if output_path is None:
+            output_path = os.path.join(self.output_dir, "feature_store_data")
         
-        for issue in issues.get("github", []):
-            try:
-                formatted_issue = self._format_issue_for_training(issue, source="github")
-                if formatted_issue:
-                    formatted_issues.append(formatted_issue)
-            except Exception as e:
-                logger.error(f"Error formatting GitHub issue: {e}")
+        os.makedirs(output_path, exist_ok=True)
         
-        for issue in issues.get("gitee", []):
-            try:
-                formatted_issue = self._format_issue_for_training(issue, source="gitee")
-                if formatted_issue:
-                    formatted_issues.append(formatted_issue)
-            except Exception as e:
-                logger.error(f"Error formatting Gitee issue: {e}")
+        with open(training_data_path, "r") as f:
+            training_data = json.load(f)
         
-        logger.info(f"Formatted {len(formatted_issues)} issues for training")
-        return formatted_issues
-
-    def _format_issue_for_training(
-        self, issue: Dict[str, Any], source: str
-    ) -> Optional[Dict[str, Any]]:
-        """
-        Format a single issue for training.
-
-        Args:
-            issue: Issue to format
-            source: Source of the issue (github or gitee)
-
-        Returns:
-            Formatted issue for training or None if issue cannot be formatted
-        """
-        if not issue.get("solution") and not issue.get("body"):
-            return None
+        self.logger.info(f"Loaded {len(training_data)} training examples")
         
-        solution = issue.get("solution", "")
-        if not solution and issue.get("body"):
-            solution = issue.get("body", "")
-        
-        repository = issue.get("repository", {})
-        repo_name = repository.get("full_name", "")
-        repo_topics = repository.get("topics", [])
-        
-        issue_title = issue.get("title", "")
-        issue_description = issue.get("body", "")
-        issue_id = issue.get("id", "")
-        issue_url = issue.get("html_url", "")
-        issue_created_at = issue.get("created_at", "")
-        issue_closed_at = issue.get("closed_at", "")
-        issue_labels = [label.get("name", "") for label in issue.get("labels", [])]
-        
-        trajectory = []
-        for comment in issue.get("comments", []):
-            trajectory.append({
-                "step": len(trajectory) + 1,
-                "action": "comment",
-                "content": comment.get("body", ""),
-                "timestamp": comment.get("created_at", ""),
-                "user": comment.get("user", {}).get("login", ""),
+        issue_features = []
+        for example in training_data:
+            metadata = example.get("metadata", {})
+            
+            title_embedding = [0.0] * 384
+            description_embedding = [0.0] * 384
+            topic_vector = [0.0] * 50
+            
+            issue_features.append({
+                "issue_id": metadata.get("issue_id", 0),
+                "repository": metadata.get("repository", ""),
+                "title_embedding": title_embedding,
+                "description_embedding": description_embedding,
+                "topic_vector": topic_vector,
+                "language": metadata.get("language", ""),
+                "stars": metadata.get("stars", 0),
+                "issue_age_days": 0,  # Placeholder
+                "solution_length": len(example.get("output", "")),
+                "has_code": 1 if "```" in example.get("output", "") else 0,
+                "timestamp": datetime.now().isoformat(),
+                "created_timestamp": datetime.now().isoformat(),
             })
         
-        formatted_issue = {
-            "input": {
-                "repository": repo_name,
-                "topics": repo_topics,
-                "title": issue_title,
-                "description": issue_description,
+        repository_features = []
+        repositories = {}
+        
+        for example in training_data:
+            metadata = example.get("metadata", {})
+            repo = metadata.get("repository", "")
+            
+            if repo and repo not in repositories:
+                repositories[repo] = True
+                
+                repository_embedding = [0.0] * 384
+                
+                repository_features.append({
+                    "issue_id": metadata.get("issue_id", 0),
+                    "repository": repo,
+                    "repository_embedding": repository_embedding,
+                    "repository_stars": metadata.get("stars", 0),
+                    "repository_forks": 0,  # Placeholder
+                    "repository_age_days": 0,  # Placeholder
+                    "repository_topics": metadata.get("topics", [""] * 10)[:10] + [""] * (10 - len(metadata.get("topics", []))),
+                    "timestamp": datetime.now().isoformat(),
+                    "created_timestamp": datetime.now().isoformat(),
+                })
+        
+        issue_df = pd.DataFrame(issue_features)
+        repository_df = pd.DataFrame(repository_features)
+        
+        issue_path = os.path.join(output_path, "issue_features.parquet")
+        repository_path = os.path.join(output_path, "repository_features.parquet")
+        
+        issue_df.to_parquet(issue_path, index=False)
+        repository_df.to_parquet(repository_path, index=False)
+        
+        self.logger.info(f"Saved feature store data to {output_path}")
+        
+        return {
+            "issue_features_path": issue_path,
+            "repository_features_path": repository_path,
+        }
+
+    def create_mlflow_experiment(
+        self,
+        experiment_name: str,
+        metadata: Dict[str, Any],
+    ) -> str:
+        """
+        Create MLFlow experiment for tracking.
+
+        Args:
+            experiment_name: Name of the experiment
+            metadata: Experiment metadata
+
+        Returns:
+            Experiment ID
+        """
+        self.logger.info(f"Creating MLFlow experiment: {experiment_name}")
+        
+        if self.mlflow_tracking_uri is None:
+            self.logger.warning("MLFlow tracking URI not set, skipping experiment creation")
+            return ""
+        
+        try:
+            import mlflow
+            
+            mlflow.set_tracking_uri(self.mlflow_tracking_uri)
+            
+            experiment = mlflow.get_experiment_by_name(experiment_name)
+            if experiment is None:
+                experiment_id = mlflow.create_experiment(
+                    name=experiment_name,
+                    tags=metadata,
+                )
+                self.logger.info(f"Created MLFlow experiment: {experiment_name} (ID: {experiment_id})")
+            else:
+                experiment_id = experiment.experiment_id
+                self.logger.info(f"Using existing MLFlow experiment: {experiment_name} (ID: {experiment_id})")
+            
+            return experiment_id
+        
+        except ImportError:
+            self.logger.warning("MLFlow not installed, skipping experiment creation")
+            return ""
+        
+        except Exception as e:
+            self.logger.error(f"Error creating MLFlow experiment: {str(e)}")
+            return ""
+
+    def prepare_training_config(
+        self,
+        model_type: str,
+        train_path: str,
+        validation_path: str,
+        output_path: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Prepare training configuration for fine-tuning.
+
+        Args:
+            model_type: Model type (llama4-maverick or llama4-scout)
+            train_path: Path to training data
+            validation_path: Path to validation data
+            output_path: Path for output files
+
+        Returns:
+            Training configuration
+        """
+        self.logger.info(f"Preparing training configuration for {model_type}")
+        
+        if output_path is None:
+            output_path = os.path.join(self.output_dir, "training_config")
+        
+        os.makedirs(output_path, exist_ok=True)
+        
+        config = {
+            "model_type": model_type,
+            "model_id": f"meta-llama/{model_type}",
+            "train_file": train_path,
+            "validation_file": validation_path,
+            "output_dir": f"/models/{model_type}",
+            "training_args": {
+                "per_device_train_batch_size": 8,
+                "per_device_eval_batch_size": 8,
+                "gradient_accumulation_steps": 4,
+                "learning_rate": 5e-5,
+                "num_train_epochs": 3,
+                "fp16": True,
+                "logging_steps": 100,
+                "evaluation_strategy": "steps",
+                "eval_steps": 500,
+                "save_steps": 1000,
+                "save_total_limit": 3,
+                "load_best_model_at_end": True,
+                "metric_for_best_model": "eval_loss",
+                "greater_is_better": False,
+                "seed": 42,
             },
-            "output": {
-                "solution": solution,
+            "tokenizer_config": {
+                "padding_side": "right",
+                "truncation_side": "right",
+                "model_max_length": 4096,
             },
-            "metadata": {
-                "id": issue_id,
-                "source": source,
-                "repository": repo_name,
-                "url": issue_url,
-                "created_at": issue_created_at,
-                "closed_at": issue_closed_at,
-                "labels": issue_labels,
-            },
-            "trajectory": trajectory,
         }
         
-        return formatted_issue
-
-    def save_training_data(
-        self, training_data: List[Dict[str, Any]], filename: str = "training_data.json"
-    ) -> str:
-        """
-        Save training data to a file.
-
-        Args:
-            training_data: Training data to save
-            filename: Name of the file to save training data to
-
-        Returns:
-            Path to the saved file
-        """
-        logger.info(f"Saving {len(training_data)} training examples to {filename}")
+        config_path = os.path.join(output_path, f"{model_type}_config.json")
+        with open(config_path, "w") as f:
+            json.dump(config, f, indent=2)
         
-        os.makedirs(self.output_dir, exist_ok=True)
+        self.logger.info(f"Saved training configuration to {config_path}")
         
-        output_path = os.path.join(self.output_dir, filename)
-        with open(output_path, "w") as f:
-            json.dump(training_data, f, indent=2)
-        
-        logger.info(f"Training data saved to {output_path}")
-        return output_path
+        return {
+            "config": config,
+            "config_path": config_path,
+        }
 
-    def log_dataset_to_mlflow(
+    async def run_full_pipeline(
         self,
-        dataset_path: str,
-        experiment_name: str = "llama4-fine-tuning",
-        dataset_name: str = "github-gitee-issues",
-    ) -> str:
+        github_api_key: Optional[str] = None,
+        gitee_api_key: Optional[str] = None,
+        topics: List[str] = ["gitops", "terraform", "kubernetes", "k8s"],
+        languages: Optional[List[str]] = None,
+        min_stars: int = 100,
+        max_repos_per_platform: int = 25,
+        max_issues_per_repo: int = 50,
+        model_types: List[str] = ["llama4-maverick", "llama4-scout"],
+    ) -> Dict[str, Any]:
         """
-        Log dataset to MLflow for versioning.
+        Run the full data pipeline from scraping to ML infrastructure.
 
         Args:
-            dataset_path: Path to the dataset file
-            experiment_name: Name of the MLflow experiment
-            dataset_name: Name of the dataset
+            github_api_key: GitHub API key
+            gitee_api_key: Gitee API key
+            topics: List of topics to search for
+            languages: List of languages to filter by
+            min_stars: Minimum number of stars
+            max_repos_per_platform: Maximum number of repositories to scrape per platform
+            max_issues_per_repo: Maximum number of issues to scrape per repository
+            model_types: List of model types to prepare for
 
         Returns:
-            MLflow run ID
+            Pipeline results
         """
-        logger.info(f"Logging dataset to MLflow: {dataset_path}")
+        self.logger.info("Running full data pipeline")
         
-        experiment = self.mlflow_client.get_experiment_by_name(experiment_name)
-        if experiment is None:
-            experiment_id = self.mlflow_client.create_experiment(experiment_name)
-        else:
-            experiment_id = experiment.experiment_id
+        collection_results = await self.collect_training_data(
+            github_api_key=github_api_key,
+            gitee_api_key=gitee_api_key,
+            topics=topics,
+            languages=languages,
+            min_stars=min_stars,
+            max_repos_per_platform=max_repos_per_platform,
+            max_issues_per_repo=max_issues_per_repo,
+        )
         
-        with mlflow.start_run(experiment_id=experiment_id) as run:
-            run_id = run.info.run_id
-            
-            mlflow.log_artifact(dataset_path, "datasets")
-            
-            with open(dataset_path, "r") as f:
-                dataset = json.load(f)
-                
-                mlflow.log_param("dataset_name", dataset_name)
-                mlflow.log_param("dataset_size", len(dataset))
-                mlflow.log_param("dataset_path", dataset_path)
-                mlflow.log_param("dataset_created_at", datetime.now().isoformat())
-                
-                github_count = sum(1 for item in dataset if item["metadata"]["source"] == "github")
-                gitee_count = sum(1 for item in dataset if item["metadata"]["source"] == "gitee")
-                
-                mlflow.log_metric("github_issues_count", github_count)
-                mlflow.log_metric("gitee_issues_count", gitee_count)
-                mlflow.log_metric("total_issues_count", len(dataset))
+        preprocessing_results = self.preprocess_training_data(
+            training_data_path=collection_results["combined_training_data_path"],
+        )
         
-        logger.info(f"Dataset logged to MLflow: {run_id}")
-        return run_id
-
-
-async def main():
-    """
-    Main function for testing the ScraperConnector.
-    """
-    connector = ScraperConnector(
-        mlflow_tracking_uri="http://mlflow-server.mlflow.svc.cluster.local:5000",
-        output_dir="data",
-    )
-    
-    github_repositories = [
-        "kubernetes/kubernetes",
-        "hashicorp/terraform",
-        "fluxcd/flux2",
-        "argoproj/argo-cd",
-        "jenkins-x/jx",
-    ]
-    
-    gitee_repositories = [
-        "openharmony/kernel_linux_5.10",
-        "openeuler/infrastructure",
-        "open-cluster-management/ocm",
-    ]
-    
-    issues = await connector.collect_issues(
-        github_repositories=github_repositories,
-        gitee_repositories=gitee_repositories,
-        topics=["gitops", "terraform", "kubernetes"],
-        state="closed",
-        limit=100,
-    )
-    
-    training_data = connector.format_issues_for_training(issues)
-    
-    dataset_path = connector.save_training_data(
-        training_data, filename="github_gitee_issues.json"
-    )
-    
-    run_id = connector.log_dataset_to_mlflow(
-        dataset_path=dataset_path,
-        experiment_name="llama4-fine-tuning",
-        dataset_name="github-gitee-issues",
-    )
-    
-    logger.info(f"Dataset logged to MLflow: {run_id}")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
+        feature_store_results = self.create_feature_store_data(
+            training_data_path=collection_results["combined_training_data_path"],
+        )
+        
+        experiment_id = self.create_mlflow_experiment(
+            experiment_name="llama4-fine-tuning",
+            metadata={
+                "dataset_size": len(collection_results["combined_training_data"]),
+                "topics": ",".join(topics),
+                "languages": ",".join(languages) if languages else "",
+                "model_types": ",".join(model_types),
+            },
+        )
+        
+        training_configs = {}
+        for model_type in model_types:
+            training_configs[model_type] = self.prepare_training_config(
+                model_type=model_type,
+                train_path=preprocessing_results["train_path"],
+                validation_path=preprocessing_results["validation_path"],
+            )
+        
+        pipeline_results = {
+            "collection_results": collection_results,
+            "preprocessing_results": preprocessing_results,
+            "feature_store_results": feature_store_results,
+            "experiment_id": experiment_id,
+            "training_configs": training_configs,
+        }
+        
+        pipeline_results_path = os.path.join(self.output_dir, "pipeline_results.json")
+        with open(pipeline_results_path, "w") as f:
+            serializable_results = {
+                "collection_results": {
+                    "github_issues_count": len(collection_results.get("github", {}).get("issues", [])),
+                    "gitee_issues_count": len(collection_results.get("gitee", {}).get("issues", [])),
+                    "combined_training_data_count": len(collection_results["combined_training_data"]),
+                    "combined_training_data_path": collection_results["combined_training_data_path"],
+                },
+                "preprocessing_results": preprocessing_results,
+                "feature_store_results": feature_store_results,
+                "experiment_id": experiment_id,
+                "training_configs": {
+                    model_type: {
+                        "config_path": config["config_path"],
+                    }
+                    for model_type, config in training_configs.items()
+                },
+            }
+            json.dump(serializable_results, f, indent=2)
+        
+        self.logger.info(f"Saved pipeline results to {pipeline_results_path}")
+        
+        return pipeline_results

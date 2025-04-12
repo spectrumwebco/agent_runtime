@@ -1,0 +1,84 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: feast-feature-server
+  namespace: feast
+  labels:
+    app: feast-feature-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: feast-feature-server
+  template:
+    metadata:
+      labels:
+        app: feast-feature-server
+    spec:
+      containers:
+      - name: feast-feature-server
+        image: feastdev/feature-server:latest
+        args:
+        - serve
+        - --host=0.0.0.0
+        - --port=6566
+        ports:
+        - containerPort: 6566
+        env:
+        - name: FEAST_REGISTRY_URL
+          value: s3://feast/registry.pb
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: accesskey
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: minio-credentials
+              key: secretkey
+        - name: AWS_ENDPOINT_URL
+          value: http://minio.minio.svc.cluster.local:9000
+        - name: S3_USE_HTTPS
+          value: "0"
+        - name: S3_VERIFY_SSL
+          value: "0"
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2Gi
+          requests:
+            cpu: "0.5"
+            memory: 1Gi
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 6566
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 6566
+          initialDelaySeconds: 60
+          periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: feast-feature-server
+  namespace: feast
+spec:
+  selector:
+    app: feast-feature-server
+  ports:
+  - port: 6566
+    targetPort: 6566
+  type: ClusterIP
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: feast
+  labels:
+    name: feast

@@ -97,7 +97,8 @@ class GitHubIntegration:
             "page": page,
         }
 
-        return await self._make_request("GET", "search/repositories", params=params)
+        return await self._make_request("GET", "search/repositories", params=
+    params)
 
     async def get_repository(self, owner: str, repo: str) -> Dict[str, Any]:
         """
@@ -194,7 +195,8 @@ class GitHubIntegration:
         }
 
         return await self._make_request(
-            "GET", f"repos/{owner}/{repo}/issues/{issue_number}/comments", params=params
+            "GET", f"repos/{owner}/{repo}/issues/{issue_number}/comments", params=
+    params
         )
 
     async def get_rate_limit(self) -> Dict[str, Any]:
