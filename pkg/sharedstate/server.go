@@ -10,12 +10,15 @@ import (
 	"github.com/spectrumwebco/agent_runtime/internal/eventstream"
 	"github.com/spectrumwebco/agent_runtime/internal/statemanager"
 	"github.com/spectrumwebco/agent_runtime/internal/statemanager/supabase"
+	"github.com/spectrumwebco/agent_runtime/pkg/ai/vercel"
 )
 
 type Server struct {
 	router             *gin.Engine
 	sharedStateManager *SharedStateManager
 	integration        *Integration
+	aiClient           *vercel.VercelAIClient
+	actionAdapter      *vercel.ServerActionsAdapter
 	port               int
 }
 
@@ -25,6 +28,8 @@ type ServerConfig struct {
 	StateManager       *statemanager.StateManager
 	SupabaseClient     *supabase.Client
 	SharedStateManager *SharedStateManager
+	AIClient           *vercel.VercelAIClient
+	ActionAdapter      *vercel.ServerActionsAdapter
 }
 
 func NewServer(cfg ServerConfig) (*Server, error) {
@@ -44,6 +49,14 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to create shared state manager: %w", err)
 		}
+	}
+
+	if cfg.AIClient == nil {
+		cfg.AIClient = vercel.NewVercelAIClient(cfg.SharedStateManager, cfg.EventStream)
+	}
+
+	if cfg.ActionAdapter == nil {
+		cfg.ActionAdapter = vercel.NewServerActionsAdapter(cfg.SharedStateManager, cfg.AIClient)
 	}
 
 	integrationCfg := IntegrationConfig{
@@ -70,6 +83,8 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 		router:             router,
 		sharedStateManager: cfg.SharedStateManager,
 		integration:        integration,
+		aiClient:           cfg.AIClient,
+		actionAdapter:      cfg.ActionAdapter,
 		port:               cfg.Port,
 	}
 
@@ -80,6 +95,9 @@ func NewServer(cfg ServerConfig) (*Server, error) {
 
 func (s *Server) registerRoutes() {
 	s.sharedStateManager.RegisterWebSocketHandler(s.router)
+	
+	s.router.Use(vercel.StreamingMiddleware(s.aiClient))
+	s.router.Use(vercel.ActionMiddleware(s.actionAdapter))
 
 	api := s.router.Group("/api")
 	{
@@ -92,6 +110,8 @@ func (s *Server) registerRoutes() {
 		api.GET("/state/:type/:id", s.getState)
 
 		api.POST("/state/:type/:id", s.updateState)
+		
+		api.GET("/actions", s.listActions)
 	}
 }
 
@@ -147,6 +167,14 @@ func (s *Server) Start() error {
 	return s.router.Run(addr)
 }
 
+func (s *Server) listActions(c *gin.Context) {
+	actions := s.actionAdapter.ListActions()
+	
+	c.JSON(http.StatusOK, gin.H{
+		"actions": actions,
+	})
+}
+
 func (s *Server) Close() error {
 	if s.integration != nil {
 		if err := s.integration.Close(); err != nil {
@@ -158,6 +186,10 @@ func (s *Server) Close() error {
 		if err := s.sharedStateManager.Close(); err != nil {
 			log.Printf("Error closing shared state manager: %v", err)
 		}
+	}
+	
+	if s.aiClient != nil {
+		s.aiClient.Close()
 	}
 
 	return nil

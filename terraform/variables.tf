@@ -67,3 +67,50 @@ variable "dragonfly_password" {
   sensitive   = true
   default     = "changeme" 
 }
+
+variable "mcp_host_url" {
+  description = "URL for the MCP host"
+  type        = string
+  default     = "http://mcp-host:8080"
+}
+
+variable "mcp_server_url" {
+  description = "URL for the MCP server"
+  type        = string
+  default     = "http://mcp-server:8080"
+}
+
+variable "librechat_code_api_key" {
+  description = "API key for LibreChat Code Interpreter"
+  type        = string
+  sensitive   = true
+}
+
+variable "argocd_chart_version" {
+  description = "Version of the ArgoCD Helm chart"
+  type        = string
+  default     = "5.51.4"
+}
+
+variable "argocd_values_yaml" {
+  description = "Values YAML for the ArgoCD Helm chart"
+  type        = string
+  default     = ""
+}
+
+variable "flux_git_repository_url" {
+  description = "URL of the Git repository for Flux"
+  type        = string
+}
+
+variable "flux_git_branch" {
+  description = "Branch of the Git repository for Flux"
+  type        = string
+  default     = "main"
+}
+
+variable "flux_sync_interval" {
+  description = "Interval for Flux synchronization"
+  type        = string
+  default     = "1m0s"
+}
