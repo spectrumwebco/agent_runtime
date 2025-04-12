@@ -104,10 +104,29 @@ For more detailed examples, see the example scripts in `src/ml_infrastructure/ap
 
 - **Web Scrapers**: Collect solved issues from GitHub and Gitee repositories
 - **Data Pipeline**: Preprocess and validate training data
-- **KubeFlow**: Orchestrate ML workflows
-- **MLflow**: Track experiments and manage models
-- **KServe**: Serve models on Kubernetes
-- **Terraform**: Deploy infrastructure components
+- **k8s/**: All Kubernetes manifests (KubeFlow, MLflow, KServe, etc.)
+- **terraform/**: Infrastructure as Code configurations
+- **src/models/**: Pydantic models for type safety and validation
+
+## Directory Structure
+
+- **k8s/**: All Kubernetes manifests and configurations
+  - kubeflow/: KubeFlow manifests for orchestrating ML workflows
+  - mlflow/: MLflow configurations for experiment tracking
+  - kserve/: KServe manifests for model serving
+  - minio/: MinIO configurations for artifact storage
+  - monitoring/: Prometheus, Grafana, and Loki for monitoring
+  - argocd/: ArgoCD configurations for GitOps
+  
+- **terraform/**: Infrastructure as Code
+  - modules/: Terraform modules for each component
+  - main.tf: Main Terraform configuration
+
+- **src/models/**: Pydantic models for type safety
+  - api/: API models
+  - data_validation/: Data validation models
+  - integrations/: Integration models (GitHub, Gitee)
+  - ml_infrastructure/: ML infrastructure models
 
 ## License
 
