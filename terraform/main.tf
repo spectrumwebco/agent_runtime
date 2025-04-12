@@ -9,10 +9,6 @@ terraform {
       source  = "hashicorp/helm"
       version = "~> 2.9.0"
     }
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.67.0"
-    }
   }
   required_version = ">= 1.0.0"
 }
@@ -25,10 +21,6 @@ provider "helm" {
   kubernetes {
     config_path = var.kubeconfig_path
   }
-}
-
-provider "aws" {
-  region = var.aws_region
 }
 
 resource "kubernetes_namespace" "ml_infrastructure" {
@@ -154,4 +146,18 @@ module "h2o" {
   h2o_storage_size         = var.h2o_storage_size
   storage_class_name       = var.storage_class_name
   depends_on               = [kubernetes_namespace.ml_infrastructure]
+}
+
+module "vault" {
+  source = "./modules/vault"
+
+  kubeconfig_path                 = var.kubeconfig_path
+  vault_namespace                 = var.vault_namespace
+  vault_version                   = var.vault_version
+  vault_k8s_version               = var.vault_k8s_version
+  vault_token                     = var.vault_token
+  vault_resources_limits_cpu      = var.vault_resources_limits_cpu
+  vault_resources_limits_memory   = var.vault_resources_limits_memory
+  vault_resources_requests_cpu    = var.vault_resources_requests_cpu
+  vault_resources_requests_memory = var.vault_resources_requests_memory
 }
