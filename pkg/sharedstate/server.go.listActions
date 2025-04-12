@@ -1,0 +1,7 @@
+func (s *Server) listActions(c *gin.Context) {
+	actions := s.actionAdapter.ListActions()
+	
+	c.JSON(http.StatusOK, gin.H{
+		"actions": actions,
+	})
+}
