@@ -1,5 +1,9 @@
 """
-Training scripts module for ML infrastructure.
+Training Scripts
+
+This package provides scripts for fine-tuning Llama 4 models.
 """
 
-__all__ = []
+from .train_llama4 import train_model
+
+__all__ = ["train_model"]
