@@ -69,9 +69,11 @@ class GiteeScraper:
                     )
 
                     response = await self.gitee_integration.search_repositories(
-                        query=language_query,
-                        page=1,
-                        per_page=min(max_repos, 100),
+                                                                               query=language_query,
+                                                                               page=1,
+                                                                               per_page=min(max_repos,
+                                                                               100
+                                                                           ),
                         order="desc",
                     )
 
@@ -110,7 +112,8 @@ class GiteeScraper:
             if repo.get("stargazers_count", 0) >= min_stars
         ]
 
-        repositories.sort(key=lambda x: x.get("stargazers_count", 0), reverse=True)
+        repositories.sort(key=
+    lambda x: x.get("stargazers_count", 0), reverse=True)
 
         repositories = repositories[:max_repos]
 
@@ -142,9 +145,11 @@ class GiteeScraper:
         all_issues = []
 
         for repo in repositories:
-            owner = repo.get("owner", {}).get("login") or repo.get("namespace", {}).get(
-                "path"
-            )
+            owner = repo.get(
+                            "owner",
+                            {}).get("login") or repo.get("namespace",
+                            {}).get(                "path"
+                        )
             name = repo.get("name") or repo.get("path")
 
             if not owner or not name:
@@ -253,7 +258,8 @@ class GiteeScraper:
                 continue
 
             repo = issue["repository"]
-            repo_name = f"{repo.get('namespace', {}).get('path') or repo.get('owner', {}).get('login')}/{repo.get('path') or repo.get('name')}"
+            repo_name = (f"{repo.get('namespace', {}).get('path') or repo.get('owner', {}).get('login')}/"
+                      f"{repo.get('path') or repo.get('name')}")
             repo_topics = repo.get("topics", [])
 
             issue_title = issue["title"]

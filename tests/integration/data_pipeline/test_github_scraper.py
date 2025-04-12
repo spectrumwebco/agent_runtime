@@ -1,144 +1,79 @@
-import unittest
+"""
+Integration test for GitHub scraper.
+"""
+
 import os
-import sys
-import json
-from unittest.mock import patch, MagicMock
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../src')))
-
-from integrations.github.scraper import GitHubScraper
-from integrations.issue_collector.collector import IssueCollector
+import pytest
+import asyncio
+from src.integrations.github.integration import GitHubIntegration
+from src.integrations.github.scraper import GitHubScraper
 
 
-class TestGitHubScraper(unittest.TestCase):
-    """Integration tests for the GitHub scraper component."""
-
-    def setUp(self):
-        """Set up test fixtures."""
-        self.scraper = GitHubScraper(
-            token=os.environ.get('GITHUB_TOKEN', 'dummy_token'),
-            max_issues=5
-        )
-        self.collector = IssueCollector()
-        
-        self.test_data_dir = os.path.join(os.path.dirname(__file__), '../../data/test')
-        os.makedirs(self.test_data_dir, exist_ok=True)
-
-    @patch('integrations.github.scraper.GitHubScraper._fetch_issues')
-    def test_scraper_integration_with_collector(self, mock_fetch_issues):
-        """Test that the GitHub scraper integrates correctly with the issue collector."""
-        mock_issues = [
-            {
-                "number": 1,
-                "title": "Fix Kubernetes deployment issue",
-                "body": "The deployment is failing with error: ResourceQuotaExceeded",
-                "state": "closed",
-                "labels": [{"name": "bug"}, {"name": "kubernetes"}],
-                "created_at": "2023-01-01T00:00:00Z",
-                "closed_at": "2023-01-02T00:00:00Z",
-                "user": {"login": "user1"},
-                "html_url": "https://github.com/org/repo/issues/1"
-            },
-            {
-                "number": 2,
-                "title": "Update Terraform module for AWS provider",
-                "body": "Need to update the module to support the latest AWS provider version",
-                "state": "closed",
-                "labels": [{"name": "enhancement"}, {"name": "terraform"}],
-                "created_at": "2023-01-03T00:00:00Z",
-                "closed_at": "2023-01-04T00:00:00Z",
-                "user": {"login": "user2"},
-                "html_url": "https://github.com/org/repo/issues/2"
-            }
-        ]
-        
-        mock_comments = {
-            1: [
-                {"user": {"login": "user3"}, "body": "I fixed this by increasing the resource quota."},
-                {"user": {"login": "user1"}, "body": "Thanks, that worked!"}
-            ],
-            2: [
-                {"user": {"login": "user4"}, "body": "Updated the module to use AWS provider 4.0."},
-                {"user": {"login": "user2"}, "body": "Looks good, merging now."}
-            ]
-        }
-        
-        mock_fetch_issues.return_value = mock_issues
-        self.scraper._fetch_comments = MagicMock(side_effect=lambda issue_number: mock_comments.get(issue_number, []))
-        
-        issues = self.scraper.scrape_issues("kubernetes/kubernetes")
-        processed_data = self.collector.process_issues(issues, source="github", repo="kubernetes/kubernetes")
-        
-        self.assertEqual(len(processed_data), 2)
-        self.assertEqual(processed_data[0]["issue_number"], 1)
-        self.assertEqual(processed_data[0]["title"], "Fix Kubernetes deployment issue")
-        self.assertEqual(processed_data[0]["source"], "github")
-        self.assertEqual(processed_data[0]["repository"], "kubernetes/kubernetes")
-        self.assertIn("kubernetes", processed_data[0]["labels"])
-        
-        with open(os.path.join(self.test_data_dir, 'github_processed_data.json'), 'w') as f:
-            json.dump(processed_data, f, indent=2)
-
-    @patch('integrations.github.scraper.GitHubScraper._fetch_issues')
-    def test_filter_issues_by_label(self, mock_fetch_issues):
-        """Test that issues can be filtered by label."""
-        mock_issues = [
-            {
-                "number": 1,
-                "title": "Fix Kubernetes deployment issue",
-                "body": "The deployment is failing with error: ResourceQuotaExceeded",
-                "state": "closed",
-                "labels": [{"name": "bug"}, {"name": "kubernetes"}],
-                "created_at": "2023-01-01T00:00:00Z",
-                "closed_at": "2023-01-02T00:00:00Z",
-                "user": {"login": "user1"},
-                "html_url": "https://github.com/org/repo/issues/1"
-            },
-            {
-                "number": 2,
-                "title": "Update Terraform module for AWS provider",
-                "body": "Need to update the module to support the latest AWS provider version",
-                "state": "closed",
-                "labels": [{"name": "enhancement"}, {"name": "terraform"}],
-                "created_at": "2023-01-03T00:00:00Z",
-                "closed_at": "2023-01-04T00:00:00Z",
-                "user": {"login": "user2"},
-                "html_url": "https://github.com/org/repo/issues/2"
-            }
-        ]
-        
-        mock_fetch_issues.return_value = mock_issues
-        self.scraper._fetch_comments = MagicMock(return_value=[])
-        
-        issues = self.scraper.scrape_issues("kubernetes/kubernetes", labels=["kubernetes"])
-        
-        self.assertEqual(len(issues), 1)
-        self.assertEqual(issues[0]["number"], 1)
-        self.assertEqual(issues[0]["title"], "Fix Kubernetes deployment issue")
-
-    def test_data_format_validation(self):
-        """Test that the data format is valid for training."""
-        data_file = os.path.join(self.test_data_dir, 'github_processed_data.json')
-        if not os.path.exists(data_file):
-            self.skipTest("Processed data file not found. Run test_scraper_integration_with_collector first.")
-        
-        with open(data_file, 'r') as f:
-            processed_data = json.load(f)
-        
-        for item in processed_data:
-            self.assertIn("issue_number", item)
-            self.assertIn("title", item)
-            self.assertIn("body", item)
-            self.assertIn("state", item)
-            self.assertIn("labels", item)
-            self.assertIn("created_at", item)
-            self.assertIn("closed_at", item)
-            self.assertIn("user", item)
-            self.assertIn("url", item)
-            self.assertIn("comments", item)
-            self.assertIn("source", item)
-            self.assertIn("repository", item)
+@pytest.mark.asyncio
+async def test_github_scraper_initialization():
+    """Test GitHub scraper initialization."""
+    api_key = "test_api_key"
+    
+    integration = GitHubIntegration(api_key=api_key)
+    
+    scraper = GitHubScraper(integration=integration)
+    
+    assert scraper.integration == integration
+    assert hasattr(scraper, "logger")
 
 
-if __name__ == '__main__':
-    unittest.main()
+@pytest.mark.asyncio
+async def test_github_scraper_search_repositories():
+    """Test GitHub scraper search repositories method."""
+    github_token = os.environ.get("GITHUB_TOKEN")
+    if not github_token:
+        pytest.skip("No GitHub token available")
+    
+    integration = GitHubIntegration(api_key=github_token)
+    
+    scraper = GitHubScraper(integration=integration)
+    
+    repositories = await scraper.search_repositories(
+        query="kubernetes", 
+        limit=5
+    )
+    
+    assert isinstance(repositories, list)
+    assert len(repositories) <= 5
+    
+    if repositories:
+        assert "name" in repositories[0]
+        assert "owner" in repositories[0]
+        assert "url" in repositories[0]
+
+
+@pytest.mark.asyncio
+async def test_github_scraper_get_issues():
+    """Test GitHub scraper get issues method."""
+    github_token = os.environ.get("GITHUB_TOKEN")
+    if not github_token:
+        pytest.skip("No GitHub token available")
+    
+    integration = GitHubIntegration(api_key=github_token)
+    
+    scraper = GitHubScraper(integration=integration)
+    
+    issues = await scraper.get_issues(
+        owner="kubernetes",
+        repo="kubernetes",
+        state="closed",
+        limit=5
+    )
+    
+    assert isinstance(issues, list)
+    assert len(issues) <= 5
+    
+    if issues:
+        assert "number" in issues[0]
+        assert "title" in issues[0]
+        assert "state" in issues[0]
+        assert issues[0]["state"] == "closed"
+
+
+if __name__ == "__main__":
+    asyncio.run(test_github_scraper_initialization())
