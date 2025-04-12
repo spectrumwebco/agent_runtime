@@ -76,14 +76,14 @@ func NewRocketMQAdapter(connStr string) (*RocketMQAdapter, error) {
 func (a *RocketMQAdapter) Query(ctx context.Context, query string) (interface{}, error) {
 	if strings.HasPrefix(query, "GET_TOPIC_STATS") {
 		topicName := strings.TrimPrefix(query, "GET_TOPIC_STATS ")
-		stats, err := a.admin.ExamineTopicStats(ctx, topicName)
+		stats, err := a.admin.FetchPublishStats(ctx, topicName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get topic stats: %w", err)
 		}
 		return stats, nil
 	} else if strings.HasPrefix(query, "GET_CONSUMER_GROUP_INFO") {
 		groupName := strings.TrimPrefix(query, "GET_CONSUMER_GROUP_INFO ")
-		info, err := a.admin.ExamineConsumerGroupInfo(ctx, groupName)
+		info, err := a.admin.FetchConsumerConnectionInfo(ctx, groupName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get consumer group info: %w", err)
 		}
@@ -95,7 +95,7 @@ func (a *RocketMQAdapter) Query(ctx context.Context, query string) (interface{},
 		}
 		return topics, nil
 	} else if strings.HasPrefix(query, "GET_CONSUMER_GROUPS") {
-		groups, err := a.admin.ExamineSubscriptionGroupConfig(ctx, "")
+		groups, err := a.admin.FetchAllSubscriptionGroup(ctx)
 		if err != nil {
 			return nil, fmt.Errorf("failed to fetch consumer groups: %w", err)
 		}
@@ -113,7 +113,12 @@ func (a *RocketMQAdapter) Execute(ctx context.Context, command string) (interfac
 		}
 		
 		topicName := parts[0]
-		err := a.admin.CreateTopic(ctx, admin.NewTopicConfig(topicName, 8, 3))
+		err := a.admin.CreateTopic(ctx, &primitive.TopicConfig{
+			TopicName:      topicName,
+			ReadQueueNums:  8,
+			WriteQueueNums: 8,
+			Perm:           6,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to create topic: %w", err)
 		}
@@ -148,7 +153,9 @@ func (a *RocketMQAdapter) Execute(ctx context.Context, command string) (interfac
 		}, nil
 	} else if strings.HasPrefix(command, "DELETE_TOPIC") {
 		topicName := strings.TrimPrefix(command, "DELETE_TOPIC ")
-		err := a.admin.DeleteTopic(ctx, admin.NewTopicConfig(topicName, 0, 0))
+		err := a.admin.DeleteTopic(ctx, &primitive.TopicConfig{
+			TopicName: topicName,
+		})
 		if err != nil {
 			return nil, fmt.Errorf("failed to delete topic: %w", err)
 		}
@@ -172,14 +179,14 @@ func (a *RocketMQAdapter) GetSchema(ctx context.Context) (interface{}, error) {
 	
 	topicDetails := make([]map[string]interface{}, 0, len(topics.TopicList))
 	for _, topic := range topics.TopicList {
-		stats, err := a.admin.ExamineTopicStats(ctx, topic)
+		stats, err := a.admin.FetchPublishStats(ctx, topic)
 		if err != nil {
 			continue
 		}
 		
 		topicDetail := map[string]interface{}{
 			"name":           topic,
-			"message_count":  stats.OffsetTable,
+			"message_count":  stats.TotalCount,
 			"creation_time":  time.Now().String(), // Not provided by API
 		}
 		
@@ -188,7 +195,7 @@ func (a *RocketMQAdapter) GetSchema(ctx context.Context) (interface{}, error) {
 	
 	schema["topics"] = topicDetails
 	
-	brokerData, err := a.admin.FetchBrokerNameList(ctx)
+	brokerData, err := a.admin.FetchBrokerRuntimeStats(ctx)
 	if err == nil {
 		schema["brokers"] = brokerData
 	}
