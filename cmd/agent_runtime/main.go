@@ -176,7 +176,7 @@ It provides a high-performance agent runtime with Python FFI capabilities.`,
 	}
 	
 	// Add flags
-	rootCmd.PersistentFlags().StringVar(&configPath, "config", "configs/default.yaml", "Path to configuration file")
+	rootCmd.PersistentFlags().StringVar(&configPath, "config", "config/default.yaml", "Path to configuration file")
 	rootCmd.PersistentFlags().StringVar(&outputDir, "output", "output", "Directory for output files")
 	rootCmd.PersistentFlags().BoolVar(&verbose, "verbose", false, "Enable verbose logging")
 	rootCmd.PersistentFlags().StringVar(&toolsDir, "tools-dir", "tools", "Directory containing tools")
