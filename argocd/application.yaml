@@ -18,3 +18,16 @@ spec:
       selfHeal: true
     syncOptions:
     - CreateNamespace=true
+    healthChecks:
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: agent-runtime-mcp-client
+      namespace: agent-runtime-system
+    - apiVersion: apps/v1
+      kind: Deployment
+      name: agent-runtime-mcp-host
+      namespace: agent-runtime-system
+    - apiVersion: v1
+      kind: Pod
+      name: sandbox
+      namespace: agent-runtime-system

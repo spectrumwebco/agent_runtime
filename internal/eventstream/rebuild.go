@@ -4,11 +4,8 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/spectrumwebco/agent_runtime/internal/env"
 )
 
 type ContextRebuildFunc func(identifier string) (string, error)

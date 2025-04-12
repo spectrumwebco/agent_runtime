@@ -108,7 +108,7 @@ func NewToolRegistry(config *ToolConfig, scriptRunner *python.ScriptRunner) (*To
 		projectRoot, _ := os.Getwd()
 		toolsFullPath := filepath.Join(projectRoot, config.ToolsDir)
 		var err error
-		scriptRunner, err = python.NewScriptRunner(toolsFullPath)
+		scriptRunner, err = python.NewScriptRunner(toolsFullPath, []string{}, "")
 		if err != nil {
 			fmt.Printf("Warning: Failed to create default script runner: %v. Python tools might not work.\n", err)
 		} else {
@@ -282,7 +282,16 @@ func (r *ToolRegistry) SetMockState(state map[string]interface{}) {
 }
 
 func (r *ToolRegistry) Install(env *env.SWEEnv) error {
-	err := env.SetEnvVariables(r.config.EnvVariables)
+	envVars := make(map[string]string)
+	for k, v := range r.config.EnvVariables {
+		if strVal, ok := v.(string); ok {
+			envVars[k] = strVal
+		} else {
+			envVars[k] = fmt.Sprintf("%v", v)
+		}
+	}
+	
+	err := env.SetEnvVariables(envVars)
 	if err != nil {
 		return fmt.Errorf("failed to set environment variables: %w", err)
 	}

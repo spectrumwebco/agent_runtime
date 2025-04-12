@@ -1,35 +1,21 @@
-# Agent Runtime
+# Kubeval
 
-Agent Runtime is a Go implementation of SWE-Agent and SWE-ReX frameworks, providing a high-performance agent runtime with Python FFI capabilities.
+`kubeval` is a tool for validating a Kubernetes YAML or JSON configuration file.
+It does so using schemas generated from the Kubernetes OpenAPI specification, and
+therefore can validate schemas for multiple versions of Kubernetes.
 
-## Project Structure
+[![CircleCI](https://circleci.com/gh/instrumenta/kubeval.svg?style=svg)](https://circleci.com/gh/instrumenta/kubeval)
+[![Go Report
+Card](https://goreportcard.com/badge/github.com/instrumenta/kubeval)](https://goreportcard.com/report/github.com/instrumenta/kubeval)
+[![GoDoc](https://godoc.org/github.com/instrumenta/kubeval?status.svg)](https://godoc.org/github.com/instrumenta/kubeval)
 
-The project follows standard Go project layout:
 
-- `cmd/` - Main applications
-- `internal/` - Private application and library code
-- `pkg/` - Library code that's ok to use by external applications
-- `configs/` - Configuration files
-- `python_agent/` - Python implementation of the agent
+```
+$ kubeval my-invalid-rc.yaml
+WARN - fixtures/my-invalid-rc.yaml contains an invalid ReplicationController - spec.replicas: Invalid type. Expected: [integer,null], given: string
+$ echo $?
+1
+```
 
-## Python Agent
 
-The Python agent is located in the `python_agent/` directory and includes:
-
-- `agent/` - Core agent implementation
-- `tools/` - Tools used by the agent
-- `tests/` - Tests for the agent
-- `agent_config/` - Configuration files
-- `agent_framework/` - Agent framework implementation (formerly SWE-ReX)
-
-## Getting Started
-
-See the documentation in the `docs/` directory for more information.
-
-## Features
-
-- High-performance Go implementation of the agent runtime
-- Python FFI for tool execution
-- Support for multiple MCP servers
-- Integration with Gitee and GitHub repositories
-- Kubernetes and Kata container support
+For full usage and installation instructions see [kubeval.com](https://kubeval.com/).

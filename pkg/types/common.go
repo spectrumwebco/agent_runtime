@@ -1,6 +1,5 @@
 // Package types provides common type definitions used throughout the agent runtime
 package types
-import "time"
 
 // Message represents a communication between the agent and other components
 type Message struct {

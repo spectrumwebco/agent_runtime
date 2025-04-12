@@ -8,7 +8,7 @@ output "vcluster_namespace" {
   value       = var.vcluster_namespace
 }
 
-output "kubeconfig" {
+output "vcluster_kubeconfig" {
   description = "Kubeconfig for accessing the vCluster"
   value       = data.kubernetes_secret.vcluster_kubeconfig.data.config
   sensitive   = true

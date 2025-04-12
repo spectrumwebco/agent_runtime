@@ -111,12 +111,30 @@ spec:
         command: ["/bin/bash", "-c"]
         args:
         - |
+          apt-get update && \
+          apt-get install -y golang git curl jq
+
+          git clone https://github.com/spectrumwebco/gitops-go.git /opt/gitops-go
+          cd /opt/gitops-go
+          go mod download
+          go build -o /usr/local/bin/gitops-mcp-server
+
           service xrdp start
           service ssh start
-          
           systemctl start e2b-surf
           
-          tail -f /dev/null
+          export SSH_HOST="${SSH_HOST}"
+          export SSH_USERNAME="${SSH_USERNAME}"
+          export SSH_PASSWORD="${SSH_PASSWORD}"
+          export LIBRECHAT_CODE_API_KEY=${LIBRECHAT_CODE_API_KEY}
+          
+          /usr/local/bin/gitops-mcp-server
+        env:
+        - name: LIBRECHAT_CODE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: agent-runtime-secrets
+              key: librechat_code_api_key
         ports:
         - containerPort: 3389
           name: rdp

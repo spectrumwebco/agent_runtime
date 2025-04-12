@@ -97,10 +97,10 @@ func (sm *StateManager) handleStateUpdate(ctx context.Context, msg *rocketmq.Mes
 	stateID := keys[0]
 	stateType := keys[1]
 
-	log.Printf("Received state update for ID: %s, Type: %s\n", stateID, stateType)
+	log.Printf("Received state update for ID: %s, Type: %s\n", string(stateID), string(stateType))
 
 	sm.stateCacheLock.Lock()
-	sm.stateCache[stateID] = msg.Body
+	sm.stateCache[string(stateID)] = msg.Body
 	sm.stateCacheLock.Unlock()
 
 
