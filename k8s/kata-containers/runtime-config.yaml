@@ -1,0 +1,29 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kata-runtime-config
+  namespace: agent-runtime-system
+  labels:
+    app.kubernetes.io/name: agent-runtime
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+data:
+  config.toml: |
+    [runtime]
+    name = "kata-runtime-rs"
+    path = "/usr/local/bin/runtime-rs"
+    
+    [agent]
+    container_pipe_size = 1
+    
+    [hypervisor]
+    path = "/usr/bin/qemu-system-x86_64"
+    kernel = "/usr/share/kata-containers/vmlinux.container"
+    image = "/usr/share/kata-containers/kata-containers.img"
+    
+    [factory]
+    cache_type = "memory"
+    
+    [mem_agent]
+    enable = true
+    socket = "/var/run/kata-containers/mem-agent.sock"
