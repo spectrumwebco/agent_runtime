@@ -3,6 +3,10 @@ kind: ConfigMap
 metadata:
   name: vector-config
   namespace: monitoring
+  labels:
+    app.kubernetes.io/name: vector
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
 data:
   vector.yaml: |
     data_dir: /vector-data-dir
@@ -38,6 +42,14 @@ data:
     
       kubernetes_events:
         type: kubernetes_events
+      
+      container_metrics:
+        type: docker_stats
+        scrape_interval_secs: 15
+      
+      opentelemetry:
+        type: opentelemetry
+        address: 0.0.0.0:4317
     
     transforms:
       kubernetes_logs_remap:
@@ -86,6 +98,7 @@ data:
         inputs:
           - internal_metrics
           - host_metrics
+          - container_metrics
         address: 0.0.0.0:9598
     
       loki:
@@ -109,6 +122,21 @@ data:
         inputs:
           - kubernetes_logs_remap
         endpoint: http://jaeger-collector.monitoring.svc.cluster.local:14268/api/traces
+      
+      elasticsearch:
+        type: elasticsearch
+        inputs:
+          - kubernetes_logs_remap
+        endpoint: http://elasticsearch.monitoring.svc.cluster.local:9200
+        index: vector-logs-%Y.%m.%d
+      
+      thanos:
+        type: prometheus_remote_write
+        inputs:
+          - internal_metrics
+          - host_metrics
+          - container_metrics
+        endpoint: http://thanos-receive.monitoring.svc.cluster.local:19291/api/v1/receive
 ---
 apiVersion: apps/v1
 kind: DaemonSet

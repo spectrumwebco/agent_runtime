@@ -1,0 +1,382 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: supabase
+  labels:
+    app.kubernetes.io/name: supabase
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: supabase-postgres-credentials
+  namespace: supabase
+  labels:
+    app.kubernetes.io/name: supabase
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  POSTGRES_ADMIN_PASSWORD: ${POSTGRES_ADMIN_PASSWORD}
+  POSTGRES_REPLICATION_PASSWORD: ${POSTGRES_REPLICATION_PASSWORD}
+  JWT_SECRET: ${JWT_SECRET}
+  ANON_KEY: ${ANON_KEY}
+  SERVICE_ROLE_KEY: ${SERVICE_ROLE_KEY}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: supabase-postgres-config
+  namespace: supabase
+  labels:
+    app.kubernetes.io/name: supabase
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+data:
+  postgresql.conf: |
+    listen_addresses = '*'
+    port = 5432
+    
+    shared_buffers = 128MB
+    work_mem = '64MB'
+    
+    wal_level = replica
+    max_wal_senders = 10
+    max_replication_slots = 10
+    
+    max_connections = 100
+    
+    hot_standby = on
+    hot_standby_feedback = on
+  pg_hba.conf: |
+    local   all             all                                     trust
+    host    all             all             127.0.0.1/32            md5
+    host    all             all             ::1/128                 md5
+    host    replication     replicator      all                     md5
+    host    all             all             all                     md5
+  setup-primary.sh: |
+    set -e
+    
+    psql -v ON_ERROR_STOP=1 --username postgres <<-EOSQL
+      CREATE USER replicator WITH REPLICATION PASSWORD '${POSTGRES_REPLICATION_PASSWORD}';
+    EOSQL
+    
+    psql -v ON_ERROR_STOP=1 --username postgres <<-EOSQL
+      CREATE USER agent WITH PASSWORD 'agent_password';
+      CREATE USER readonly WITH PASSWORD 'readonly_password';
+    EOSQL
+    
+    for db in agent_state task_state tool_state mcp_state prompts_state modules_state; do
+      psql -v ON_ERROR_STOP=1 --username postgres <<-EOSQL
+        CREATE DATABASE $db OWNER agent;
+      EOSQL
+      
+      psql -v ON_ERROR_STOP=1 --username postgres -d $db <<-EOSQL
+        CREATE EXTENSION IF NOT EXISTS "pg_stat_statements";
+        CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+        CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+      EOSQL
+    done
+    
+    psql -v ON_ERROR_STOP=1 --username postgres -d task_state <<-EOSQL
+      CREATE SCHEMA IF NOT EXISTS task;
+      CREATE TABLE IF NOT EXISTS task.state (
+        id SERIAL PRIMARY KEY,
+        task_id UUID NOT NULL,
+        agent_id UUID NOT NULL,
+        state JSONB NOT NULL,
+        status VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+        updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      
+      CREATE TABLE IF NOT EXISTS task.state_history (
+        id SERIAL PRIMARY KEY,
+        state_id INTEGER NOT NULL REFERENCES task.state(id),
+        state JSONB NOT NULL,
+        status VARCHAR(50) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+      );
+      
+      -- Create rollback trigger
+      CREATE OR REPLACE FUNCTION task.state_history_trigger()
+      RETURNS TRIGGER AS $$
+      BEGIN
+        INSERT INTO task.state_history (state_id, state, status, created_at)
+        VALUES (OLD.id, OLD.state, OLD.status, NOW());
+        RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;
+      
+      DROP TRIGGER IF EXISTS state_history_trigger ON task.state;
+      CREATE TRIGGER state_history_trigger
+      BEFORE UPDATE ON task.state
+      FOR EACH ROW
+      EXECUTE FUNCTION task.state_history_trigger();
+    EOSQL
+  setup-replica.sh: |
+    set -e
+    
+    pg_basebackup -h supabase-postgres-primary -U replicator -p 5432 -D /var/lib/postgresql/data -Fp -Xs -P -R
+    
+    cat > /var/lib/postgresql/data/recovery.conf <<-EOF
+    standby_mode = 'on'
+    primary_conninfo = 'host=supabase-postgres-primary port=5432 user=replicator password=${POSTGRES_REPLICATION_PASSWORD}'
+    EOF
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: supabase-postgres-primary
+  namespace: supabase
+  labels:
+    app.kubernetes.io/name: supabase
+    app.kubernetes.io/component: postgres-primary
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+spec:
+  serviceName: supabase-postgres-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: supabase
+      app.kubernetes.io/component: postgres-primary
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: supabase
+        app.kubernetes.io/component: postgres-primary
+        app.kubernetes.io/part-of: agent-runtime
+        app.kubernetes.io/managed-by: terraform
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:14
+        env:
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: supabase-postgres-credentials
+              key: POSTGRES_PASSWORD
+        ports:
+        - containerPort: 5432
+          name: postgres
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+        - name: config
+          mountPath: /docker-entrypoint-initdb.d/setup-primary.sh
+          subPath: setup-primary.sh
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "postgres"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: config
+        configMap:
+          name: supabase-postgres-config
+          defaultMode: 0755
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: supabase-postgres-replica
+  namespace: supabase
+  labels:
+    app.kubernetes.io/name: supabase
+    app.kubernetes.io/component: postgres-replica
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+spec:
+  serviceName: supabase-postgres-replica-headless
+  replicas: 0
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: supabase
+      app.kubernetes.io/component: postgres-replica
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: supabase
+        app.kubernetes.io/component: postgres-replica
+        app.kubernetes.io/part-of: agent-runtime
+        app.kubernetes.io/managed-by: terraform
+    spec:
+      initContainers:
+      - name: init-replica
+        image: postgres:14
+        command: ["/scripts/setup-replica.sh"]
+        env:
+        - name: PGPASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: supabase-postgres-credentials
+              key: POSTGRES_REPLICATION_PASSWORD
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+        - name: scripts
+          mountPath: /scripts
+      containers:
+      - name: postgres
+        image: postgres:14
+        ports:
+        - containerPort: 5432
+          name: postgres
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "postgres"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+      volumes:
+      - name: scripts
+        configMap:
+          name: supabase-postgres-config
+          defaultMode: 0755
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: supabase-postgres-primary
+  namespace: supabase
+  labels:
+    app.kubernetes.io/name: supabase
+    app.kubernetes.io/component: postgres-primary
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+spec:
+  selector:
+    app.kubernetes.io/name: supabase
+    app.kubernetes.io/component: postgres-primary
+  ports:
+  - port: 5432
+    targetPort: 5432
+    name: postgres
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: supabase-postgres-replica
+  namespace: supabase
+  labels:
+    app.kubernetes.io/name: supabase
+    app.kubernetes.io/component: postgres-replica
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+spec:
+  selector:
+    app.kubernetes.io/name: supabase
+    app.kubernetes.io/component: postgres-replica
+  ports:
+  - port: 5432
+    targetPort: 5432
+    name: postgres
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: supabase-0
+  namespace: supabase
+  labels:
+    app.kubernetes.io/name: supabase
+    app.kubernetes.io/component: supabase
+    app.kubernetes.io/instance: "0"
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: supabase
+      app.kubernetes.io/component: supabase
+      app.kubernetes.io/instance: "0"
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: supabase
+        app.kubernetes.io/component: supabase
+        app.kubernetes.io/instance: "0"
+        app.kubernetes.io/part-of: agent-runtime
+        app.kubernetes.io/managed-by: terraform
+    spec:
+      containers:
+      - name: auth
+        image: supabase/auth:latest
+        env:
+        - name: POSTGRES_HOST
+          value: supabase-postgres-primary
+        - name: POSTGRES_PORT
+          value: "5432"
+        - name: POSTGRES_DB
+          value: "postgres"
+        - name: POSTGRES_USER
+          value: "postgres"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: supabase-postgres-credentials
+              key: POSTGRES_PASSWORD
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: supabase-postgres-credentials
+              key: JWT_SECRET
+        ports:
+        - containerPort: 9999
+          name: auth
+      - name: rest
+        image: postgrest/postgrest:latest
+        env:
+        - name: PGRST_DB_URI
+          value: "postgres://postgres:${POSTGRES_PASSWORD}@supabase-postgres-primary:5432/postgres"
+        - name: PGRST_JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: supabase-postgres-credentials
+              key: JWT_SECRET
+        ports:
+        - containerPort: 3000
+          name: rest
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: supabase
+  namespace: supabase
+  labels:
+    app.kubernetes.io/name: supabase
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+spec:
+  selector:
+    app.kubernetes.io/name: supabase
+    app.kubernetes.io/component: supabase
+  ports:
+  - port: 80
+    targetPort: 3000
+    name: rest
+  - port: 9999
+    targetPort: 9999
+    name: auth

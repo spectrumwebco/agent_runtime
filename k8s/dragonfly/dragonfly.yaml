@@ -1,0 +1,354 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dragonfly
+  labels:
+    app.kubernetes.io/name: dragonfly
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dragonfly-config
+  namespace: dragonfly
+  labels:
+    app.kubernetes.io/name: dragonfly
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+data:
+  dragonfly.conf: |
+    bind 0.0.0.0
+    port 6379
+    
+    maxmemory 75%
+    maxmemory-policy volatile-lru
+    
+    dir /data
+    dbfilename dump.rdb
+    save 900 1
+    save 300 10
+    save 60 10000
+    
+    
+    
+    notify-keyspace-events AKE
+    
+    lazyfree-lazy-eviction yes
+    lazyfree-lazy-expire yes
+    
+    expire-default-ttl 3600
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: dragonfly
+  namespace: dragonfly
+  labels:
+    app.kubernetes.io/name: dragonfly
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+spec:
+  serviceName: dragonfly-headless
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dragonfly
+  template:
+    metadata:
+      labels:
+        app: dragonfly
+        app.kubernetes.io/name: dragonfly
+        app.kubernetes.io/part-of: agent-runtime
+        app.kubernetes.io/managed-by: terraform
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "6379"
+    spec:
+      containers:
+      - name: dragonfly
+        image: docker.io/dragonflydb/dragonfly:latest
+        args: ["--config", "/etc/dragonfly/dragonfly.conf"]
+        ports:
+        - name: redis
+          containerPort: 6379
+        - name: gossip
+          containerPort: 6380
+        resources:
+          limits:
+            cpu: "1000m"
+            memory: "2Gi"
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/dragonfly
+        - name: data
+          mountPath: /data
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - redis-cli -h localhost -p 6379 ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - redis-cli -h localhost -p 6379 ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: config
+        configMap:
+          name: dragonfly-config
+          items:
+          - key: dragonfly.conf
+            path: dragonfly.conf
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dragonfly-headless
+  namespace: dragonfly
+  labels:
+    app.kubernetes.io/name: dragonfly
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+spec:
+  selector:
+    app: dragonfly
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+  - name: gossip
+    port: 6380
+    targetPort: 6380
+  clusterIP: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dragonfly
+  namespace: dragonfly
+  labels:
+    app.kubernetes.io/name: dragonfly
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+spec:
+  selector:
+    app: dragonfly
+  ports:
+  - name: redis
+    port: 6379
+    targetPort: 6379
+  type: ClusterIP
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: dragonfly-snapshot
+  namespace: dragonfly
+  labels:
+    app.kubernetes.io/name: dragonfly
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+spec:
+  schedule: "0 0 * * *"  # Daily at midnight
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 5
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: dragonfly
+            app.kubernetes.io/part-of: agent-runtime
+            app.kubernetes.io/managed-by: terraform
+        spec:
+          containers:
+          - name: snapshot
+            image: redis:alpine
+            command:
+            - sh
+            - -c
+            - redis-cli -h dragonfly.dragonfly.svc.cluster.local -p 6379 SAVE
+          restartPolicy: OnFailure
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dragonfly-rollback
+  namespace: dragonfly
+  labels:
+    app.kubernetes.io/name: dragonfly
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+data:
+  rollback.sh: |
+    set -e
+    
+    SNAPSHOTS=$(ls -1t /data/backup/ | grep -E '^dragonfly-snapshot-[0-9]+\.rdb$')
+    
+    if [ -z "$SNAPSHOTS" ]; then
+      echo "No snapshots available for rollback"
+      exit 1
+    fi
+    
+    SNAPSHOT_INDEX=${1:-1}
+    SNAPSHOT=$(echo "$SNAPSHOTS" | sed -n "${SNAPSHOT_INDEX}p")
+    
+    if [ -z "$SNAPSHOT" ]; then
+      echo "Snapshot index $SNAPSHOT_INDEX not found"
+      exit 1
+    fi
+    
+    echo "Rolling back to snapshot: $SNAPSHOT"
+    
+    redis-cli -h localhost -p 6379 SHUTDOWN SAVE
+    
+    while pgrep -f "dragonfly" > /dev/null; do
+      echo "Waiting for DragonflyDB to stop..."
+      sleep 1
+    done
+    
+    cp /data/dump.rdb /data/dump.rdb.bak
+    
+    cp /data/backup/$SNAPSHOT /data/dump.rdb
+    
+    dragonfly --config /etc/dragonfly/dragonfly.conf &
+    
+    echo "Rollback completed successfully"
+  create-snapshot.sh: |
+    set -e
+    
+    mkdir -p /data/backup
+    
+    TIMESTAMP=$(date +%Y%m%d%H%M%S)
+    
+    redis-cli -h localhost -p 6379 SAVE
+    
+    cp /data/dump.rdb /data/backup/dragonfly-snapshot-$TIMESTAMP.rdb
+    
+    ls -1t /data/backup/dragonfly-snapshot-*.rdb | tail -n +6 | xargs -r rm
+    
+    echo "Snapshot created: dragonfly-snapshot-$TIMESTAMP.rdb"
+  list-snapshots.sh: |
+    if [ ! -d "/data/backup" ]; then
+      echo "No snapshots available"
+      exit 0
+    fi
+    
+    SNAPSHOTS=$(ls -1t /data/backup/ | grep -E '^dragonfly-snapshot-[0-9]+\.rdb$')
+    
+    if [ -z "$SNAPSHOTS" ]; then
+      echo "No snapshots available"
+      exit 0
+    fi
+    
+    echo "Available snapshots:"
+    echo "$SNAPSHOTS" | nl
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: dragonfly-service-monitor
+  namespace: dragonfly
+  labels:
+    app.kubernetes.io/name: dragonfly
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: dragonfly
+  endpoints:
+  - port: redis
+    interval: 30s
+    path: /metrics
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dragonfly-event-stream
+  namespace: dragonfly
+  labels:
+    app.kubernetes.io/name: dragonfly
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+data:
+  event-stream-integration.sh: |
+    set -e
+    
+    redis-cli -h localhost -p 6379 CONFIG SET notify-keyspace-events AKE
+    
+    redis-cli -h localhost -p 6379 CONFIG SET expire-default-ttl 3600
+    
+    redis-cli -h localhost -p 6379 CONFIG SET context-cache-ttl 7200
+    
+    echo "Event Stream integration configured successfully"
+  cache-invalidation.sh: |
+    set -e
+    
+    if [ -z "$1" ]; then
+      echo "Usage: $0 <pattern>"
+      exit 1
+    fi
+    
+    PATTERN=$1
+    
+    KEYS=$(redis-cli -h localhost -p 6379 KEYS "$PATTERN")
+    
+    if [ -z "$KEYS" ]; then
+      echo "No keys found matching pattern: $PATTERN"
+      exit 0
+    fi
+    
+    echo "$KEYS" | xargs -I{} redis-cli -h localhost -p 6379 DEL {}
+    
+    echo "Cache invalidation completed for pattern: $PATTERN"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dragonfly-context-rebuild
+  namespace: dragonfly
+  labels:
+    app.kubernetes.io/name: dragonfly
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+data:
+  context-rebuild-registry.json: |
+    {
+      "rebuild_functions": [
+        {
+          "pattern": "agent:context:*",
+          "rebuild_function": "agent.RebuildAgentContext",
+          "ttl": 7200
+        },
+        {
+          "pattern": "tool:state:*",
+          "rebuild_function": "tools.RebuildToolState",
+          "ttl": 3600
+        },
+        {
+          "pattern": "execution:state:*",
+          "rebuild_function": "execution.RebuildExecutionState",
+          "ttl": 3600
+        }
+      ]
+    }
