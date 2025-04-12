@@ -1,0 +1,979 @@
+{
+  "tools": [
+    {
+      "name": "shell",
+      "description": "Executes a shell command",
+      "parameters": {
+        "command": {
+          "type": "string",
+          "description": "Command to execute"
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Command output"
+      }
+    },
+    {
+      "name": "file",
+      "description": "Performs file operations",
+      "parameters": {
+        "operation": {
+          "type": "string",
+          "description": "Operation to perform (read, write, list, delete)",
+          "enum": ["read", "write", "list", "delete"]
+        },
+        "path": {
+          "type": "string",
+          "description": "Path to the file or directory"
+        },
+        "content": {
+          "type": "string",
+          "description": "Content to write (for write operation)",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Operation result"
+      }
+    },
+    {
+      "name": "http",
+      "description": "Makes HTTP requests",
+      "parameters": {
+        "url": {
+          "type": "string",
+          "description": "URL to request"
+        },
+        "method": {
+          "type": "string",
+          "description": "HTTP method",
+          "enum": ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"],
+          "default": "GET"
+        },
+        "headers": {
+          "type": "object",
+          "description": "HTTP headers",
+          "required": false
+        },
+        "body": {
+          "type": "string",
+          "description": "Request body",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "object",
+        "description": "HTTP response",
+        "properties": {
+          "status": {
+            "type": "integer",
+            "description": "HTTP status code"
+          },
+          "headers": {
+            "type": "object",
+            "description": "HTTP response headers"
+          },
+          "body": {
+            "type": "string",
+            "description": "Response body"
+          }
+        }
+      }
+    },
+    {
+      "name": "git",
+      "description": "Performs Git operations",
+      "parameters": {
+        "operation": {
+          "type": "string",
+          "description": "Git operation to perform",
+          "enum": ["clone", "pull", "push", "commit", "checkout", "status"]
+        },
+        "repository": {
+          "type": "string",
+          "description": "Git repository URL or path",
+          "required": false
+        },
+        "branch": {
+          "type": "string",
+          "description": "Git branch",
+          "required": false
+        },
+        "message": {
+          "type": "string",
+          "description": "Commit message",
+          "required": false
+        },
+        "files": {
+          "type": "array",
+          "description": "Files to add to commit",
+          "required": false,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Git operation result"
+      }
+    },
+    {
+      "name": "python",
+      "description": "Executes Python code",
+      "parameters": {
+        "code": {
+          "type": "string",
+          "description": "Python code to execute"
+        },
+        "file": {
+          "type": "string",
+          "description": "Python file to execute",
+          "required": false
+        },
+        "function": {
+          "type": "string",
+          "description": "Python function to execute",
+          "required": false
+        },
+        "module": {
+          "type": "string",
+          "description": "Python module containing the function",
+          "required": false
+        },
+        "args": {
+          "type": "array",
+          "description": "Arguments for the function",
+          "required": false,
+          "items": {
+            "type": "any"
+          }
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Python execution result"
+      }
+    },
+    {
+      "name": "cpp",
+      "description": "Executes C++ code",
+      "parameters": {
+        "code": {
+          "type": "string",
+          "description": "C++ code to execute"
+        },
+        "input": {
+          "type": "string",
+          "description": "Input to provide to the program",
+          "required": false
+        },
+        "flags": {
+          "type": "array",
+          "description": "Compiler flags",
+          "required": false,
+          "items": {
+            "type": "string"
+          }
+        },
+        "include_dirs": {
+          "type": "array",
+          "description": "Include directories",
+          "required": false,
+          "items": {
+            "type": "string"
+          }
+        },
+        "libraries": {
+          "type": "array",
+          "description": "Libraries to link",
+          "required": false,
+          "items": {
+            "type": "string"
+          }
+        },
+        "library": {
+          "type": "string",
+          "description": "Compile as a library with this name",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "C++ execution result"
+      }
+    },
+    {
+      "name": "docker",
+      "description": "Manages Docker containers",
+      "parameters": {
+        "operation": {
+          "type": "string",
+          "description": "Docker operation to perform",
+          "enum": ["run", "build", "stop", "rm", "ps", "images", "pull"]
+        },
+        "image": {
+          "type": "string",
+          "description": "Docker image",
+          "required": false
+        },
+        "container": {
+          "type": "string",
+          "description": "Docker container",
+          "required": false
+        },
+        "options": {
+          "type": "array",
+          "description": "Docker command options",
+          "required": false,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Docker operation result"
+      }
+    },
+    {
+      "name": "kubernetes",
+      "description": "Manages Kubernetes resources",
+      "parameters": {
+        "operation": {
+          "type": "string",
+          "description": "Kubernetes operation to perform",
+          "enum": ["apply", "get", "delete", "describe", "logs", "exec"]
+        },
+        "resource": {
+          "type": "string",
+          "description": "Kubernetes resource type",
+          "required": false
+        },
+        "name": {
+          "type": "string",
+          "description": "Resource name",
+          "required": false
+        },
+        "namespace": {
+          "type": "string",
+          "description": "Kubernetes namespace",
+          "required": false
+        },
+        "file": {
+          "type": "string",
+          "description": "YAML file for apply operation",
+          "required": false
+        },
+        "command": {
+          "type": "string",
+          "description": "Command to execute in the pod",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Kubernetes operation result"
+      }
+    },
+    {
+      "name": "message_notify_user",
+      "description": "Send a message to user without requiring a response. Use for acknowledging receipt of messages, providing progress updates, reporting task completion, or explaining changes in approach.",
+      "parameters": {
+        "text": {
+          "type": "string",
+          "description": "Message text to display to user"
+        },
+        "attachments": {
+          "type": "array",
+          "description": "(Optional) List of attachments to show to user, can be file paths or URLs",
+          "required": false,
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "returns": {
+        "type": "null",
+        "description": "No return value"
+      }
+    },
+    {
+      "name": "message_ask_user",
+      "description": "Ask user a question and wait for response. Use for requesting clarification, asking for confirmation, or gathering additional information.",
+      "parameters": {
+        "text": {
+          "type": "string",
+          "description": "Question text to present to user"
+        },
+        "attachments": {
+          "type": "array",
+          "description": "(Optional) List of question-related files or reference materials",
+          "required": false,
+          "items": {
+            "type": "string"
+          }
+        },
+        "suggest_user_takeover": {
+          "type": "string",
+          "description": "(Optional) Suggested operation for user takeover",
+          "enum": ["none", "browser"],
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "User's response"
+      }
+    },
+    {
+      "name": "file_read",
+      "description": "Read file content. Use for checking file contents, analyzing logs, or reading configuration files.",
+      "parameters": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path of the file to read"
+        },
+        "start_line": {
+          "type": "integer",
+          "description": "(Optional) Starting line to read from, 0-based",
+          "required": false
+        },
+        "end_line": {
+          "type": "integer",
+          "description": "(Optional) Ending line number (exclusive)",
+          "required": false
+        },
+        "sudo": {
+          "type": "boolean",
+          "description": "(Optional) Whether to use sudo privileges",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "File content"
+      }
+    },
+    {
+      "name": "file_write",
+      "description": "Overwrite or append content to a file. Use for creating new files, appending content, or modifying existing files.",
+      "parameters": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path of the file to write to"
+        },
+        "content": {
+          "type": "string",
+          "description": "Text content to write"
+        },
+        "append": {
+          "type": "boolean",
+          "description": "(Optional) Whether to use append mode",
+          "required": false
+        },
+        "leading_newline": {
+          "type": "boolean",
+          "description": "(Optional) Whether to add a leading newline",
+          "required": false
+        },
+        "trailing_newline": {
+          "type": "boolean",
+          "description": "(Optional) Whether to add a trailing newline",
+          "required": false
+        },
+        "sudo": {
+          "type": "boolean",
+          "description": "(Optional) Whether to use sudo privileges",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Operation result"
+      }
+    },
+    {
+      "name": "file_str_replace",
+      "description": "Replace specified string in a file. Use for updating specific content in files or fixing errors in code.",
+      "parameters": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path of the file to perform replacement on"
+        },
+        "old_str": {
+          "type": "string",
+          "description": "Original string to be replaced"
+        },
+        "new_str": {
+          "type": "string",
+          "description": "New string to replace with"
+        },
+        "sudo": {
+          "type": "boolean",
+          "description": "(Optional) Whether to use sudo privileges",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Operation result"
+      }
+    },
+    {
+      "name": "file_find_in_content",
+      "description": "Search for matching text within file content. Use for finding specific content or patterns in files.",
+      "parameters": {
+        "file": {
+          "type": "string",
+          "description": "Absolute path of the file to search within"
+        },
+        "regex": {
+          "type": "string",
+          "description": "Regular expression pattern to match"
+        },
+        "sudo": {
+          "type": "boolean",
+          "description": "(Optional) Whether to use sudo privileges",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "array",
+        "description": "Array of matches",
+        "items": {
+          "type": "object",
+          "properties": {
+            "line": {
+              "type": "integer",
+              "description": "Line number of match"
+            },
+            "content": {
+              "type": "string",
+              "description": "Matched content"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "file_find_by_name",
+      "description": "Find files by name pattern in specified directory. Use for locating files with specific naming patterns.",
+      "parameters": {
+        "path": {
+          "type": "string",
+          "description": "Absolute path of directory to search"
+        },
+        "glob": {
+          "type": "string",
+          "description": "Filename pattern using glob syntax wildcards"
+        }
+      },
+      "returns": {
+        "type": "array",
+        "description": "Array of matching file paths",
+        "items": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "name": "shell_exec",
+      "description": "Execute commands in a specified shell session. Use for running code, installing packages, or managing files.",
+      "parameters": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the target shell session"
+        },
+        "exec_dir": {
+          "type": "string",
+          "description": "Working directory for command execution (must use absolute path)"
+        },
+        "command": {
+          "type": "string",
+          "description": "Shell command to execute"
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Command output"
+      }
+    },
+    {
+      "name": "shell_view",
+      "description": "View the content of a specified shell session. Use for checking command execution results or monitoring output.",
+      "parameters": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the target shell session"
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Shell session content"
+      }
+    },
+    {
+      "name": "shell_wait",
+      "description": "Wait for the running process in a specified shell session to return. Use after running commands that require longer runtime.",
+      "parameters": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the target shell session"
+        },
+        "seconds": {
+          "type": "integer",
+          "description": "Wait duration in seconds",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Shell session content after waiting"
+      }
+    },
+    {
+      "name": "shell_write_to_process",
+      "description": "Write input to a running process in a specified shell session. Use for responding to interactive command prompts.",
+      "parameters": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the target shell session"
+        },
+        "input": {
+          "type": "string",
+          "description": "Input content to write to the process"
+        },
+        "press_enter": {
+          "type": "boolean",
+          "description": "Whether to press Enter key after input"
+        }
+      },
+      "returns": {
+        "type": "null",
+        "description": "No return value"
+      }
+    },
+    {
+      "name": "shell_kill_process",
+      "description": "Terminate a running process in a specified shell session. Use for stopping long-running processes or handling frozen commands.",
+      "parameters": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier of the target shell session"
+        }
+      },
+      "returns": {
+        "type": "null",
+        "description": "No return value"
+      }
+    },
+    {
+      "name": "browser_view",
+      "description": "View content of the current browser page. Use for checking the latest state of previously opened pages.",
+      "parameters": {},
+      "returns": {
+        "type": "object",
+        "description": "Browser page content",
+        "properties": {
+          "html": {
+            "type": "string",
+            "description": "HTML content of the page"
+          },
+          "screenshot": {
+            "type": "string",
+            "description": "Base64-encoded screenshot of the page"
+          }
+        }
+      }
+    },
+    {
+      "name": "browser_navigate",
+      "description": "Navigate browser to specified URL. Use when accessing new pages is needed.",
+      "parameters": {
+        "url": {
+          "type": "string",
+          "description": "Complete URL to visit. Must include protocol prefix."
+        }
+      },
+      "returns": {
+        "type": "object",
+        "description": "Browser page content after navigation",
+        "properties": {
+          "html": {
+            "type": "string",
+            "description": "HTML content of the page"
+          },
+          "screenshot": {
+            "type": "string",
+            "description": "Base64-encoded screenshot of the page"
+          }
+        }
+      }
+    },
+    {
+      "name": "browser_restart",
+      "description": "Restart browser and navigate to specified URL. Use when browser state needs to be reset.",
+      "parameters": {
+        "url": {
+          "type": "string",
+          "description": "Complete URL to visit after restart. Must include protocol prefix."
+        }
+      },
+      "returns": {
+        "type": "object",
+        "description": "Browser page content after restart",
+        "properties": {
+          "html": {
+            "type": "string",
+            "description": "HTML content of the page"
+          },
+          "screenshot": {
+            "type": "string",
+            "description": "Base64-encoded screenshot of the page"
+          }
+        }
+      }
+    },
+    {
+      "name": "browser_click",
+      "description": "Click on elements in the current browser page. Use when clicking page elements is needed.",
+      "parameters": {
+        "index": {
+          "type": "integer",
+          "description": "(Optional) Index number of the element to click",
+          "required": false
+        },
+        "coordinate_x": {
+          "type": "number",
+          "description": "(Optional) X coordinate of click position",
+          "required": false
+        },
+        "coordinate_y": {
+          "type": "number",
+          "description": "(Optional) Y coordinate of click position",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "object",
+        "description": "Browser page content after click",
+        "properties": {
+          "html": {
+            "type": "string",
+            "description": "HTML content of the page"
+          },
+          "screenshot": {
+            "type": "string",
+            "description": "Base64-encoded screenshot of the page"
+          }
+        }
+      }
+    },
+    {
+      "name": "browser_input",
+      "description": "Overwrite text in editable elements on the current browser page. Use when filling content in input fields.",
+      "parameters": {
+        "index": {
+          "type": "integer",
+          "description": "(Optional) Index number of the element to overwrite text",
+          "required": false
+        },
+        "coordinate_x": {
+          "type": "number",
+          "description": "(Optional) X coordinate of the element to overwrite text",
+          "required": false
+        },
+        "coordinate_y": {
+          "type": "number",
+          "description": "(Optional) Y coordinate of the element to overwrite text",
+          "required": false
+        },
+        "text": {
+          "type": "string",
+          "description": "Complete text content to overwrite"
+        },
+        "press_enter": {
+          "type": "boolean",
+          "description": "Whether to press Enter key after input"
+        }
+      },
+      "returns": {
+        "type": "object",
+        "description": "Browser page content after input",
+        "properties": {
+          "html": {
+            "type": "string",
+            "description": "HTML content of the page"
+          },
+          "screenshot": {
+            "type": "string",
+            "description": "Base64-encoded screenshot of the page"
+          }
+        }
+      }
+    },
+    {
+      "name": "browser_move_mouse",
+      "description": "Move cursor to specified position on the current browser page. Use when simulating user mouse movement.",
+      "parameters": {
+        "coordinate_x": {
+          "type": "number",
+          "description": "X coordinate of target cursor position"
+        },
+        "coordinate_y": {
+          "type": "number",
+          "description": "Y coordinate of target cursor position"
+        }
+      },
+      "returns": {
+        "type": "null",
+        "description": "No return value"
+      }
+    },
+    {
+      "name": "browser_press_key",
+      "description": "Simulate key press in the current browser page. Use when specific keyboard operations are needed.",
+      "parameters": {
+        "key": {
+          "type": "string",
+          "description": "Key name to simulate (e.g., Enter, Tab, ArrowUp), supports key combinations (e.g., Control+Enter)."
+        }
+      },
+      "returns": {
+        "type": "object",
+        "description": "Browser page content after key press",
+        "properties": {
+          "html": {
+            "type": "string",
+            "description": "HTML content of the page"
+          },
+          "screenshot": {
+            "type": "string",
+            "description": "Base64-encoded screenshot of the page"
+          }
+        }
+      }
+    },
+    {
+      "name": "browser_select_option",
+      "description": "Select specified option from dropdown list element in the current browser page. Use when selecting dropdown menu options.",
+      "parameters": {
+        "index": {
+          "type": "integer",
+          "description": "Index number of the dropdown list element"
+        },
+        "option": {
+          "type": "integer",
+          "description": "Option number to select, starting from 0."
+        }
+      },
+      "returns": {
+        "type": "object",
+        "description": "Browser page content after selection",
+        "properties": {
+          "html": {
+            "type": "string",
+            "description": "HTML content of the page"
+          },
+          "screenshot": {
+            "type": "string",
+            "description": "Base64-encoded screenshot of the page"
+          }
+        }
+      }
+    },
+    {
+      "name": "browser_scroll_up",
+      "description": "Scroll up the current browser page. Use when viewing content above or returning to page top.",
+      "parameters": {
+        "to_top": {
+          "type": "boolean",
+          "description": "(Optional) Whether to scroll directly to page top instead of one viewport up.",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "object",
+        "description": "Browser page content after scrolling",
+        "properties": {
+          "html": {
+            "type": "string",
+            "description": "HTML content of the page"
+          },
+          "screenshot": {
+            "type": "string",
+            "description": "Base64-encoded screenshot of the page"
+          }
+        }
+      }
+    },
+    {
+      "name": "browser_scroll_down",
+      "description": "Scroll down the current browser page. Use when viewing content below or jumping to page bottom.",
+      "parameters": {
+        "to_bottom": {
+          "type": "boolean",
+          "description": "(Optional) Whether to scroll directly to page bottom instead of one viewport down.",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "object",
+        "description": "Browser page content after scrolling",
+        "properties": {
+          "html": {
+            "type": "string",
+            "description": "HTML content of the page"
+          },
+          "screenshot": {
+            "type": "string",
+            "description": "Base64-encoded screenshot of the page"
+          }
+        }
+      }
+    },
+    {
+      "name": "browser_console_exec",
+      "description": "Execute JavaScript code in browser console. Use when custom scripts need to be executed.",
+      "parameters": {
+        "javascript": {
+          "type": "string",
+          "description": "JavaScript code to execute. Note that the runtime environment is browser console."
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Console execution result"
+      }
+    },
+    {
+      "name": "browser_console_view",
+      "description": "View browser console output. Use when checking JavaScript logs or debugging page errors.",
+      "parameters": {
+        "max_lines": {
+          "type": "integer",
+          "description": "(Optional) Maximum number of log lines to return.",
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "string",
+        "description": "Console output"
+      }
+    },
+    {
+      "name": "info_search_web",
+      "description": "Search web pages using search engine. Use for obtaining latest information or finding references.",
+      "parameters": {
+        "query": {
+          "type": "string",
+          "description": "Search query in Google search style, using 3-5 keywords."
+        },
+        "date_range": {
+          "type": "string",
+          "description": "(Optional) Time range filter for search results.",
+          "enum": ["all", "past_hour", "past_day", "past_week", "past_month", "past_year"],
+          "required": false
+        }
+      },
+      "returns": {
+        "type": "array",
+        "description": "Search results",
+        "items": {
+          "type": "object",
+          "properties": {
+            "title": {
+              "type": "string",
+              "description": "Result title"
+            },
+            "url": {
+              "type": "string",
+              "description": "Result URL"
+            },
+            "snippet": {
+              "type": "string",
+              "description": "Result snippet"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "deploy_expose_port",
+      "description": "Expose specified local port for temporary public access. Use when providing temporary public access for services.",
+      "parameters": {
+        "port": {
+          "type": "integer",
+          "description": "Local port number to expose"
+        }
+      },
+      "returns": {
+        "type": "object",
+        "description": "Exposure result",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Public URL for accessing the exposed port"
+          }
+        }
+      }
+    },
+    {
+      "name": "deploy_apply_deployment",
+      "description": "Deploy website or application to public production environment. Use when deploying or updating static websites or applications.",
+      "parameters": {
+        "type": {
+          "type": "string",
+          "description": "Type of website or application to deploy.",
+          "enum": ["static", "nextjs"]
+        },
+        "local_dir": {
+          "type": "string",
+          "description": "Absolute path of local directory to deploy."
+        }
+      },
+      "returns": {
+        "type": "object",
+        "description": "Deployment result",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "Public URL for accessing the deployed application"
+          }
+        }
+      }
+    },
+    {
+      "name": "make_manus_page",
+      "description": "Make a Manus Page from a local MDX file.",
+      "parameters": {
+        "mdx_file_path": {
+          "type": "string",
+          "description": "Absolute path of the source MDX file"
+        }
+      },
+      "returns": {
+        "type": "object",
+        "description": "Page creation result",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "URL of the created page"
+          }
+        }
+      }
+    },
+    {
+      "name": "idle",
+      "description": "A special tool to indicate you have completed all tasks and are about to enter idle state.",
+      "parameters": {},
+      "returns": {
+        "type": "null",
+        "description": "No return value"
+      }
+    }
+  ]
+}
