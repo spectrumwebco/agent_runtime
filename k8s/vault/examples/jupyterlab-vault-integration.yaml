@@ -101,7 +101,7 @@ spec:
                   conn.close()
           EOF
           
-          start-notebook.sh --NotebookApp.token='' --NotebookApp.password=''
+          start-notebook.sh --NotebookApp.token='${JUPYTER_TOKEN}' --NotebookApp.password='${JUPYTER_PASSWORD}'
         env:
         - name: JUPYTER_ENABLE_LAB
           value: "yes"
