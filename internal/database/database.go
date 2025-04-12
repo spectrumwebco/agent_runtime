@@ -22,7 +22,12 @@ Natural Language Question: %s
 
 Respond with ONLY the SQL query, nothing else.`, dbType, question)
 	
-	response, err := ai.CompletionWithLLM(ctx, prompt, "llama-4")
+	client, err := ai.NewDefaultClient()
+	if err != nil {
+		return "", fmt.Errorf("failed to create AI client: %w", err)
+	}
+	
+	response, err := client.CompletionWithLLM(prompt, ai.WithModel("llama-4"), ai.WithContext(ctx))
 	if err != nil {
 		return "", fmt.Errorf("failed to generate SQL: %w", err)
 	}
@@ -122,7 +127,7 @@ func TestConnection(ctx context.Context, dbType, connStr string) error {
 }
 
 func GetSchema(ctx context.Context, dbType, connStr string) (interface{}, error) {
-	db, err := getConnection(dbType, connStr)
+	_, err := getConnection(dbType, connStr)
 	if err != nil {
 		return nil, err
 	}

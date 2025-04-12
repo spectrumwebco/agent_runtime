@@ -132,7 +132,14 @@ func (a *DragonflyAdapter) Query(ctx context.Context, command string) (interface
 			}
 		}
 		
-		return a.client.Scan(ctx, cursor, match, count).Result()
+		keys, nextCursor, err := a.client.Scan(ctx, cursor, match, count).Result()
+		if err != nil {
+			return nil, err
+		}
+		return map[string]interface{}{
+			"keys":        keys,
+			"next_cursor": nextCursor,
+		}, nil
 		
 	case "LRANGE":
 		if len(args) < 4 {
