@@ -2,9 +2,6 @@
 Gitee integration for D4E Agent.
 """
 
-import os
-import json
-import asyncio
 import logging
 from typing import Dict, List, Any, Optional
 from datetime import datetime
@@ -14,7 +11,8 @@ import aiohttp
 class GiteeIntegration:
     """Gitee API integration for D4E Agent."""
 
-    def __init__(self, api_key: str, base_url: str = "https://gitee.com/api/v5"):
+    def __init__(self, api_key: str, base_url: str =
+    "https://gitee.com/api/v5"):
         """
         Initialize the Gitee integration.
 
@@ -103,7 +101,8 @@ class GiteeIntegration:
             "order": order,
         }
 
-        return await self._make_request("GET", "search/repositories", params=params)
+        return await self._make_request("GET", "search/repositories", params=
+    params)
 
     async def get_repository(self, owner: str, repo: str) -> Dict[str, Any]:
         """
@@ -200,7 +199,8 @@ class GiteeIntegration:
         }
 
         return await self._make_request(
-            "GET", f"repos/{owner}/{repo}/issues/{issue_number}/comments", params=params
+            "GET", f"repos/{owner}/{repo}/issues/{issue_number}/comments", params=
+    params
         )
 
     async def get_rate_limit(self) -> Dict[str, Any]:

@@ -1,9 +1,7 @@
 """
-ML Infrastructure API
-
-This package provides a client for interacting with the ML infrastructure for Llama 4 fine-tuning.
+API module for ML infrastructure.
 """
 
-from .client import MLInfrastructureClient
+from .client import MLInfrastructureAPIClient
 
-__all__ = ["MLInfrastructureClient"]
+__all__ = ["MLInfrastructureAPIClient"]
