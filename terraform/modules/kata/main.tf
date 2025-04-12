@@ -30,7 +30,7 @@ resource "kubernetes_config_map" "kata_config" {
   }
   
   data = {
-    "configuration.toml" = file("${path.module}/../../configs/kata/configuration.toml")
+    "configuration.toml" = file("${path.module}/../../config/kata/configuration.toml")
     
     "e2b-surf-config.json" = jsonencode({
       browser = {
