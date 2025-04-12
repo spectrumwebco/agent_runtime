@@ -1,18 +1,20 @@
-/**
- * # MinIO Terraform Module
- *
- * This module deploys MinIO for artifact storage in the ML infrastructure.
- */
+provider "kubernetes" {
+  config_path = var.kubeconfig_path
+}
 
-resource "kubernetes_namespace" "ml_infrastructure" {
-  count = var.create_namespace ? 1 : 0
-  
+provider "helm" {
+  kubernetes {
+    config_path = var.kubeconfig_path
+  }
+}
+
+resource "kubernetes_namespace" "minio" {
   metadata {
-    name = var.namespace
-    
+    name = var.minio_namespace
     labels = {
-      "app.kubernetes.io/part-of" = "ml-infrastructure"
-      "app.kubernetes.io/component" = "storage"
+      "app.kubernetes.io/name" = "minio"
+      "app.kubernetes.io/instance" = "minio"
+      "app.kubernetes.io/managed-by" = "terraform"
     }
   }
 }
@@ -20,486 +22,188 @@ resource "kubernetes_namespace" "ml_infrastructure" {
 resource "kubernetes_secret" "minio_credentials" {
   metadata {
     name      = "minio-credentials"
-    namespace = var.namespace
-    
-    labels = {
-      app       = "minio"
-      component = "artifact-storage"
-    }
+    namespace = kubernetes_namespace.minio.metadata[0].name
   }
-  
+
   data = {
-    accessKey = var.minio_access_key
-    secretKey = var.minio_secret_key
+    "accesskey" = var.minio_access_key
+    "secretkey" = var.minio_secret_key
   }
-  
-  depends_on = [kubernetes_namespace.ml_infrastructure]
+
+  type = "Opaque"
 }
 
-resource "kubernetes_config_map" "minio_config" {
+resource "kubernetes_persistent_volume_claim" "minio_data" {
   metadata {
-    name      = "minio-config"
-    namespace = var.namespace
-    
-    labels = {
-      app       = "minio"
-      component = "artifact-storage"
-    }
+    name      = "minio-data"
+    namespace = kubernetes_namespace.minio.metadata[0].name
   }
-  
-  data = {
-    MINIO_BROWSER_REDIRECT_URL = var.minio_console_url
-    MINIO_PROMETHEUS_AUTH_TYPE = "public"
-    MINIO_PROMETHEUS_URL       = var.prometheus_url
-    MINIO_PROMETHEUS_JOB_ID    = "minio"
-    MINIO_REGION               = var.region
-    MINIO_DOMAIN               = var.minio_domain
-    MINIO_STORAGE_CLASS_STANDARD = "EC:2"
-    MINIO_STORAGE_CLASS_RRS    = "EC:1"
-  }
-  
-  depends_on = [kubernetes_namespace.ml_infrastructure]
-}
-
-resource "kubernetes_persistent_volume_claim" "minio_pvc" {
-  metadata {
-    name      = "minio-pvc"
-    namespace = var.namespace
-    
-    labels = {
-      app       = "minio"
-      component = "artifact-storage"
-    }
-  }
-  
   spec {
     access_modes = ["ReadWriteOnce"]
-    
     resources {
       requests = {
-        storage = var.storage_size
+        storage = var.minio_storage_size
       }
     }
-    
-    storage_class_name = var.storage_class
+    storage_class_name = var.storage_class_name
   }
-  
-  depends_on = [kubernetes_namespace.ml_infrastructure]
 }
 
-resource "kubernetes_deployment" "minio" {
-  metadata {
-    name      = "minio"
-    namespace = var.namespace
-    
-    labels = {
-      app       = "minio"
-      component = "artifact-storage"
-    }
+resource "helm_release" "minio" {
+  name       = "minio"
+  repository = "https://charts.min.io/"
+  chart      = "minio"
+  namespace  = kubernetes_namespace.minio.metadata[0].name
+  version    = var.minio_version
+  timeout    = 600
+
+  set {
+    name  = "mode"
+    value = "standalone"
   }
-  
+
+  set {
+    name  = "persistence.enabled"
+    value = "true"
+  }
+
+  set {
+    name  = "persistence.existingClaim"
+    value = kubernetes_persistent_volume_claim.minio_data.metadata[0].name
+  }
+
+  set {
+    name  = "accessKey"
+    value = var.minio_access_key
+  }
+
+  set {
+    name  = "secretKey"
+    value = var.minio_secret_key
+  }
+
+  set {
+    name  = "resources.requests.memory"
+    value = "1Gi"
+  }
+
+  set {
+    name  = "resources.requests.cpu"
+    value = "250m"
+  }
+
+  set {
+    name  = "resources.limits.memory"
+    value = "2Gi"
+  }
+
+  set {
+    name  = "resources.limits.cpu"
+    value = "500m"
+  }
+
+  depends_on = [
+    kubernetes_namespace.minio,
+    kubernetes_persistent_volume_claim.minio_data
+  ]
+}
+
+resource "kubernetes_config_map" "minio_bucket_config" {
+  metadata {
+    name      = "minio-bucket-config"
+    namespace = kubernetes_namespace.minio.metadata[0].name
+  }
+
+  data = {
+    "create-buckets.sh" = <<-EOT
+      
+      wget -q https://dl.min.io/client/mc/release/linux-amd64/mc -O /usr/local/bin/mc
+      chmod +x /usr/local/bin/mc
+      
+      mc config host add minio http://minio.${kubernetes_namespace.minio.metadata[0].name}.svc.cluster.local:9000 ${var.minio_access_key} ${var.minio_secret_key} --api s3v4
+      
+      mc mb --ignore-existing minio/mlflow
+      mc mb --ignore-existing minio/models
+      mc mb --ignore-existing minio/datasets
+      mc mb --ignore-existing minio/feast
+      
+      mc policy set download minio/mlflow
+      mc policy set download minio/models
+      mc policy set download minio/datasets
+      mc policy set download minio/feast
+      
+      echo "MinIO buckets created and configured successfully"
+    EOT
+  }
+
+  depends_on = [
+    helm_release.minio
+  ]
+}
+
+resource "kubernetes_job" "minio_init" {
+  metadata {
+    name      = "minio-init"
+    namespace = kubernetes_namespace.minio.metadata[0].name
+  }
+
   spec {
-    selector {
-      match_labels = {
-        app = "minio"
-      }
-    }
-    
-    strategy {
-      type = "Recreate"
-    }
-    
     template {
       metadata {
         labels = {
-          app       = "minio"
-          component = "artifact-storage"
+          app = "minio-init"
         }
       }
-      
+
       spec {
         container {
-          name  = "minio"
-          image = var.minio_image
-          
-          args = [
-            "server",
-            "/data",
-            "--console-address",
-            ":9001"
-          ]
-          
-          env {
-            name = "MINIO_ROOT_USER"
-            
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.minio_credentials.metadata[0].name
-                key  = "accessKey"
-              }
-            }
-          }
-          
-          env {
-            name = "MINIO_ROOT_PASSWORD"
-            
-            value_from {
-              secret_key_ref {
-                name = kubernetes_secret.minio_credentials.metadata[0].name
-                key  = "secretKey"
-              }
-            }
-          }
-          
-          dynamic "env" {
-            for_each = kubernetes_config_map.minio_config.data
-            
-            content {
-              name  = env.key
-              value = env.value
-            }
-          }
-          
-          port {
-            container_port = 9000
-            name           = "api"
-          }
-          
-          port {
-            container_port = 9001
-            name           = "console"
-          }
-          
+          name    = "minio-init"
+          image   = "alpine:3.15"
+          command = ["/bin/sh", "-c", "/scripts/create-buckets.sh"]
+
           volume_mount {
-            name       = "data"
-            mount_path = "/data"
+            name       = "scripts"
+            mount_path = "/scripts"
           }
-          
-          resources {
-            requests = {
-              memory = var.memory_request
-              cpu    = var.cpu_request
-            }
-            
-            limits = {
-              memory = var.memory_limit
-              cpu    = var.cpu_limit
+
+          env {
+            name = "MINIO_ACCESS_KEY"
+            value_from {
+              secret_key_ref {
+                name = kubernetes_secret.minio_credentials.metadata[0].name
+                key  = "accesskey"
+              }
             }
           }
-          
-          liveness_probe {
-            http_get {
-              path = "/minio/health/live"
-              port = "api"
+
+          env {
+            name = "MINIO_SECRET_KEY"
+            value_from {
+              secret_key_ref {
+                name = kubernetes_secret.minio_credentials.metadata[0].name
+                key  = "secretkey"
+              }
             }
-            
-            initial_delay_seconds = 120
-            period_seconds        = 20
-          }
-          
-          readiness_probe {
-            http_get {
-              path = "/minio/health/ready"
-              port = "api"
-            }
-            
-            initial_delay_seconds = 120
-            period_seconds        = 20
           }
         }
-        
+
         volume {
-          name = "data"
-          
-          persistent_volume_claim {
-            claim_name = kubernetes_persistent_volume_claim.minio_pvc.metadata[0].name
+          name = "scripts"
+          config_map {
+            name = kubernetes_config_map.minio_bucket_config.metadata[0].name
+            default_mode = "0755"
           }
         }
+
+        restart_policy = "OnFailure"
       }
     }
+
+    backoff_limit = 3
   }
-  
+
   depends_on = [
-    kubernetes_namespace.ml_infrastructure,
-    kubernetes_secret.minio_credentials,
-    kubernetes_config_map.minio_config,
-    kubernetes_persistent_volume_claim.minio_pvc
-  ]
-}
-
-resource "kubernetes_service" "minio" {
-  metadata {
-    name      = "minio"
-    namespace = var.namespace
-    
-    labels = {
-      app       = "minio"
-      component = "artifact-storage"
-    }
-  }
-  
-  spec {
-    port {
-      port        = 9000
-      target_port = 9000
-      protocol    = "TCP"
-      name        = "api"
-    }
-    
-    port {
-      port        = 9001
-      target_port = 9001
-      protocol    = "TCP"
-      name        = "console"
-    }
-    
-    selector = {
-      app = "minio"
-    }
-    
-    type = "ClusterIP"
-  }
-  
-  depends_on = [kubernetes_namespace.ml_infrastructure]
-}
-
-resource "kubernetes_service" "minio_headless" {
-  metadata {
-    name      = "minio-headless"
-    namespace = var.namespace
-    
-    labels = {
-      app       = "minio"
-      component = "artifact-storage"
-    }
-  }
-  
-  spec {
-    port {
-      port = 9000
-      name = "api"
-    }
-    
-    port {
-      port = 9001
-      name = "console"
-    }
-    
-    selector = {
-      app = "minio"
-    }
-    
-    cluster_ip = "None"
-  }
-  
-  depends_on = [kubernetes_namespace.ml_infrastructure]
-}
-
-resource "kubernetes_ingress_v1" "minio" {
-  count = var.create_ingress ? 1 : 0
-  
-  metadata {
-    name      = "minio"
-    namespace = var.namespace
-    
-    labels = {
-      app       = "minio"
-      component = "artifact-storage"
-    }
-    
-    annotations = {
-      "kubernetes.io/ingress.class"                 = "nginx"
-      "nginx.ingress.kubernetes.io/ssl-redirect"    = "true"
-      "nginx.ingress.kubernetes.io/proxy-body-size" = "0"
-      "nginx.ingress.kubernetes.io/proxy-buffering" = "off"
-      "nginx.ingress.kubernetes.io/proxy-read-timeout" = "600"
-      "nginx.ingress.kubernetes.io/proxy-send-timeout" = "600"
-    }
-  }
-  
-  spec {
-    rule {
-      host = var.minio_domain
-      
-      http {
-        path {
-          path      = "/"
-          path_type = "Prefix"
-          
-          backend {
-            service {
-              name = kubernetes_service.minio.metadata[0].name
-              
-              port {
-                name = "api"
-              }
-            }
-          }
-        }
-      }
-    }
-    
-    rule {
-      host = var.minio_console_domain
-      
-      http {
-        path {
-          path      = "/"
-          path_type = "Prefix"
-          
-          backend {
-            service {
-              name = kubernetes_service.minio.metadata[0].name
-              
-              port {
-                name = "console"
-              }
-            }
-          }
-        }
-      }
-    }
-    
-    dynamic "tls" {
-      for_each = var.tls_secret_name != "" ? [1] : []
-      
-      content {
-        hosts = [
-          var.minio_domain,
-          var.minio_console_domain
-        ]
-        
-        secret_name = var.tls_secret_name
-      }
-    }
-  }
-  
-  depends_on = [
-    kubernetes_namespace.ml_infrastructure,
-    kubernetes_service.minio
-  ]
-}
-
-resource "null_resource" "create_buckets" {
-  count = var.create_buckets ? 1 : 0
-  
-  provisioner "local-exec" {
-    command = <<-EOT
-      export MINIO_ENDPOINT=${var.minio_endpoint}
-      export MINIO_ACCESS_KEY=${var.minio_access_key}
-      export MINIO_SECRET_KEY=${var.minio_secret_key}
-      
-      if ! command -v mc &> /dev/null; then
-        curl -O https://dl.min.io/client/mc/release/linux-amd64/mc
-        chmod +x mc
-        sudo mv mc /usr/local/bin/
-      fi
-      
-      mc alias set minio "${MINIO_ENDPOINT}" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}"
-      
-      for bucket in ${join(" ", var.buckets)}; do
-        mc mb --ignore-existing "minio/$bucket"
-      done
-      
-      mc policy set download "minio/mlflow-artifacts"
-      mc policy set download "minio/model-registry"
-      mc policy set download "minio/training-data"
-      mc policy set download "minio/model-serving"
-      
-      mc version enable "minio/model-registry"
-      mc version enable "minio/checkpoints"
-    EOT
-  }
-  
-  depends_on = [
-    kubernetes_deployment.minio,
-    kubernetes_service.minio
-  ]
-}
-
-resource "null_resource" "configure_lifecycle" {
-  count = var.configure_lifecycle ? 1 : 0
-  
-  provisioner "local-exec" {
-    command = <<-EOT
-      export MINIO_ENDPOINT=${var.minio_endpoint}
-      export MINIO_ACCESS_KEY=${var.minio_access_key}
-      export MINIO_SECRET_KEY=${var.minio_secret_key}
-      
-      if ! command -v mc &> /dev/null; then
-        curl -O https://dl.min.io/client/mc/release/linux-amd64/mc
-        chmod +x mc
-        sudo mv mc /usr/local/bin/
-      fi
-      
-      mc alias set minio "${MINIO_ENDPOINT}" "${MINIO_ACCESS_KEY}" "${MINIO_SECRET_KEY}"
-      
-      cat > /tmp/logs-lifecycle.json << EOF
-      {
-        "Rules": [
-          {
-            "ID": "expire-old-logs",
-            "Status": "Enabled",
-            "Filter": {
-              "Prefix": ""
-            },
-            "Expiration": {
-              "Days": 30
-            }
-          }
-        ]
-      }
-      EOF
-      
-      mc ilm import minio/logs < /tmp/logs-lifecycle.json
-      rm /tmp/logs-lifecycle.json
-      
-      cat > /tmp/checkpoints-lifecycle.json << EOF
-      {
-        "Rules": [
-          {
-            "ID": "expire-old-checkpoints",
-            "Status": "Enabled",
-            "Filter": {
-              "Prefix": ""
-            },
-            "NoncurrentVersionExpiration": {
-              "NoncurrentDays": 90
-            },
-            "Expiration": {
-              "Days": 365
-            }
-          }
-        ]
-      }
-      EOF
-      
-      mc ilm import minio/checkpoints < /tmp/checkpoints-lifecycle.json
-      rm /tmp/checkpoints-lifecycle.json
-      
-      cat > /tmp/model-registry-lifecycle.json << EOF
-      {
-        "Rules": [
-          {
-            "ID": "expire-old-model-versions",
-            "Status": "Enabled",
-            "Filter": {
-              "Prefix": ""
-            },
-            "NoncurrentVersionExpiration": {
-              "NoncurrentDays": 180
-            }
-          }
-        ]
-      }
-      EOF
-      
-      mc ilm import minio/model-registry < /tmp/model-registry-lifecycle.json
-      rm /tmp/model-registry-lifecycle.json
-    EOT
-  }
-  
-  depends_on = [
-    null_resource.create_buckets
+    helm_release.minio,
+    kubernetes_config_map.minio_bucket_config
   ]
 }
