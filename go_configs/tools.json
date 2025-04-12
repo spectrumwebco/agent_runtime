@@ -1,16 +1,18 @@
-[
-  {
-    "name": "example_tool",
-    "description": "An example tool placeholder.",
-    "input_schema": {
-      "type": "object",
-      "properties": {
+{
+  "tools": [
+    {
+      "name": "example_tool",
+      "description": "An example tool placeholder.",
+      "parameters": {
         "param1": {
           "type": "string",
           "description": "An example parameter."
         }
       },
-      "required": ["param1"]
+      "returns": {
+        "type": "string",
+        "description": "Operation result"
+      }
     }
-  }
-]
+  ]
+}

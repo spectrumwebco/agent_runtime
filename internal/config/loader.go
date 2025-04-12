@@ -11,34 +11,43 @@ import (
 func LoadConfig(configPath string) (*Config, error) {
 	v := viper.New()
 	
-	v.SetDefault("agent.name", "default-go-agent")
-	v.SetDefault("agent.max_requeries", 3)
-	v.SetDefault("agent.always_require_zero_exit", true)
-	v.SetDefault("tools.execution_timeout", 60) // 60 seconds
-	v.SetDefault("tools.max_output_size", 10000) // 10000 characters
+	defaultConfig := NewDefaultConfig()
 	
-	v.SetDefault("rocketmq.name_server_addrs", []string{"127.0.0.1:9876"}) // Default local nameserver
-	v.SetDefault("rocketmq.state_topic", "agent_state_updates")
-	v.SetDefault("rocketmq.producer_group_name", "agent_runtime_producer_group")
-	v.SetDefault("rocketmq.consumer_group_name", "agent_runtime_consumer_group")
-	v.SetDefault("rocketmq.consumer_subscription", "*") // Consume all tags by default
-	v.SetDefault("rocketmq.producer_retry", 2)          // Default retry count for producer
-	v.SetDefault("supabase.main_url", "https://supabase.example.com")
-	v.SetDefault("supabase.readonly_url", "https://readonly.supabase.example.com")
-	v.SetDefault("supabase.rollback_url", "https://rollback.supabase.example.com")
-	v.SetDefault("supabase.api_key", "")
-	v.SetDefault("supabase.auth_token", "")
-
-
-
+	v.SetDefault("agent.name", defaultConfig.Agent.Name)
+	v.SetDefault("agent.max_requeries", defaultConfig.Agent.MaxRequeries)
+	v.SetDefault("agent.always_require_zero_exit", defaultConfig.Agent.AlwaysRequireZeroExit)
+	v.SetDefault("agent.execution_timeout", defaultConfig.Agent.ExecutionTimeout)
+	v.SetDefault("agent.config_source", defaultConfig.Agent.ConfigSource)
+	
+	v.SetDefault("tools.execution_timeout", defaultConfig.Tools.ExecutionTimeout)
+	v.SetDefault("tools.max_output_size", defaultConfig.Tools.MaxOutputSize)
+	v.SetDefault("tools.total_execution_timeout", defaultConfig.Tools.TotalExecutionTimeout)
+	v.SetDefault("tools.max_consecutive_timeouts", defaultConfig.Tools.MaxConsecutiveTimeouts)
+	
+	v.SetDefault("rocketmq.name_server_addrs", defaultConfig.RocketMQ.NameServerAddrs)
+	v.SetDefault("rocketmq.state_topic", defaultConfig.RocketMQ.StateTopic)
+	v.SetDefault("rocketmq.producer_group_name", defaultConfig.RocketMQ.ProducerGroupName)
+	v.SetDefault("rocketmq.consumer_group_name", defaultConfig.RocketMQ.ConsumerGroupName)
+	v.SetDefault("rocketmq.consumer_subscription", defaultConfig.RocketMQ.ConsumerSubscription)
+	v.SetDefault("rocketmq.producer_retry", defaultConfig.RocketMQ.ProducerRetry)
+	
+	v.SetDefault("supabase.main_url", defaultConfig.Supabase.MainURL)
+	v.SetDefault("supabase.readonly_url", defaultConfig.Supabase.ReadonlyURL)
+	v.SetDefault("supabase.rollback_url", defaultConfig.Supabase.RollbackURL)
+	v.SetDefault("supabase.api_key", defaultConfig.Supabase.APIKey)
+	v.SetDefault("supabase.auth_token", defaultConfig.Supabase.AuthToken)
+	
+	v.SetDefault("dragonfly.host", defaultConfig.Dragonfly.Host)
+	v.SetDefault("dragonfly.port", defaultConfig.Dragonfly.Port)
+	v.SetDefault("dragonfly.password", defaultConfig.Dragonfly.Password)
+	
+	v.SetDefault("ai.default_provider", defaultConfig.AI.DefaultProvider)
+	v.SetDefault("ai.providers", defaultConfig.AI.Providers)
+	v.SetDefault("ai.api_keys", defaultConfig.AI.APIKeys)
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		fmt.Printf("Config file %s does not exist, using defaults\n", configPath)
-		var defaultConfig Config
-		if err := v.Unmarshal(&defaultConfig); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal default config: %w", err)
-		}
-		return &defaultConfig, nil
+		return defaultConfig, nil
 	}
 	
 	dir, file := filepath.Split(configPath)
@@ -56,6 +65,22 @@ func LoadConfig(configPath string) (*Config, error) {
 	var config Config
 	if err := v.Unmarshal(&config); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+	
+	adapter, err := NewConfigAdapter(ConfigSource(config.Agent.ConfigSource))
+	if err != nil {
+		fmt.Printf("Warning: Failed to create config adapter: %v. Using default configurations.\n", err)
+		return &config, nil
+	}
+	
+	_, err = adapter.LoadPrompts()
+	if err != nil {
+		fmt.Printf("Warning: Failed to load prompts: %v. Using default prompts.\n", err)
+	}
+	
+	_, err = adapter.LoadTools()
+	if err != nil {
+		fmt.Printf("Warning: Failed to load tools: %v. Using default tools.\n", err)
 	}
 	
 	return &config, nil

@@ -1,7 +1,7 @@
 # Placeholder for prompts.txt
 
 ## System Prompt
-You are Sam Sepiol, an autonomous software engineering agent implemented in Go.
+You are samsepi0l, an autonomous software engineering agent implemented in Go.
 
 ## Example Task Prompt
 Fix the bug described in issue #123.
