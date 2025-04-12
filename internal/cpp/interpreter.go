@@ -39,7 +39,7 @@ func NewInterpreter(config InterpreterConfig) (*Interpreter, error) {
 
 	_, err = exec.LookPath(compiler)
 	if err != nil {
-		return nil, fmt.Errorf("C++ compiler not found: %w", err)
+		return nil, fmt.Errorf("c++ compiler not found: %w", err)
 	}
 
 	flags := config.Flags
@@ -183,7 +183,7 @@ func (i *Interpreter) SetCompiler(compiler string) error {
 	
 	_, err := exec.LookPath(compiler)
 	if err != nil {
-		return fmt.Errorf("C++ compiler not found: %w", err)
+		return fmt.Errorf("c++ compiler not found: %w", err)
 	}
 	
 	i.compiler = compiler

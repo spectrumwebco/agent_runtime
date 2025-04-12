@@ -1,0 +1,125 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-runtime-mcp-client
+  namespace: agent-runtime-system
+  labels:
+    app: agent-runtime-mcp-client
+    agent-runtime/component: mcp-client
+    app.kubernetes.io/name: agent-runtime
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-runtime-mcp-client
+  template:
+    metadata:
+      labels:
+        app: agent-runtime-mcp-client
+        agent-runtime/component: mcp-client
+        app.kubernetes.io/name: agent-runtime
+        app.kubernetes.io/part-of: agent-runtime
+    spec:
+      containers:
+      - name: mcp-client
+        image: ${CONTAINER_REGISTRY}/agent-runtime:latest
+        command: ["./agent-runtime"]
+        args: ["--mcp-client"]
+        ports:
+        - containerPort: 8082
+          name: mcp-client
+        env:
+        - name: MCP_HOST_URL
+          value: "http://agent-runtime-mcp-host:8080"
+        - name: MCP_SERVER_URL
+          value: "http://agent-runtime-sandbox:8081"
+        - name: LIBRECHAT_CODE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: agent-runtime-secrets
+              key: librechat_code_api_key
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/agent-runtime/config
+        - name: shared-data
+          mountPath: /var/lib/agent-runtime/data
+      volumes:
+      - name: config
+        configMap:
+          name: agent-runtime-config
+      - name: shared-data
+        emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent-runtime-mcp-client
+  namespace: agent-runtime-system
+  labels:
+    app: agent-runtime-mcp-client
+    agent-runtime/component: mcp-client
+    app.kubernetes.io/name: agent-runtime
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+spec:
+  selector:
+    app: agent-runtime-mcp-client
+  ports:
+  - port: 8082
+    targetPort: mcp-client
+    name: mcp-client
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-runtime-config
+  namespace: agent-runtime-system
+  labels:
+    app.kubernetes.io/name: agent-runtime
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+data:
+  config.yaml: |
+    mcp:
+      client:
+        enabled: true
+        port: 8082
+        host_url: "http://agent-runtime-mcp-host:8080"
+        server_url: "http://agent-runtime-sandbox:8081"
+      container_runtimes:
+        - lxc
+        - podman
+        - docker
+        - kata
+      handlers:
+        - creation
+        - deletion
+        - maintenance
+        - monitoring
+        - insights
+    integrations:
+      librechat:
+        enabled: true
+        api_key_env: "LIBRECHAT_CODE_API_KEY"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: agent-runtime-secrets
+  namespace: agent-runtime-system
+  labels:
+    app.kubernetes.io/name: agent-runtime
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+type: Opaque
+stringData:
+  librechat_code_api_key: "${LIBRECHAT_CODE_API_KEY}"
