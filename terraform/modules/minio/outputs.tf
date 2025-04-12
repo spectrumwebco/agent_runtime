@@ -1,4 +1,3 @@
-
 output "minio_namespace" {
   description = "Namespace where MinIO is deployed"
   value       = kubernetes_namespace.minio.metadata[0].name
