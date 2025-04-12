@@ -11,6 +11,60 @@ variable "aws_region" {
   default     = "us-west-2"
 }
 
+variable "postgres_operator_namespace" {
+  description = "Namespace for the PostgreSQL Operator"
+  type        = string
+  default     = "postgres-operator"
+}
+
+variable "postgres_version" {
+  description = "PostgreSQL version to deploy"
+  type        = number
+  default     = 15
+}
+
+variable "postgres_replicas" {
+  description = "Number of PostgreSQL replicas"
+  type        = number
+  default     = 3
+}
+
+variable "postgres_storage_size" {
+  description = "Storage size for PostgreSQL data"
+  type        = string
+  default     = "10Gi"
+}
+
+variable "backup_storage_size" {
+  description = "Storage size for PostgreSQL backups"
+  type        = string
+  default     = "20Gi"
+}
+
+variable "vault_integration_enabled" {
+  description = "Enable Vault integration for PostgreSQL"
+  type        = bool
+  default     = true
+}
+
+variable "vault_address" {
+  description = "Vault server address"
+  type        = string
+  default     = "http://vault.vault.svc.cluster.local:8200"
+}
+
+variable "vnode_runtime_enabled" {
+  description = "Enable vNode runtime integration"
+  type        = bool
+  default     = true
+}
+
+variable "vnode_runtime_version" {
+  description = "vNode runtime version"
+  type        = string
+  default     = "0.0.2"
+}
+
 variable "kubeflow_version" {
   description = "Version of KubeFlow to deploy"
   type        = string

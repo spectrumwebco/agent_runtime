@@ -44,15 +44,33 @@ resource "kubernetes_namespace" "ml_infrastructure" {
   }
 }
 
+module "postgres_operator" {
+  source = "./modules/postgres-operator"
+
+  kubeconfig_path             = var.kubeconfig_path
+  postgres_operator_namespace = var.postgres_operator_namespace
+  postgres_version            = var.postgres_version
+  postgres_replicas           = var.postgres_replicas
+  postgres_storage_size       = var.postgres_storage_size
+  backup_storage_size         = var.backup_storage_size
+  storage_class_name          = var.storage_class_name
+  vault_integration_enabled   = var.vault_integration_enabled
+  vault_address               = var.vault_address
+  vnode_runtime_enabled       = var.vnode_runtime_enabled
+  vnode_runtime_version       = var.vnode_runtime_version
+  depends_on                  = [kubernetes_namespace.ml_infrastructure]
+}
+
 module "kubeflow" {
   source = "./modules/kubeflow"
 
-  kubeconfig_path           = var.kubeconfig_path
-  kubeflow_version          = var.kubeflow_version
-  training_operator_version = var.training_operator_version
-  katib_version             = var.katib_version
-  kubeflow_data_storage_size = var.kubeflow_data_storage_size
-  storage_class_name        = var.storage_class_name
+  kubeconfig_path             = var.kubeconfig_path
+  kubeflow_version            = var.kubeflow_version
+  training_operator_version   = var.training_operator_version
+  katib_version               = var.katib_version
+  kubeflow_data_storage_size  = var.kubeflow_data_storage_size
+  storage_class_name          = var.storage_class_name
+  depends_on                  = [module.postgres_operator]
 }
 
 module "mlflow" {
@@ -66,7 +84,7 @@ module "mlflow" {
   minio_access_key         = var.minio_access_key
   minio_secret_key         = var.minio_secret_key
   mlflow_tracking_uri      = var.mlflow_tracking_uri
-  depends_on               = [kubernetes_namespace.ml_infrastructure]
+  depends_on               = [module.postgres_operator]
 }
 
 module "kserve" {
