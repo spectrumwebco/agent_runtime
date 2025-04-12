@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vault-config
+  namespace: vault
+data:
+  vault-init.sh: |
+
+
+    until curl -s -o /dev/null -w "%{http_code}" ${VAULT_ADDR}/v1/sys/health | grep 200; do
+      echo "Waiting for Vault to be ready..."
+      sleep 5
+    done
+
+    vault auth enable kubernetes
+
+    vault write auth/kubernetes/config \
+      kubernetes_host="https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT" \
+      token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+      kubernetes_ca_cert="$(cat /var/run/secrets/kubernetes.io/serviceaccount/ca.crt)" \
+      issuer="https://kubernetes.default.svc.cluster.local"
+
+    vault secrets enable database
+
+    vault secrets enable -version=2 kv
+
+    vault policy write mlflow - <<EOF
+    path "database/creds/ml-app" {
+      capabilities = ["read"]
+    }
+
+    path "kv/data/mlflow/*" {
+      capabilities = ["read", "list"]
+    }
+    EOF
+
+    vault policy write jupyterlab - <<EOF
+    path "database/creds/ml-app" {
+      capabilities = ["read"]
+    }
+
+    path "kv/data/jupyterlab/*" {
+      capabilities = ["read", "list"]
+    }
+    EOF
+
+    vault policy write kubeflow - <<EOF
+    path "database/creds/ml-app" {
+      capabilities = ["read"]
+    }
+
+    path "kv/data/kubeflow/*" {
+      capabilities = ["read", "list"]
+    }
+    EOF
+
+    vault write auth/kubernetes/role/mlflow \
+      bound_service_account_names=mlflow \
+      bound_service_account_namespaces=mlflow \
+      policies=mlflow \
+      ttl=1h
+
+    vault write auth/kubernetes/role/jupyterlab \
+      bound_service_account_names=jupyterlab \
+      bound_service_account_namespaces=jupyter \
+      policies=jupyterlab \
+      ttl=1h
+
+    vault write auth/kubernetes/role/kubeflow \
+      bound_service_account_names=kubeflow \
+      bound_service_account_namespaces=kubeflow \
+      policies=kubeflow \
+      ttl=1h
+
+    vault kv put kv/mlflow/config \
+      tracking_uri="http://mlflow-server.mlflow.svc.cluster.local:5000" \
+      artifact_root="s3://mlflow/" \
+      s3_endpoint_url="http://minio.minio.svc.cluster.local:9000"
+
+    vault kv put kv/jupyterlab/config \
+      mlflow_tracking_uri="http://mlflow-server.mlflow.svc.cluster.local:5000" \
+      s3_endpoint_url="http://minio.minio.svc.cluster.local:9000"
+
+    vault kv put kv/kubeflow/config \
+      mlflow_tracking_uri="http://mlflow-server.mlflow.svc.cluster.local:5000" \
+      s3_endpoint_url="http://minio.minio.svc.cluster.local:9000"
+
+    echo "Vault initialization and configuration completed successfully"

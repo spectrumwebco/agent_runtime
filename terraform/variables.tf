@@ -5,10 +5,143 @@ variable "kubeconfig_path" {
   default     = "~/.kube/config"
 }
 
-variable "aws_region" {
-  description = "AWS region"
+variable "postgres_operator_namespace" {
+  description = "Namespace for the PostgreSQL Operator"
   type        = string
-  default     = "us-west-2"
+  default     = "postgres-operator"
+}
+
+variable "postgres_version" {
+  description = "PostgreSQL version to deploy"
+  type        = number
+  default     = 15
+}
+
+variable "postgres_replicas" {
+  description = "Number of PostgreSQL replicas"
+  type        = number
+  default     = 3
+}
+
+variable "postgres_storage_size" {
+  description = "Storage size for PostgreSQL data"
+  type        = string
+  default     = "10Gi"
+}
+
+variable "backup_storage_size" {
+  description = "Storage size for PostgreSQL backups"
+  type        = string
+  default     = "20Gi"
+}
+
+variable "vault_integration_enabled" {
+  description = "Enable Vault integration for PostgreSQL"
+  type        = bool
+  default     = true
+}
+
+variable "vault_address" {
+  description = "Vault server address"
+  type        = string
+  default     = "http://vault.vault.svc.cluster.local:8200"
+}
+
+variable "vnode_runtime_enabled" {
+  description = "Enable vNode runtime integration"
+  type        = bool
+  default     = true
+}
+
+variable "vnode_runtime_version" {
+  description = "vNode runtime version"
+  type        = string
+  default     = "0.0.2"
+}
+
+variable "vnode_runtime_namespace" {
+  description = "Namespace for vNode runtime deployment"
+  type        = string
+  default     = "vnode-runtime"
+}
+
+variable "vnode_runtime_replica_count" {
+  description = "Number of vNode runtime replicas"
+  type        = number
+  default     = 1
+}
+
+variable "vnode_runtime_resources_limits_cpu" {
+  description = "CPU limits for vNode runtime"
+  type        = string
+  default     = "500m"
+}
+
+variable "vnode_runtime_resources_limits_memory" {
+  description = "Memory limits for vNode runtime"
+  type        = string
+  default     = "512Mi"
+}
+
+variable "vnode_runtime_resources_requests_cpu" {
+  description = "CPU requests for vNode runtime"
+  type        = string
+  default     = "250m"
+}
+
+variable "vnode_runtime_resources_requests_memory" {
+  description = "Memory requests for vNode runtime"
+  type        = string
+  default     = "256Mi"
+}
+
+variable "vault_namespace" {
+  description = "Namespace for Vault deployment"
+  type        = string
+  default     = "vault"
+}
+
+variable "vault_version" {
+  description = "Version of Vault to deploy"
+  type        = string
+  default     = "1.13.0"
+}
+
+variable "vault_k8s_version" {
+  description = "Version of Vault K8s to deploy"
+  type        = string
+  default     = "1.1.0"
+}
+
+variable "vault_token" {
+  description = "Root token for Vault"
+  type        = string
+  default     = "vault-token-secret-key"
+  sensitive   = true
+}
+
+variable "vault_resources_limits_cpu" {
+  description = "CPU limits for Vault"
+  type        = string
+  default     = "500m"
+}
+
+variable "vault_resources_limits_memory" {
+  description = "Memory limits for Vault"
+  type        = string
+  default     = "512Mi"
+}
+
+variable "vault_resources_requests_cpu" {
+  description = "CPU requests for Vault"
+  type        = string
+  default     = "250m"
+}
+
+variable "vault_resources_requests_memory" {
+  description = "Memory requests for Vault"
+  type        = string
+  default     = "256Mi"
 }
 
 variable "kubeflow_version" {

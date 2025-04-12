@@ -1,0 +1,193 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: mlflow
+  namespace: mlflow
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mlflow-db
+  namespace: mlflow
+spec:
+  serviceName: mlflow-db
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow-db
+  template:
+    metadata:
+      labels:
+        app: mlflow-db
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-inject-secret-db-creds: "database/creds/ml-app"
+        vault.hashicorp.com/agent-inject-template-db-creds: |
+          {{- with secret "database/creds/ml-app" -}}
+          export POSTGRES_USER="{{ .Data.username }}"
+          export POSTGRES_PASSWORD="{{ .Data.password }}"
+          {{- end -}}
+        vault.hashicorp.com/role: "mlflow"
+    spec:
+      serviceAccountName: mlflow
+      containers:
+      - name: postgres
+        image: postgres:13
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          value: mlflow
+        command:
+        - "/bin/sh"
+        - "-c"
+        - |
+          source /vault/secrets/db-creds
+          exec docker-entrypoint.sh postgres
+        volumeMounts:
+        - name: mlflow-db-data
+          mountPath: /var/lib/postgresql/data
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2Gi
+          requests:
+            cpu: "0.5"
+            memory: 1Gi
+  volumeClaimTemplates:
+  - metadata:
+      name: mlflow-db-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
+      storageClassName: standard
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlflow-db
+  namespace: mlflow
+spec:
+  selector:
+    app: mlflow-db
+  ports:
+  - port: 5432
+    targetPort: 5432
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow-server
+  namespace: mlflow
+  labels:
+    app: mlflow-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow-server
+  template:
+    metadata:
+      labels:
+        app: mlflow-server
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-inject-secret-db-creds: "database/creds/ml-app"
+        vault.hashicorp.com/agent-inject-template-db-creds: |
+          {{- with secret "database/creds/ml-app" -}}
+          export DB_USERNAME="{{ .Data.username }}"
+          export DB_PASSWORD="{{ .Data.password }}"
+          {{- end -}}
+        vault.hashicorp.com/agent-inject-secret-mlflow-config: "kv/data/mlflow/config"
+        vault.hashicorp.com/agent-inject-template-mlflow-config: |
+          {{- with secret "kv/data/mlflow/config" -}}
+          export MLFLOW_TRACKING_URI="{{ .Data.data.tracking_uri }}"
+          export MLFLOW_S3_ENDPOINT_URL="{{ .Data.data.s3_endpoint_url }}"
+          export ARTIFACT_ROOT="{{ .Data.data.artifact_root }}"
+          {{- end -}}
+        vault.hashicorp.com/role: "mlflow"
+    spec:
+      serviceAccountName: mlflow
+      containers:
+      - name: mlflow-server
+        image: ghcr.io/mlflow/mlflow:latest
+        command:
+        - "/bin/sh"
+        - "-c"
+        - |
+          source /vault/secrets/db-creds
+          source /vault/secrets/mlflow-config
+          mlflow server \
+            --backend-store-uri=postgresql://${DB_USERNAME}:${DB_PASSWORD}@mlflow-db:5432/mlflow \
+            --default-artifact-root=${ARTIFACT_ROOT} \
+            --host=0.0.0.0 \
+            --port=5000
+        ports:
+        - containerPort: 5000
+        env:
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: ${MINIO_CREDENTIALS_SECRET_NAME}
+              key: accesskey
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: ${MINIO_CREDENTIALS_SECRET_NAME}
+              key: secretkey
+        resources:
+          limits:
+            cpu: "1"
+            memory: 2Gi
+          requests:
+            cpu: "0.5"
+            memory: 1Gi
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 5000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlflow-server
+  namespace: mlflow
+spec:
+  selector:
+    app: mlflow-server
+  ports:
+  - port: 5000
+    targetPort: 5000
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: mlflow-server
+  namespace: mlflow
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+spec:
+  rules:
+  - host: mlflow.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: mlflow-server
+            port:
+              number: 5000
