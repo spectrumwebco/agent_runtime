@@ -13,8 +13,15 @@ import numpy as np
 from typing import Dict, List, Optional, Union, Any
 from datetime import datetime
 import re
-import jsonschema
-from jsonschema import validate
+from pydantic import ValidationError
+
+from .models import (
+    RawDataModel, 
+    ChatFormatModel, 
+    CompletionFormatModel,
+    ValidationResult,
+    QualityMetrics
+)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -276,21 +283,27 @@ class DataValidator:
 
     def validate_data(
         self, data: List[Dict[str, Any]], schema_name: str = "raw"
-    ) -> Dict[str, Any]:
+    ) -> ValidationResult:
         """
-        Validate data against a JSON schema.
+        Validate data against a Pydantic model.
 
         Args:
             data: List of data examples to validate
             schema_name: Name of the schema to validate against
 
         Returns:
-            Dictionary containing validation results
+            ValidationResult containing validation results
         """
         logger.info(f"Validating {len(data)} examples against {schema_name} schema")
         
-        schema = self.schemas.get(schema_name)
-        if not schema:
+        model_map = {
+            "raw": RawDataModel,
+            "chat": ChatFormatModel,
+            "completion": CompletionFormatModel
+        }
+        
+        model_class = model_map.get(schema_name)
+        if not model_class:
             raise ValueError(f"Schema {schema_name} not found")
         
         valid_examples = []
@@ -299,9 +312,9 @@ class DataValidator:
         
         for i, example in enumerate(data):
             try:
-                validate(instance=example, schema=schema)
-                valid_examples.append(example)
-            except jsonschema.exceptions.ValidationError as e:
+                validated_example = model_class(**example)
+                valid_examples.append(validated_example.dict())
+            except ValidationError as e:
                 invalid_examples.append(example)
                 validation_errors.append({
                     "index": i,
@@ -313,26 +326,26 @@ class DataValidator:
         invalid_count = len(invalid_examples)
         valid_ratio = valid_count / total_examples if total_examples > 0 else 0
         
-        validation_results = {
-            "schema_name": schema_name,
-            "total_examples": total_examples,
-            "valid_examples": valid_count,
-            "invalid_examples": invalid_count,
-            "valid_ratio": valid_ratio,
-            "validation_errors": validation_errors,
-        }
+        validation_results = ValidationResult(
+            schema_name=schema_name,
+            total_examples=total_examples,
+            valid_examples=valid_count,
+            invalid_examples=invalid_count,
+            valid_ratio=valid_ratio,
+            validation_errors=validation_errors,
+        )
         
         logger.info(f"Validation results: {valid_count}/{total_examples} examples valid ({valid_ratio:.2%})")
         return validation_results
 
     def save_validation_results(
-        self, validation_results: Dict[str, Any], filename: str = "validation_results.json"
+        self, validation_results: ValidationResult, filename: str = "validation_results.json"
     ) -> str:
         """
         Save validation results to a file.
 
         Args:
-            validation_results: Dictionary containing validation results
+            validation_results: ValidationResult Pydantic model containing validation results
             filename: Name of the file to save validation results to
 
         Returns:
@@ -344,20 +357,20 @@ class DataValidator:
         
         output_path = os.path.join(self.output_dir, filename)
         with open(output_path, "w") as f:
-            json.dump(validation_results, f, indent=2)
+            json.dump(validation_results.dict(), f, indent=2)
         
         logger.info(f"Validation results saved to {output_path}")
         return output_path
 
     def save_valid_examples(
-        self, data: List[Dict[str, Any]], validation_results: Dict[str, Any], filename: str = "valid_examples.json"
+        self, data: List[Dict[str, Any]], validation_results: ValidationResult, filename: str = "valid_examples.json"
     ) -> str:
         """
         Save valid examples to a file.
 
         Args:
             data: List of data examples
-            validation_results: Dictionary containing validation results
+            validation_results: ValidationResult Pydantic model containing validation results
             filename: Name of the file to save valid examples to
 
         Returns:
@@ -367,7 +380,7 @@ class DataValidator:
         
         os.makedirs(self.output_dir, exist_ok=True)
         
-        invalid_indices = [error["index"] for error in validation_results.get("validation_errors", [])]
+        invalid_indices = [error["index"] for error in validation_results.validation_errors]
         
         valid_examples = [example for i, example in enumerate(data) if i not in invalid_indices]
         
@@ -382,7 +395,7 @@ class DataValidator:
         self, filename: str, schema_name: str = "raw", save_valid: bool = True
     ) -> Dict[str, str]:
         """
-        Validate data in a file against a JSON schema.
+        Validate data in a file against a Pydantic model.
 
         Args:
             filename: Name of the file to validate
@@ -413,7 +426,7 @@ class DataValidator:
         logger.info(f"Validation completed: {output_paths}")
         return output_paths
 
-    def check_data_quality(self, data: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def check_data_quality(self, data: List[Dict[str, Any]]) -> QualityMetrics:
         """
         Check data quality metrics.
 
@@ -421,41 +434,35 @@ class DataValidator:
             data: List of data examples
 
         Returns:
-            Dictionary containing data quality metrics
+            QualityMetrics Pydantic model containing data quality metrics
         """
         logger.info(f"Checking data quality for {len(data)} examples")
         
-        quality_metrics = {
-            "total_examples": len(data),
-            "empty_fields": {
-                "input_title": 0,
-                "input_description": 0,
-                "output_solution": 0,
+        empty_fields = {
+            "input_title": 0,
+            "input_description": 0,
+            "output_solution": 0,
+        }
+        
+        length_metrics = {
+            "input_title": {
+                "min": float("inf"),
+                "max": 0,
+                "mean": 0,
+                "median": 0,
             },
-            "length_metrics": {
-                "input_title": {
-                    "min": float("inf"),
-                    "max": 0,
-                    "mean": 0,
-                    "median": 0,
-                },
-                "input_description": {
-                    "min": float("inf"),
-                    "max": 0,
-                    "mean": 0,
-                    "median": 0,
-                },
-                "output_solution": {
-                    "min": float("inf"),
-                    "max": 0,
-                    "mean": 0,
-                    "median": 0,
-                },
+            "input_description": {
+                "min": float("inf"),
+                "max": 0,
+                "mean": 0,
+                "median": 0,
             },
-            "source_distribution": {},
-            "repository_distribution": {},
-            "topic_distribution": {},
-            "label_distribution": {},
+            "output_solution": {
+                "min": float("inf"),
+                "max": 0,
+                "mean": 0,
+                "median": 0,
+            },
         }
         
         title_lengths = []
@@ -472,31 +479,31 @@ class DataValidator:
             description = input_data.get("description", "")
             
             if not title:
-                quality_metrics["empty_fields"]["input_title"] += 1
+                empty_fields["input_title"] += 1
             else:
                 title_length = len(title)
                 title_lengths.append(title_length)
-                quality_metrics["length_metrics"]["input_title"]["min"] = min(quality_metrics["length_metrics"]["input_title"]["min"], title_length)
-                quality_metrics["length_metrics"]["input_title"]["max"] = max(quality_metrics["length_metrics"]["input_title"]["max"], title_length)
+                length_metrics["input_title"]["min"] = min(length_metrics["input_title"]["min"], title_length)
+                length_metrics["input_title"]["max"] = max(length_metrics["input_title"]["max"], title_length)
             
             if not description:
-                quality_metrics["empty_fields"]["input_description"] += 1
+                empty_fields["input_description"] += 1
             else:
                 description_length = len(description)
                 description_lengths.append(description_length)
-                quality_metrics["length_metrics"]["input_description"]["min"] = min(quality_metrics["length_metrics"]["input_description"]["min"], description_length)
-                quality_metrics["length_metrics"]["input_description"]["max"] = max(quality_metrics["length_metrics"]["input_description"]["max"], description_length)
+                length_metrics["input_description"]["min"] = min(length_metrics["input_description"]["min"], description_length)
+                length_metrics["input_description"]["max"] = max(length_metrics["input_description"]["max"], description_length)
             
             output_data = example.get("output", {})
             solution = output_data.get("solution", "")
             
             if not solution:
-                quality_metrics["empty_fields"]["output_solution"] += 1
+                empty_fields["output_solution"] += 1
             else:
                 solution_length = len(solution)
                 solution_lengths.append(solution_length)
-                quality_metrics["length_metrics"]["output_solution"]["min"] = min(quality_metrics["length_metrics"]["output_solution"]["min"], solution_length)
-                quality_metrics["length_metrics"]["output_solution"]["max"] = max(quality_metrics["length_metrics"]["output_solution"]["max"], solution_length)
+                length_metrics["output_solution"]["min"] = min(length_metrics["output_solution"]["min"], solution_length)
+                length_metrics["output_solution"]["max"] = max(length_metrics["output_solution"]["max"], solution_length)
             
             metadata = example.get("metadata", {})
             source = metadata.get("source", "unknown")
@@ -514,33 +521,38 @@ class DataValidator:
                 labels[label] = labels.get(label, 0) + 1
         
         if title_lengths:
-            quality_metrics["length_metrics"]["input_title"]["mean"] = np.mean(title_lengths)
-            quality_metrics["length_metrics"]["input_title"]["median"] = np.median(title_lengths)
+            length_metrics["input_title"]["mean"] = float(np.mean(title_lengths))
+            length_metrics["input_title"]["median"] = float(np.median(title_lengths))
         
         if description_lengths:
-            quality_metrics["length_metrics"]["input_description"]["mean"] = np.mean(description_lengths)
-            quality_metrics["length_metrics"]["input_description"]["median"] = np.median(description_lengths)
+            length_metrics["input_description"]["mean"] = float(np.mean(description_lengths))
+            length_metrics["input_description"]["median"] = float(np.median(description_lengths))
         
         if solution_lengths:
-            quality_metrics["length_metrics"]["output_solution"]["mean"] = np.mean(solution_lengths)
-            quality_metrics["length_metrics"]["output_solution"]["median"] = np.median(solution_lengths)
+            length_metrics["output_solution"]["mean"] = float(np.mean(solution_lengths))
+            length_metrics["output_solution"]["median"] = float(np.median(solution_lengths))
         
-        quality_metrics["source_distribution"] = sources
-        quality_metrics["repository_distribution"] = repositories
-        quality_metrics["topic_distribution"] = topics
-        quality_metrics["label_distribution"] = labels
+        quality_metrics = QualityMetrics(
+            total_examples=len(data),
+            empty_fields=empty_fields,
+            length_metrics=length_metrics,
+            source_distribution=sources,
+            repository_distribution=repositories,
+            topic_distribution=topics,
+            label_distribution=labels
+        )
         
         logger.info("Data quality check completed")
         return quality_metrics
 
     def save_quality_metrics(
-        self, quality_metrics: Dict[str, Any], filename: str = "quality_metrics.json"
+        self, quality_metrics: QualityMetrics, filename: str = "quality_metrics.json"
     ) -> str:
         """
         Save data quality metrics to a file.
 
         Args:
-            quality_metrics: Dictionary containing data quality metrics
+            quality_metrics: QualityMetrics Pydantic model containing data quality metrics
             filename: Name of the file to save quality metrics to
 
         Returns:
@@ -552,7 +564,7 @@ class DataValidator:
         
         output_path = os.path.join(self.output_dir, filename)
         with open(output_path, "w") as f:
-            json.dump(quality_metrics, f, indent=2)
+            json.dump(quality_metrics.dict(), f, indent=2)
         
         logger.info(f"Data quality metrics saved to {output_path}")
         return output_path

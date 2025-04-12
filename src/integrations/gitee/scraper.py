@@ -10,6 +10,7 @@ from typing import Dict, List, Any, Optional, Set, Tuple
 from datetime import datetime
 
 from .integration import GiteeIntegration
+from .models import GiteeRepository, GiteeIssue, TrainingExample
 
 
 class GiteeScraper:
@@ -313,14 +314,14 @@ class GiteeScraper:
                 },
             ]
 
-            training_data.append(
-                {
-                    "input": input_text,
-                    "output": output_text,
-                    "metadata": metadata,
-                    "trajectory": trajectory,
-                }
+            training_example = TrainingExample(
+                input=input_text,
+                output=output_text,
+                metadata=metadata,
+                trajectory=trajectory
             )
+            
+            training_data.append(training_example.dict())
 
         output_path = os.path.join(self.output_dir, filename)
 

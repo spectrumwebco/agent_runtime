@@ -10,6 +10,7 @@ from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime
 
 from .integration import GitHubIntegration
+from .models import GitHubRepository, GitHubIssue, TrainingExample
 
 
 class GitHubScraper:
@@ -294,14 +295,14 @@ class GitHubScraper:
                 },
             ]
 
-            training_data.append(
-                {
-                    "input": input_text,
-                    "output": output_text,
-                    "metadata": metadata,
-                    "trajectory": trajectory,
-                }
+            training_example = TrainingExample(
+                input=input_text,
+                output=output_text,
+                metadata=metadata,
+                trajectory=trajectory
             )
+            
+            training_data.append(training_example.dict())
 
         output_path = os.path.join(self.output_dir, filename)
 

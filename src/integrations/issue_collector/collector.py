@@ -13,6 +13,7 @@ from ..github.integration import GitHubIntegration
 from ..github.scraper import GitHubScraper
 from ..gitee.integration import GiteeIntegration
 from ..gitee.scraper import GiteeScraper
+from .models import CollectionConfig, CollectionResult, TrainingExample
 
 
 class IssueCollector:
@@ -60,13 +61,13 @@ class IssueCollector:
 
     async def collect_issues(
         self,
-        topics: List[str],
+        topics: List[str] = ["gitops", "terraform", "kubernetes", "k8s"],
         languages: Optional[List[str]] = None,
         min_stars: int = 100,
         max_repos_per_platform: int = 25,
         max_issues_per_repo: int = 50,
         include_pull_requests: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> CollectionResult:
         """
         Collect issues from GitHub and Gitee.
 
@@ -81,29 +82,38 @@ class IssueCollector:
         Returns:
             Collection results
         """
-        self.logger.info(f"Collecting issues for topics: {topics}")
+        config = CollectionConfig(
+            topics=topics,
+            languages=languages,
+            min_stars=min_stars,
+            max_repos_per_platform=max_repos_per_platform,
+            max_issues_per_repo=max_issues_per_repo,
+            include_pull_requests=include_pull_requests
+        )
+        
+        self.logger.info(f"Collecting issues for topics: {config.topics}")
 
         self.logger.info("Collecting issues from GitHub")
         github_issues_path, github_training_data_path = (
             await self.github_scraper.scrape_and_save(
-                topics=topics,
-                languages=languages,
-                min_stars=min_stars,
-                max_repos=max_repos_per_platform,
-                max_issues_per_repo=max_issues_per_repo,
-                include_pull_requests=include_pull_requests,
+                topics=config.topics,
+                languages=config.languages,
+                min_stars=config.min_stars,
+                max_repos=config.max_repos_per_platform,
+                max_issues_per_repo=config.max_issues_per_repo,
+                include_pull_requests=config.include_pull_requests,
             )
         )
 
         self.logger.info("Collecting issues from Gitee")
         gitee_issues_path, gitee_training_data_path = (
             await self.gitee_scraper.scrape_and_save(
-                topics=topics,
-                languages=languages,
-                min_stars=min_stars,
-                max_repos=max_repos_per_platform,
-                max_issues_per_repo=max_issues_per_repo,
-                include_pull_requests=include_pull_requests,
+                topics=config.topics,
+                languages=config.languages,
+                min_stars=config.min_stars,
+                max_repos=config.max_repos_per_platform,
+                max_issues_per_repo=config.max_issues_per_repo,
+                include_pull_requests=config.include_pull_requests,
             )
         )
 
@@ -112,13 +122,15 @@ class IssueCollector:
             gitee_training_data_path,
         )
 
-        return {
-            "github_issues_path": github_issues_path,
-            "github_training_data_path": github_training_data_path,
-            "gitee_issues_path": gitee_issues_path,
-            "gitee_training_data_path": gitee_training_data_path,
-            "combined_training_data_path": combined_training_data,
-        }
+        result = CollectionResult(
+            github_issues_path=github_issues_path,
+            github_training_data_path=github_training_data_path,
+            gitee_issues_path=gitee_issues_path,
+            gitee_training_data_path=gitee_training_data_path,
+            combined_training_data_path=combined_training_data,
+        )
+        
+        return result
 
     async def combine_training_data(
         self, github_training_data_path: str, gitee_training_data_path: str
@@ -141,14 +153,30 @@ class IssueCollector:
         with open(gitee_training_data_path, "r") as f:
             gitee_training_data = json.load(f)
 
-        combined_training_data = github_training_data + gitee_training_data
+        validated_github_data = []
+        for example in github_training_data:
+            try:
+                validated_example = TrainingExample(**example)
+                validated_github_data.append(validated_example.dict())
+            except Exception as e:
+                self.logger.warning(f"Invalid GitHub training example: {str(e)}")
+                
+        validated_gitee_data = []
+        for example in gitee_training_data:
+            try:
+                validated_example = TrainingExample(**example)
+                validated_gitee_data.append(validated_example.dict())
+            except Exception as e:
+                self.logger.warning(f"Invalid Gitee training example: {str(e)}")
+
+        combined_training_data = validated_github_data + validated_gitee_data
 
         output_path = os.path.join(self.output_dir, "combined_training_data.json")
         with open(output_path, "w") as f:
             json.dump(combined_training_data, f, indent=2)
 
         self.logger.info(
-            f"Saved {len(combined_training_data)} combined training examples to {output_path}"
+            f"Saved {len(combined_training_data)} validated training examples to {output_path}"
         )
         return output_path
 
@@ -160,7 +188,7 @@ class IssueCollector:
         max_repos_per_platform: int = 25,
         max_issues_per_repo: int = 50,
         include_pull_requests: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> CollectionResult:
         """
         Collect and save issues from GitHub and Gitee.
 
@@ -173,13 +201,22 @@ class IssueCollector:
             include_pull_requests: Whether to include pull requests
 
         Returns:
-            Collection results
+            Collection results as a validated Pydantic model
         """
-        return await self.collect_issues(
+        config = CollectionConfig(
             topics=topics,
             languages=languages,
             min_stars=min_stars,
             max_repos_per_platform=max_repos_per_platform,
             max_issues_per_repo=max_issues_per_repo,
-            include_pull_requests=include_pull_requests,
+            include_pull_requests=include_pull_requests
+        )
+        
+        return await self.collect_issues(
+            topics=config.topics,
+            languages=config.languages,
+            min_stars=config.min_stars,
+            max_repos_per_platform=config.max_repos_per_platform,
+            max_issues_per_repo=config.max_issues_per_repo,
+            include_pull_requests=config.include_pull_requests,
         )
