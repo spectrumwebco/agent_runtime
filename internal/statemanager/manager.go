@@ -7,6 +7,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/apache/rocketmq-client-go/v2/consumer"
+	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"github.com/spectrumwebco/agent_runtime/internal/config"
 	"github.com/spectrumwebco/agent_runtime/internal/statemanager/rocketmq"
 )
@@ -49,7 +51,7 @@ func NewStateManager(cfg *config.Config) (*StateManager, error) {
 		Topic:                  cfg.RocketMQ.StateTopic,
 		GroupName:              cfg.RocketMQ.ConsumerGroupName,
 		SubscriptionExpression: cfg.RocketMQ.ConsumerSubscription,
-		ConsumeFromWhere:       rocketmq.ConsumeFromLastOffset,
+		ConsumeFromWhere:       consumer.ConsumeFromLastOffset,
 	}
 
 	consumer, err := rocketmq.NewStateConsumer(consumerCfg, manager.handleStateUpdate)
@@ -88,7 +90,7 @@ func (sm *StateManager) GetState(stateID string) ([]byte, bool) {
 	return data, exists
 }
 
-func (sm *StateManager) handleStateUpdate(ctx context.Context, msg *rocketmq.MessageExt) error {
+func (sm *StateManager) handleStateUpdate(ctx context.Context, msg *primitive.MessageExt) error {
 	keys := msg.GetKeys()
 	if len(keys) < 2 {
 		return fmt.Errorf("invalid state update message: missing keys")
