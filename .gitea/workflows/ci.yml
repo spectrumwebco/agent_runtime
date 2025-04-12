@@ -1,0 +1,104 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, 'devin/**' ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: gitea-runner
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Install golint
+        run: go install golang.org/x/lint/golint@latest
+
+      - name: Run golint
+        run: golint -set_exit_status ./...
+
+      - name: Run go vet
+        run: go vet ./...
+
+  test:
+    name: Test
+    runs-on: gitea-runner
+    needs: lint
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Run tests
+        run: go test -v ./...
+
+  build:
+    name: Build
+    runs-on: gitea-runner
+    needs: test
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Build
+        run: go build -v ./...
+
+  gitops-validation:
+    name: GitOps MCP Server Validation
+    runs-on: gitea-runner
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24'
+
+      - name: Clone GitOps-Go
+        run: git clone https://github.com/spectrumwebco/gitops-go.git /tmp/gitops-go
+
+      - name: Build GitOps-Go
+        run: |
+          cd /tmp/gitops-go
+          go build -v ./...
+
+      - name: Validate MCP Integration
+        run: |
+          cd /tmp/gitops-go
+          go test -v ./server/...
+
+  k8s-validation:
+    name: Kubernetes Manifests Validation
+    runs-on: gitea-runner
+    needs: build
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install kubeval
+        run: |
+          wget https://github.com/instrumenta/kubeval/releases/latest/download/kubeval-linux-amd64.tar.gz
+          tar xf kubeval-linux-amd64.tar.gz
+          sudo mv kubeval /usr/local/bin
+
+      - name: Validate Kubernetes manifests
+        run: find ./k8s -name "*.yaml" -type f -exec kubeval --strict {} \;

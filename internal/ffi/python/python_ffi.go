@@ -8,11 +8,11 @@ import (
 	"time"
 )
 
-type Interpreter struct {
+type FFIInterpreter struct {
 	pythonPath string // Path to the python executable
 }
 
-func NewInterpreter() (*Interpreter, error) {
+func NewFFIInterpreter() (*FFIInterpreter, error) {
 	path, err := exec.LookPath("python3")
 	if err != nil {
 		path, err = exec.LookPath("python")
@@ -21,10 +21,10 @@ func NewInterpreter() (*Interpreter, error) {
 		}
 	}
 	fmt.Printf("Python FFI Interpreter initialized using executable: %s\n", path)
-	return &Interpreter{pythonPath: path}, nil
+	return &FFIInterpreter{pythonPath: path}, nil
 }
 
-func (i *Interpreter) ExecCode(ctx context.Context, code string) (string, error) {
+func (i *FFIInterpreter) ExecCode(ctx context.Context, code string) (string, error) {
 	if ctx == nil {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(context.Background(), 30*time.Second) // 30-second timeout
@@ -59,7 +59,7 @@ func (i *Interpreter) ExecCode(ctx context.Context, code string) (string, error)
 }
 
 
-func (i *Interpreter) ExecScript(ctx context.Context, scriptPath string, args ...string) (string, error) {
+func (i *FFIInterpreter) ExecScript(ctx context.Context, scriptPath string, args ...string) (string, error) {
 	if ctx == nil {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(context.Background(), 60*time.Second) // Longer timeout for scripts
@@ -97,6 +97,6 @@ func (i *Interpreter) ExecScript(ctx context.Context, scriptPath string, args ..
 	return stdoutStr, nil
 }
 
-func (i *Interpreter) Close() {
+func (i *FFIInterpreter) Close() {
 	fmt.Println("Python FFI Interpreter closed.")
 }

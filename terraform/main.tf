@@ -13,6 +13,10 @@ terraform {
       source  = "hashicorp/vault"
       version = "~> 3.20.0"
     }
+    kubectl = {
+      source  = "gavinbunney/kubectl"
+      version = ">= 1.14.0"
+    }
   }
   required_version = ">= 1.0.0"
   
@@ -38,6 +42,11 @@ provider "vault" {
   address = var.vault_addr
 }
 
+provider "kubectl" {
+  config_path = var.kubeconfig_path
+  alias       = "gavinbunney"
+}
+
 module "k8s" {
   source = "./modules/k8s"
   
@@ -57,7 +66,6 @@ module "vcluster" {
   
   name      = "${var.cluster_name}-vcluster"
   namespace = var.namespace
-  version   = var.vcluster_version
   
   depends_on = [module.k8s]
 }

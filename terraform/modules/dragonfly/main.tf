@@ -340,7 +340,7 @@ resource "kubernetes_config_map" "dragonfly_rollback" {
         exit 1
       fi
       
-      SNAPSHOT_INDEX=${1:-1}
+      SNAPSHOT_INDEX=$${1:-1}
       SNAPSHOT=$(echo "$SNAPSHOTS" | sed -n "${SNAPSHOT_INDEX}p")
       
       if [ -z "$SNAPSHOT" ]; then

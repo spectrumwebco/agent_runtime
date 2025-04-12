@@ -2,22 +2,18 @@
 package tools
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"sync"
-	"time" // Added import
 
-	"context" // Added for FFI execution context
-	"strings" // Added for argument parsing
-
-	"github.com/spectrumwebco/agent_runtime/internal/config" // Assuming config is internal
-	"github.com/spectrumwebco/agent_runtime/internal/env"   // Assuming env is internal
-	"github.com/spectrumwebco/agent_runtime/internal/ffi/cpp"    // Added C++ FFI import
-	"github.com/spectrumwebco/agent_runtime/internal/ffi/python" // Added Python FFI import
+	"github.com/spectrumwebco/agent_runtime/internal/config"
+	"github.com/spectrumwebco/agent_runtime/internal/cpp"
+	"github.com/spectrumwebco/agent_runtime/internal/env"
+	"github.com/spectrumwebco/agent_runtime/internal/python"
 )
 
-// Tool is the interface that all tools must implement
-type Tool interface {
+type ToolWithEnv interface {
 	Name() string
 	Description() string
 	Execute(ctx context.Context, args map[string]interface{}, environment *env.SWEEnv) (string, error) // Observation, error
@@ -26,7 +22,7 @@ type Tool interface {
 // Registry manages the collection of available tools
 type Registry struct {
 	config *config.Config
-	tools  map[string]Tool
+	tools  map[string]ToolWithEnv
 	mutex  sync.RWMutex
 	pythonInterpreter *python.Interpreter
 	cppInterpreter    *cpp.Interpreter
@@ -34,42 +30,29 @@ type Registry struct {
 
 // Handler manages tool execution and parsing
 type Handler struct {
-	Config      ToolConfig // Placeholder for tool configuration
+	Config      *ToolConfig // Use ToolConfig from tools package
 	Definitions map[string]ToolDefinition
 	Registry    *Registry // Reference to the tool registry
 }
 
-// ToolConfig contains configuration options for tool execution
-type ToolConfig struct {
-	ExecutionTimeout              time.Duration
-	MaxConsecutiveExecutionTimeouts int
-	TotalExecutionTimeout         time.Duration
-	FormatErrorTemplate           string
-	CppInterpreterConfig          cpp.InterpreterConfig // Added C++ config
-}
-
 // ToolDefinition defines the metadata for a tool
-type ToolDefinition struct {
-	Name        string                 `json:"name"`
-	Description string                 `json:"description"`
-	InputSchema map[string]interface{} `json:"input_schema"` // JSON schema for input
-}
 
 // NewRegistry creates a new tool registry with the provided configuration
-func NewRegistry(cfg *config.Config, toolCfg ToolConfig) (*Registry, error) {
+func NewRegistry(cfg *config.Config, toolCfg *ToolConfig) (*Registry, error) {
 	pyInterpreter, err := python.NewInterpreter()
 	if err != nil {
-		fmt.Printf("Warning: Failed to initialize Python FFI interpreter: %v\n", err)
+		fmt.Printf("Warning: Failed to initialize Python interpreter: %v\n", err)
 	}
 
-	cppInterpreter, err := cpp.NewInterpreter(toolCfg.CppInterpreterConfig)
+	cppConfig := cpp.InterpreterConfig{}
+	cppInterpreter, err := cpp.NewInterpreter(cppConfig)
 	if err != nil {
-		fmt.Printf("Warning: Failed to initialize C++ FFI interpreter: %v\n", err)
+		fmt.Printf("Warning: Failed to initialize C++ interpreter: %v\n", err)
 	}
 
 	registry := &Registry{
 		config:            cfg,
-		tools:             make(map[string]Tool),
+		tools:             make(map[string]ToolWithEnv),
 		pythonInterpreter: pyInterpreter,
 		cppInterpreter:    cppInterpreter,
 	}
@@ -79,21 +62,23 @@ func NewRegistry(cfg *config.Config, toolCfg ToolConfig) (*Registry, error) {
 
 // registerBuiltinTools registers the default set of tools with the registry
 func (r *Registry) registerBuiltinTools() {
-	r.Register(&ShellTool{
+	shellTool := &ShellTool{
 		name:        "shell",
 		description: "Executes a shell command in the environment",
-	})
+	}
+	r.Register(&shellToolAdapter{ShellTool: shellTool})
 
-	r.Register(&FileTool{
+	fileTool := &FileTool{
 		name:        "file",
 		description: "Performs file operations (read, write, list)",
-	})
+	}
+	r.Register(&fileToolAdapter{FileTool: fileTool})
 
-	r.Register(&HTTPTool{
+	httpTool := &HTTPTool{
 		name:        "http",
 		description: "Makes HTTP requests",
-	})
-
+	}
+	r.Register(&httpToolAdapter{HTTPTool: httpTool})
 
 	r.Register(&EditReplaceTool{
 		name:        "edit_replace",
@@ -104,7 +89,6 @@ func (r *Registry) registerBuiltinTools() {
 		name:        "search",
 		description: "Searches for a pattern in files",
 	})
-
 
 	r.Register(&EditAnthropicTool{
 		name:        "edit_anthropic",
@@ -136,21 +120,23 @@ func (r *Registry) registerBuiltinTools() {
 	})
 
 	if r.pythonInterpreter != nil {
-		r.Register(&PythonTool{
+		pythonTool := &PythonTool{
 			name:        "python",
-			description: "Executes Python code using the FFI interpreter",
+			description: "Executes Python code using the interpreter",
 			interpreter: r.pythonInterpreter,
-		})
+		}
+		r.Register(&pythonToolAdapter{PythonTool: pythonTool})
 	} else {
 		fmt.Println("Python interpreter not available, Python tool disabled.")
 	}
 
 	if r.cppInterpreter != nil {
-		r.Register(&CppTool{
+		cppTool := &CppTool{
 			name:        "cpp",
-			description: "Compiles and executes C++ code using the FFI interpreter",
+			description: "Compiles and executes C++ code using the interpreter",
 			interpreter: r.cppInterpreter,
-		})
+		}
+		r.Register(&cppToolAdapter{CppTool: cppTool})
 	} else {
 		fmt.Println("C++ interpreter not available, Cpp tool disabled.")
 	}
@@ -162,7 +148,7 @@ func (r *Registry) registerBuiltinTools() {
 }
 
 // NewHandler creates a new tool handler with the provided configuration and registry
-func NewHandler(config ToolConfig, definitions []ToolDefinition, registry *Registry) (*Handler, error) {
+func NewHandler(config *ToolConfig, definitions []ToolDefinition, registry *Registry) (*Handler, error) {
 	if registry == nil {
 		return nil, fmt.Errorf("registry cannot be nil for Handler")
 	}
@@ -178,7 +164,7 @@ func NewHandler(config ToolConfig, definitions []ToolDefinition, registry *Regis
 }
 
 // Register adds a tool to the registry
-func (r *Registry) Register(tool Tool) error {
+func (r *Registry) Register(tool ToolWithEnv) error {
 	r.mutex.Lock()
 	defer r.mutex.Unlock()
 
@@ -192,7 +178,7 @@ func (r *Registry) Register(tool Tool) error {
 }
 
 // Get retrieves a tool from the registry by name
-func (r *Registry) Get(name string) (Tool, error) {
+func (r *Registry) Get(name string) (ToolWithEnv, error) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
 
@@ -355,17 +341,15 @@ func (h *Handler) GetState(environment *env.SWEEnv) (map[string]interface{}, err
 		return nil, fmt.Errorf("environment is not initialized")
 	}
 	state := make(map[string]interface{})
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // Short timeout for state gathering
-	defer cancel()
 
-	cwd, err := environment.CommunicateWithContext(ctx, "pwd", "")
+	cwd, err := environment.ExecuteCommand("pwd")
 	if err == nil {
 		state["cwd"] = strings.TrimSpace(cwd)
 	} else {
 		fmt.Printf("Warning: Failed to get cwd for state: %v\n", err)
 	}
 
-	ls, err := environment.CommunicateWithContext(ctx, "ls -la", "")
+	ls, err := environment.ExecuteCommand("ls", "-la")
 	if err == nil {
 		state["ls"] = ls
 	} else {
@@ -386,24 +370,19 @@ func (h *Handler) Install(environment *env.SWEEnv) error {
 	return nil
 }
 
-// ShellTool implements the Tool interface for executing shell commands
-type ShellTool struct {
-	name        string
-	description string
+type shellToolAdapter struct {
+	*ShellTool
 }
 
-func (t *ShellTool) Name() string        { return t.name }
-func (t *ShellTool) Description() string { return t.description }
-
 // Execute runs a shell command in the environment
-func (t *ShellTool) Execute(ctx context.Context, args map[string]interface{}, environment *env.SWEEnv) (string, error) {
+func (t *shellToolAdapter) Execute(ctx context.Context, args map[string]interface{}, environment *env.SWEEnv) (string, error) {
 	command, ok := args["command"].(string)
 	if !ok || command == "" {
 		return "Error: Empty command provided to shell tool.", nil
 		// return "", fmt.Errorf("invalid or missing 'command' argument for shell tool")
 	}
 	fmt.Printf("Executing shell command: %s\n", command)
-	output, err := environment.CommunicateWithContext(ctx, command, "")
+	output, err := environment.ExecuteCommand(command)
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
 			return fmt.Sprintf("Error: Command '%s' timed out.", command), nil
@@ -413,17 +392,12 @@ func (t *ShellTool) Execute(ctx context.Context, args map[string]interface{}, en
 	return "Output:\n" + output, nil
 }
 
-// FileTool implements the Tool interface for file operations
-type FileTool struct {
-	name        string
-	description string
+type fileToolAdapter struct {
+	*FileTool
 }
 
-func (t *FileTool) Name() string        { return t.name }
-func (t *FileTool) Description() string { return t.description }
-
 // Execute performs file operations (read, write) in the environment
-func (t *FileTool) Execute(ctx context.Context, args map[string]interface{}, environment *env.SWEEnv) (string, error) {
+func (t *fileToolAdapter) Execute(ctx context.Context, args map[string]interface{}, environment *env.SWEEnv) (string, error) {
 	operation, opOK := args["operation"].(string)
 	path, pathOK := args["path"].(string)
 	if !opOK || !pathOK {
@@ -433,7 +407,7 @@ func (t *FileTool) Execute(ctx context.Context, args map[string]interface{}, env
 	switch operation {
 	case "read":
 		fmt.Printf("Reading file: %s\n", path)
-		content, err := environment.ReadFile(ctx, path, "utf-8", "ignore")
+		content, err := environment.ReadFile(path)
 		if err != nil {
 			return fmt.Sprintf("Error reading file %s: %v", path, err), nil
 		}
@@ -444,7 +418,7 @@ func (t *FileTool) Execute(ctx context.Context, args map[string]interface{}, env
 			return "Error: Missing 'content' for file write operation.", nil
 		}
 		fmt.Printf("Writing to file: %s\n", path)
-		err := environment.WriteFile(ctx, path, content)
+		err := environment.CreateFile(path, content)
 		if err != nil {
 			return fmt.Sprintf("Error writing to file %s: %v", path, err), nil
 		}
@@ -473,7 +447,7 @@ func (t *EditReplaceTool) Execute(ctx context.Context, args map[string]interface
 	}
 	fmt.Printf("Executing edit_replace: Replace '%s' with '%s' in file %s\n", oldStr, newStr, path)
 
-	currentContent, err := environment.ReadFile(ctx, path, "utf-8", "ignore")
+	currentContent, err := environment.ReadFile(path)
 	if err != nil {
 		return fmt.Sprintf("Error reading file %s for edit_replace: %v", path, err), nil
 	}
@@ -483,7 +457,7 @@ func (t *EditReplaceTool) Execute(ctx context.Context, args map[string]interface
 	}
 	newContent := strings.ReplaceAll(currentContent, oldStr, newStr)
 
-	err = environment.WriteFile(ctx, path, newContent)
+	err = environment.CreateFile(path, newContent)
 	if err != nil {
 		return fmt.Sprintf("Error writing modified content to file %s: %v", path, err), nil
 	}
@@ -514,7 +488,7 @@ func (t *SearchTool) Execute(ctx context.Context, args map[string]interface{}, e
 	}
 
 	fmt.Printf("Executing search command: %s\n", searchCmd)
-	output, err := environment.CommunicateWithContext(ctx, searchCmd, "")
+	output, err := environment.ExecuteCommand(searchCmd)
 	if err != nil {
 		if ctx.Err() == context.DeadlineExceeded {
 			return fmt.Sprintf("Error: Search command '%s' timed out.", searchCmd), nil
@@ -625,32 +599,77 @@ func (t *ReviewOnSubmitMTool) Execute(ctx context.Context, args map[string]inter
 	return "ReviewOnSubmitMTool: Not implemented yet", nil
 }
 
-// HTTPTool implements the Tool interface for making HTTP requests
-type HTTPTool struct {
-	name        string
-	description string
+type httpToolAdapter struct {
+	*HTTPTool
 }
 
-func (t *HTTPTool) Name() string        { return t.name }
-func (t *HTTPTool) Description() string { return t.description }
-
 // Execute makes HTTP requests
-func (t *HTTPTool) Execute(ctx context.Context, args map[string]interface{}, environment *env.SWEEnv) (string, error) {
+func (t *httpToolAdapter) Execute(ctx context.Context, args map[string]interface{}, environment *env.SWEEnv) (string, error) {
 	return "HTTPTool: Not implemented yet", nil
 }
 
-// PythonTool implements the Tool interface for executing Python code
-type PythonTool struct {
-	name        string
-	description string
+type pythonInterpreterAdapter struct {
 	interpreter *python.Interpreter
 }
 
-func (t *PythonTool) Name() string        { return t.name }
-func (t *PythonTool) Description() string { return t.description }
+func (a *pythonInterpreterAdapter) Exec(code string) (string, error) {
+	return a.interpreter.Exec(code)
+}
+
+func (a *pythonInterpreterAdapter) ExecFile(path string) (string, error) {
+	return a.interpreter.ExecFile(path)
+}
+
+func (a *pythonInterpreterAdapter) ExecFunction(module, function string, args ...interface{}) (string, error) {
+	return a.interpreter.ExecFunction(module, function, args...)
+}
+
+func (a *pythonInterpreterAdapter) InstallPackage(pkg string) error {
+	return a.interpreter.InstallPackage(pkg)
+}
+
+func (a *pythonInterpreterAdapter) Close() error {
+	return a.interpreter.Close()
+}
+
+type cppInterpreterAdapter struct {
+	interpreter *cpp.Interpreter
+}
+
+func (a *cppInterpreterAdapter) Exec(ctx context.Context, code string) (string, error) {
+	return a.interpreter.Exec(ctx, code)
+}
+
+func (a *cppInterpreterAdapter) SetFlags(flags []string) {
+	a.interpreter.SetFlags(flags)
+}
+
+func (a *cppInterpreterAdapter) AddIncludeDir(dir string) {
+	a.interpreter.AddIncludeDir(dir)
+}
+
+func (a *cppInterpreterAdapter) AddLibrary(lib string) {
+	a.interpreter.AddLibrary(lib)
+}
+
+func (a *cppInterpreterAdapter) CompileLibrary(ctx context.Context, code, name string) (string, error) {
+	return a.interpreter.CompileLibrary(ctx, code, name)
+}
+
+func (a *cppInterpreterAdapter) ExecWithInput(ctx context.Context, code, input string) (string, error) {
+	return a.interpreter.ExecWithInput(ctx, code, input)
+}
+
+func (a *cppInterpreterAdapter) Close() error {
+	return a.interpreter.Close()
+}
+
+type pythonToolAdapter struct {
+	*PythonTool
+}
 
 // Execute runs Python code using the FFI interpreter
-func (t *PythonTool) Execute(ctx context.Context, args map[string]interface{}, environment *env.SWEEnv) (string, error) {
+func (t *pythonToolAdapter) Execute(ctx context.Context, args map[string]interface{}, environment *env.SWEEnv) (string, error) {
 	if t.interpreter == nil {
 		return "Error: Python interpreter is not available.", nil
 	}
@@ -672,20 +691,20 @@ func (t *PythonTool) Execute(ctx context.Context, args map[string]interface{}, e
 		}
 		
 		// Read the script file
-		scriptContent, err := environment.ReadFile(ctx, scriptPath, "utf-8", "ignore")
+		scriptContent, err := environment.ReadFile(scriptPath)
 		if err != nil {
 			return fmt.Sprintf("Error reading Python script file %s: %v", scriptPath, err), nil
 		}
 		
 		// Execute the script
-		result, err := t.interpreter.RunScript(ctx, scriptContent, scriptArgs)
+		result, err := t.interpreter.Exec(scriptContent)
 		if err != nil {
 			return fmt.Sprintf("Error executing Python script %s: %v\nOutput:\n%s", scriptPath, err, result), nil
 		}
 		return fmt.Sprintf("Python script %s executed successfully:\n%s", scriptPath, result), nil
 	} else if code, ok := args["code"].(string); ok {
 		fmt.Println("Executing Python code snippet")
-		result, err := t.interpreter.RunCode(ctx, code)
+		result, err := t.interpreter.Exec(code)
 		if err != nil {
 			return fmt.Sprintf("Error executing Python code: %v\nOutput:\n%s", err, result), nil
 		}
@@ -695,18 +714,12 @@ func (t *PythonTool) Execute(ctx context.Context, args map[string]interface{}, e
 	}
 }
 
-// CppTool implements the Tool interface for executing C++ code
-type CppTool struct {
-	name        string
-	description string
-	interpreter *cpp.Interpreter
+type cppToolAdapter struct {
+	*CppTool
 }
 
-func (t *CppTool) Name() string        { return t.name }
-func (t *CppTool) Description() string { return t.description }
-
 // Execute compiles and runs C++ code using the FFI interpreter
-func (t *CppTool) Execute(ctx context.Context, args map[string]interface{}, environment *env.SWEEnv) (string, error) {
+func (t *cppToolAdapter) Execute(ctx context.Context, args map[string]interface{}, environment *env.SWEEnv) (string, error) {
 	if t.interpreter == nil {
 		return "Error: C++ interpreter is not available.", nil
 	}
@@ -717,7 +730,7 @@ func (t *CppTool) Execute(ctx context.Context, args map[string]interface{}, envi
 	}
 
 	fmt.Println("Executing C++ code snippet")
-	result, err := t.interpreter.RunCode(ctx, code)
+	result, err := t.interpreter.Exec(ctx, code)
 	if err != nil {
 		return fmt.Sprintf("Error executing C++ code: %v\nOutput:\n%s", err, result), nil
 	}

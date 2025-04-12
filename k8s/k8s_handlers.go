@@ -16,352 +16,222 @@ import (
 )
 
 func RegisterKubernetesTools(mcpServer *server.MCPServer, clientset *kubernetes.Clientset) {
-	mcpServer.RegisterTool(mcp.Tool{
-		Name:        "list_pods",
-		Description: "List pods in a namespace",
-		Parameters: []mcp.Parameter{
-			{
-				Name:        "namespace",
-				Description: "Kubernetes namespace",
-				Type:        "string",
-				Required:    true,
-			},
-		},
-		Handler: func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	mcpServer.AddTool(server.NewTool("list_pods",
+		server.WithDescription("List pods in a namespace"),
+		server.WithString("namespace",
+			server.Description("Kubernetes namespace"),
+			server.Required(),
+		),
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			return listPods(ctx, clientset, params)
-		},
-	})
+		}))
 
-	mcpServer.RegisterTool(mcp.Tool{
-		Name:        "get_pod",
-		Description: "Get details of a specific pod",
-		Parameters: []mcp.Parameter{
-			{
-				Name:        "namespace",
-				Description: "Kubernetes namespace",
-				Type:        "string",
-				Required:    true,
-			},
-			{
-				Name:        "name",
-				Description: "Pod name",
-				Type:        "string",
-				Required:    true,
-			},
-		},
-		Handler: func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	mcpServer.AddTool(server.NewTool("get_pod",
+		server.WithDescription("Get details of a specific pod"),
+		server.WithString("namespace",
+			server.Description("Kubernetes namespace"),
+			server.Required(),
+		),
+		server.WithString("name",
+			server.Description("Pod name"),
+			server.Required(),
+		),
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			return getPod(ctx, clientset, params)
-		},
-	})
+		}))
 
-	mcpServer.RegisterTool(mcp.Tool{
-		Name:        "delete_pod",
-		Description: "Delete a pod",
-		Parameters: []mcp.Parameter{
-			{
-				Name:        "namespace",
-				Description: "Kubernetes namespace",
-				Type:        "string",
-				Required:    true,
-			},
-			{
-				Name:        "name",
-				Description: "Pod name",
-				Type:        "string",
-				Required:    true,
-			},
-		},
-		Handler: func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	mcpServer.AddTool(server.NewTool("delete_pod",
+		server.WithDescription("Delete a pod"),
+		server.WithString("namespace",
+			server.Description("Kubernetes namespace"),
+			server.Required(),
+		),
+		server.WithString("name",
+			server.Description("Pod name"),
+			server.Required(),
+		),
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			return deletePod(ctx, clientset, params)
-		},
-	})
+		}))
 
-	mcpServer.RegisterTool(mcp.Tool{
-		Name:        "list_deployments",
-		Description: "List deployments in a namespace",
-		Parameters: []mcp.Parameter{
-			{
-				Name:        "namespace",
-				Description: "Kubernetes namespace",
-				Type:        "string",
-				Required:    true,
-			},
-		},
-		Handler: func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	mcpServer.AddTool(server.NewTool("list_deployments",
+		server.WithDescription("List deployments in a namespace"),
+		server.WithString("namespace",
+			server.Description("Kubernetes namespace"),
+			server.Required(),
+		),
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			return listDeployments(ctx, clientset, params)
-		},
-	})
+		}))
 
-	mcpServer.RegisterTool(mcp.Tool{
-		Name:        "get_deployment",
-		Description: "Get details of a specific deployment",
-		Parameters: []mcp.Parameter{
-			{
-				Name:        "namespace",
-				Description: "Kubernetes namespace",
-				Type:        "string",
-				Required:    true,
-			},
-			{
-				Name:        "name",
-				Description: "Deployment name",
-				Type:        "string",
-				Required:    true,
-			},
-		},
-		Handler: func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	mcpServer.AddTool(server.NewTool("get_deployment",
+		server.WithDescription("Get details of a specific deployment"),
+		server.WithString("namespace",
+			server.Description("Kubernetes namespace"),
+			server.Required(),
+		),
+		server.WithString("name",
+			server.Description("Deployment name"),
+			server.Required(),
+		),
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			return getDeployment(ctx, clientset, params)
-		},
-	})
+		}))
 
-	mcpServer.RegisterTool(mcp.Tool{
-		Name:        "create_deployment",
-		Description: "Create a new deployment",
-		Parameters: []mcp.Parameter{
-			{
-				Name:        "namespace",
-				Description: "Kubernetes namespace",
-				Type:        "string",
-				Required:    true,
-			},
-			{
-				Name:        "name",
-				Description: "Deployment name",
-				Type:        "string",
-				Required:    true,
-			},
-			{
-				Name:        "image",
-				Description: "Container image",
-				Type:        "string",
-				Required:    true,
-			},
-			{
-				Name:        "replicas",
-				Description: "Number of replicas",
-				Type:        "number",
-				Required:    true,
-			},
-			{
-				Name:        "labels",
-				Description: "Labels for the deployment",
-				Type:        "object",
-				Required:    false,
-			},
-		},
-		Handler: func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	mcpServer.AddTool(server.NewTool("create_deployment",
+		server.WithDescription("Create a new deployment"),
+		server.WithString("namespace",
+			server.Description("Kubernetes namespace"),
+			server.Required(),
+		),
+		server.WithString("name",
+			server.Description("Deployment name"),
+			server.Required(),
+		),
+		server.WithString("image",
+			server.Description("Container image"),
+			server.Required(),
+		),
+		server.WithNumber("replicas",
+			server.Description("Number of replicas"),
+			server.Required(),
+		),
+		server.WithObject("labels",
+			server.Description("Labels for the deployment"),
+		),
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			return createDeployment(ctx, clientset, params)
-		},
-	})
+		}))
 
-	mcpServer.RegisterTool(mcp.Tool{
-		Name:        "update_deployment",
-		Description: "Update an existing deployment",
-		Parameters: []mcp.Parameter{
-			{
-				Name:        "namespace",
-				Description: "Kubernetes namespace",
-				Type:        "string",
-				Required:    true,
-			},
-			{
-				Name:        "name",
-				Description: "Deployment name",
-				Type:        "string",
-				Required:    true,
-			},
-			{
-				Name:        "image",
-				Description: "Container image",
-				Type:        "string",
-				Required:    false,
-			},
-			{
-				Name:        "replicas",
-				Description: "Number of replicas",
-				Type:        "number",
-				Required:    false,
-			},
-		},
-		Handler: func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	mcpServer.AddTool(server.NewTool("update_deployment",
+		server.WithDescription("Update an existing deployment"),
+		server.WithString("namespace",
+			server.Description("Kubernetes namespace"),
+			server.Required(),
+		),
+		server.WithString("name",
+			server.Description("Deployment name"),
+			server.Required(),
+		),
+		server.WithString("image",
+			server.Description("Container image"),
+		),
+		server.WithNumber("replicas",
+			server.Description("Number of replicas"),
+		),
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			return updateDeployment(ctx, clientset, params)
-		},
-	})
+		}))
 
-	mcpServer.RegisterTool(mcp.Tool{
-		Name:        "delete_deployment",
-		Description: "Delete a deployment",
-		Parameters: []mcp.Parameter{
-			{
-				Name:        "namespace",
-				Description: "Kubernetes namespace",
-				Type:        "string",
-				Required:    true,
-			},
-			{
-				Name:        "name",
-				Description: "Deployment name",
-				Type:        "string",
-				Required:    true,
-			},
-		},
-		Handler: func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	mcpServer.AddTool(server.NewTool("delete_deployment",
+		server.WithDescription("Delete a deployment"),
+		server.WithString("namespace",
+			server.Description("Kubernetes namespace"),
+			server.Required(),
+		),
+		server.WithString("name",
+			server.Description("Deployment name"),
+			server.Required(),
+		),
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			return deleteDeployment(ctx, clientset, params)
-		},
-	})
+		}))
 
-	mcpServer.RegisterTool(mcp.Tool{
-		Name:        "scale_deployment",
-		Description: "Scale a deployment",
-		Parameters: []mcp.Parameter{
-			{
-				Name:        "namespace",
-				Description: "Kubernetes namespace",
-				Type:        "string",
-				Required:    true,
-			},
-			{
-				Name:        "name",
-				Description: "Deployment name",
-				Type:        "string",
-				Required:    true,
-			},
-			{
-				Name:        "replicas",
-				Description: "Number of replicas",
-				Type:        "number",
-				Required:    true,
-			},
-		},
-		Handler: func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	mcpServer.AddTool(server.NewTool("scale_deployment",
+		server.WithDescription("Scale a deployment"),
+		server.WithString("namespace",
+			server.Description("Kubernetes namespace"),
+			server.Required(),
+		),
+		server.WithString("name",
+			server.Description("Deployment name"),
+			server.Required(),
+		),
+		server.WithNumber("replicas",
+			server.Description("Number of replicas"),
+			server.Required(),
+		),
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			return scaleDeployment(ctx, clientset, params)
-		},
-	})
+		}))
 
-	mcpServer.RegisterTool(mcp.Tool{
-		Name:        "list_services",
-		Description: "List services in a namespace",
-		Parameters: []mcp.Parameter{
-			{
-				Name:        "namespace",
-				Description: "Kubernetes namespace",
-				Type:        "string",
-				Required:    true,
-			},
-		},
-		Handler: func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	mcpServer.AddTool(server.NewTool("list_services",
+		server.WithDescription("List services in a namespace"),
+		server.WithString("namespace",
+			server.Description("Kubernetes namespace"),
+			server.Required(),
+		),
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			return listServices(ctx, clientset, params)
-		},
-	})
+		}))
 
-	mcpServer.RegisterTool(mcp.Tool{
-		Name:        "create_service",
-		Description: "Create a new service",
-		Parameters: []mcp.Parameter{
-			{
-				Name:        "namespace",
-				Description: "Kubernetes namespace",
-				Type:        "string",
-				Required:    true,
-			},
-			{
-				Name:        "name",
-				Description: "Service name",
-				Type:        "string",
-				Required:    true,
-			},
-			{
-				Name:        "selector",
-				Description: "Label selector for pods",
-				Type:        "object",
-				Required:    true,
-			},
-			{
-				Name:        "ports",
-				Description: "Port mappings",
-				Type:        "array",
-				Required:    true,
-			},
-			{
-				Name:        "type",
-				Description: "Service type (ClusterIP, NodePort, LoadBalancer)",
-				Type:        "string",
-				Required:    false,
-			},
-		},
-		Handler: func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	mcpServer.AddTool(server.NewTool("create_service",
+		server.WithDescription("Create a new service"),
+		server.WithString("namespace",
+			server.Description("Kubernetes namespace"),
+			server.Required(),
+		),
+		server.WithString("name",
+			server.Description("Service name"),
+			server.Required(),
+		),
+		server.WithObject("selector",
+			server.Description("Label selector for pods"),
+			server.Required(),
+		),
+		server.WithArray("ports",
+			server.Description("Port mappings"),
+			server.Required(),
+		),
+		server.WithString("type",
+			server.Description("Service type (ClusterIP, NodePort, LoadBalancer)"),
+		),
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			return createService(ctx, clientset, params)
-		},
-	})
+		}))
 
-	mcpServer.RegisterTool(mcp.Tool{
-		Name:        "delete_service",
-		Description: "Delete a service",
-		Parameters: []mcp.Parameter{
-			{
-				Name:        "namespace",
-				Description: "Kubernetes namespace",
-				Type:        "string",
-				Required:    true,
-			},
-			{
-				Name:        "name",
-				Description: "Service name",
-				Type:        "string",
-				Required:    true,
-			},
-		},
-		Handler: func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	mcpServer.AddTool(server.NewTool("delete_service",
+		server.WithDescription("Delete a service"),
+		server.WithString("namespace",
+			server.Description("Kubernetes namespace"),
+			server.Required(),
+		),
+		server.WithString("name",
+			server.Description("Service name"),
+			server.Required(),
+		),
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			return deleteService(ctx, clientset, params)
-		},
-	})
+		}))
 
-	mcpServer.RegisterTool(mcp.Tool{
-		Name:        "list_namespaces",
-		Description: "List all namespaces",
-		Parameters:  []mcp.Parameter{},
-		Handler: func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	mcpServer.AddTool(server.NewTool("list_namespaces",
+		server.WithDescription("List all namespaces"),
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			return listNamespaces(ctx, clientset, params)
-		},
-	})
+		}))
 
-	mcpServer.RegisterTool(mcp.Tool{
-		Name:        "create_namespace",
-		Description: "Create a new namespace",
-		Parameters: []mcp.Parameter{
-			{
-				Name:        "name",
-				Description: "Namespace name",
-				Type:        "string",
-				Required:    true,
-			},
-			{
-				Name:        "labels",
-				Description: "Labels for the namespace",
-				Type:        "object",
-				Required:    false,
-			},
-		},
-		Handler: func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	mcpServer.AddTool(server.NewTool("create_namespace",
+		server.WithDescription("Create a new namespace"),
+		server.WithString("name",
+			server.Description("Namespace name"),
+			server.Required(),
+		),
+		server.WithObject("labels",
+			server.Description("Labels for the namespace"),
+		),
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			return createNamespace(ctx, clientset, params)
-		},
-	})
+		}))
 
-	mcpServer.RegisterTool(mcp.Tool{
-		Name:        "delete_namespace",
-		Description: "Delete a namespace",
-		Parameters: []mcp.Parameter{
-			{
-				Name:        "name",
-				Description: "Namespace name",
-				Type:        "string",
-				Required:    true,
-			},
-		},
-		Handler: func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
+	mcpServer.AddTool(server.NewTool("delete_namespace",
+		server.WithDescription("Delete a namespace"),
+		server.WithString("name",
+			server.Description("Namespace name"),
+			server.Required(),
+		),
+		func(ctx context.Context, params map[string]interface{}) (interface{}, error) {
 			return deleteNamespace(ctx, clientset, params)
-		},
-	})
+		}))
 }
 
 func listPods(ctx context.Context, clientset *kubernetes.Clientset, params map[string]interface{}) (interface{}, error) {

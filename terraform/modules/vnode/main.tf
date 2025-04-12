@@ -275,4 +275,5 @@ resource "kubectl_manifest" "node_labels" {
   override_namespace = var.namespace
   force_new          = true
   server_side_apply  = true
+  provider           = kubectl.gavinbunney
 }

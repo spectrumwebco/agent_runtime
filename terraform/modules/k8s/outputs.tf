@@ -9,8 +9,8 @@ output "cluster_id" {
   )
 }
 
-output "kubeconfig" {
-  description = "Kubeconfig for the created Kubernetes cluster"
+output "kubeconfig_path" {
+  description = "Path to the kubeconfig file for the created Kubernetes cluster"
   value = var.cloud_provider == "aws" ? aws_eks_cluster.this[0].kubeconfig : (
     var.cloud_provider == "azure" ? azurerm_kubernetes_cluster.this[0].kube_config_raw : (
       var.cloud_provider == "ovh" ? ovh_cloud_project_kube.this[0].kubeconfig : null
@@ -19,7 +19,7 @@ output "kubeconfig" {
   sensitive = true
 }
 
-output "cluster_endpoint" {
+output "api_endpoint" {
   description = "Endpoint for the Kubernetes API server"
   value = var.cloud_provider == "aws" ? aws_eks_cluster.this[0].endpoint : (
     var.cloud_provider == "azure" ? azurerm_kubernetes_cluster.this[0].kube_config.0.host : (
@@ -30,17 +30,17 @@ output "cluster_endpoint" {
   )
 }
 
-output "cluster_name" {
+output "k8s_name" {
   description = "Name of the Kubernetes cluster"
   value = var.cluster_name
 }
 
-output "cluster_region" {
+output "k8s_region" {
   description = "Region of the Kubernetes cluster"
   value = var.region
 }
 
-output "cluster_version" {
+output "k8s_version" {
   description = "Kubernetes version of the cluster"
   value = var.kubernetes_version
 }

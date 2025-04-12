@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-runtime-mcp-host
+  namespace: agent-runtime-system
+  labels:
+    app: agent-runtime-mcp-host
+    agent-runtime/component: mcp-host
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-runtime-mcp-host
+  template:
+    metadata:
+      labels:
+        app: agent-runtime-mcp-host
+    spec:
+      containers:
+      - name: mcp-host
+        image: ${CONTAINER_REGISTRY}/agent-runtime:latest
+        command: ["./agent-runtime"]
+        args: ["--mcp-host"]
+        ports:
+        - containerPort: 8080
+          name: mcp-host
+        env:
+        - name: MCP_SERVER_URL
+          value: "http://agent-runtime-sandbox:8081"
+        - name: MCP_SERVER_TYPE
+          value: "gitops"
+        - name: LIBRECHAT_CODE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: agent-runtime-secrets
+              key: librechat_code_api_key
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent-runtime-mcp-host
+  namespace: agent-runtime-system
+spec:
+  selector:
+    app: agent-runtime-mcp-host
+  ports:
+  - port: 8080
+    targetPort: mcp-host
+    name: mcp-host

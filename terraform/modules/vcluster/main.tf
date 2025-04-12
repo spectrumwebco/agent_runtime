@@ -221,8 +221,3 @@ data "kubernetes_secret" "vcluster_kubeconfig" {
 
   depends_on = [helm_release.vcluster]
 }
-
-output "kubeconfig" {
-  value     = data.kubernetes_secret.vcluster_kubeconfig.data.config
-  sensitive = true
-}

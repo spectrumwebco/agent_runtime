@@ -8,18 +8,6 @@ import (
 	"github.com/spectrumwebco/agent_runtime/pkg/tools"
 )
 
-type Module interface {
-	Name() string
-	
-	Description() string
-	
-	Tools() []tools.Tool
-	
-	Initialize(ctx context.Context) error
-	
-	Cleanup() error
-}
-
 type BaseModule struct {
 	name        string
 	description string

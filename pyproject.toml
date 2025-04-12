@@ -1,8 +1,8 @@
 # pyproject.toml for Python dependencies within the Go agent_runtime project
 
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["uv"]
+build-backend = "uv.build"
 
 [project]
 name = "agent_runtime_python_deps" # Placeholder name
@@ -83,3 +83,11 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "cloud: mark tests for modal/fargate/etc.",
 ]
+
+[tool.uv]
+exclude = ["tests"]
+virtualenv = ".venv"
+requirements = []
+pth = ["src"]
+python-path = ["$VIRTUAL_ENV/bin/python"]
+editable = true
