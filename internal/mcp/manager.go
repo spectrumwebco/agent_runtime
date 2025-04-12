@@ -51,6 +51,10 @@ func (m *Manager) initServers() error {
 		return err
 	}
 	
+	if err := m.initDatabaseServer(); err != nil {
+		return err
+	}
+	
 	return nil
 }
 
@@ -180,6 +184,13 @@ func (m *Manager) StartServers() error {
 			case "runtime":
 				if err := RegisterRuntimeTools(s.Server); err != nil {
 					return fmt.Errorf("failed to register runtime tools: %w", err)
+				}
+			case "database":
+				if err := RegisterDatabaseTools(s.Server); err != nil {
+					return fmt.Errorf("failed to register database tools: %w", err)
+				}
+				if err := RegisterDatabasePrompts(s.Server); err != nil {
+					return fmt.Errorf("failed to register database prompts: %w", err)
 				}
 			}
 			
