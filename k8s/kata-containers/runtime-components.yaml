@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kata-runtime-components
+  namespace: agent-runtime-system
+  labels:
+    app: kata-runtime-components
+    agent-runtime/component: kata-runtime
+    app.kubernetes.io/name: agent-runtime
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kata-runtime-components
+  template:
+    metadata:
+      labels:
+        app: kata-runtime-components
+        agent-runtime/component: kata-runtime
+    spec:
+      containers:
+      - name: runtime-rs
+        image: ${CONTAINER_REGISTRY}/kata-runtime-rs:latest
+        command: ["/usr/local/bin/runtime-rs"]
+        args: ["--config", "/etc/kata-runtime/config.toml"]
+        env:
+        - name: RUST_LOG
+          value: "info"
+        volumeMounts:
+        - name: config
+          mountPath: /etc/kata-runtime
+        - name: runtime-data
+          mountPath: /var/run/kata-containers
+        securityContext:
+          privileged: true
+          capabilities:
+            add:
+            - SYS_ADMIN
+            - NET_ADMIN
+      - name: mem-agent
+        image: ${CONTAINER_REGISTRY}/kata-mem-agent:latest
+        command: ["/usr/local/bin/mem-agent"]
+        args: ["--socket", "/var/run/kata-containers/mem-agent.sock"]
+        env:
+        - name: RUST_LOG
+          value: "info"
+        volumeMounts:
+        - name: runtime-data
+          mountPath: /var/run/kata-containers
+        securityContext:
+          privileged: true
+      volumes:
+      - name: config
+        configMap:
+          name: kata-runtime-config
+      - name: runtime-data
+        hostPath:
+          path: /var/run/kata-containers
+          type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kata-runtime-config
+  namespace: agent-runtime-system
+  labels:
+    app.kubernetes.io/name: agent-runtime
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+data:
+  config.toml: |
+    [runtime]
+    name = "kata-runtime-rs"
+    path = "/usr/local/bin/runtime-rs"
+    
+    [agent]
+    container_pipe_size = 1
+    
+    [hypervisor]
+    path = "/usr/bin/qemu-system-x86_64"
+    kernel = "/usr/share/kata-containers/vmlinux.container"
+    image = "/usr/share/kata-containers/kata-containers.img"
+    
+    [factory]
+    cache_type = "memory"
+    
+    [mem_agent]
+    enable = true
+    socket = "/var/run/kata-containers/mem-agent.sock"
