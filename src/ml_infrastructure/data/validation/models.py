@@ -7,7 +7,7 @@ issue scrapers for fine-tuning Llama 4 models.
 
 from typing import Dict, List, Optional, Any, Union
 from datetime import datetime
-from pydantic import BaseModel, Field, validator, HttpUrl
+from pydantic import BaseModel, Field, field_validator, HttpUrl
 
 
 class TrajectoryStep(BaseModel):
@@ -56,7 +56,7 @@ class Message(BaseModel):
     role: str = Field(..., description="Message role")
     content: str = Field(..., description="Message content")
 
-    @validator('role')
+    @field_validator('role')
     def validate_role(cls, v):
         """Validate message role."""
         if v not in ["system", "user", "assistant"]:
@@ -70,7 +70,7 @@ class ChatFormatModel(BaseModel):
     metadata: Optional[Metadata] = Field(None, description="Metadata")
     trajectory: Optional[List[TrajectoryStep]] = Field(None, description="Solution trajectory")
 
-    @validator('messages')
+    @field_validator('messages')
     def validate_messages(cls, v):
         """Validate chat messages."""
         if len(v) < 3:

@@ -9,6 +9,18 @@ import requests
 from typing import Dict, List, Any, Optional, Union
 import asyncio
 import aiohttp
+from datetime import datetime
+
+from .models import (
+    ModelList, ModelDetail, FineTuningJobCreate, FineTuningJobDetail, 
+    FineTuningJobList, DatasetUpload, DatasetDetail, DatasetList,
+    InferenceServiceCreate, InferenceServiceDetail, InferenceServiceList,
+    PredictionRequest, PredictionResponse, ExperimentList, ExperimentDetail,
+    ExperimentCreate, RunList, RunDetail, RunCreate, MetricsLog, ParamsLog,
+    PipelineRunCreate, PipelineRunDetail, PipelineRunList, KServeModelCreate,
+    KServeModelDetail, KServeModelList, FeatureRequest, FeatureResponse,
+    ErrorResponse, HyperParameters, ResourceRequirements
+)
 
 
 class MLInfrastructureAPIClient:
@@ -151,7 +163,7 @@ class MLInfrastructureAPIClient:
             raise
 
 
-    async def get_models(self, model_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    async def get_models(self, model_type: Optional[str] = None) -> ModelList:
         """
         Get available models.
 
@@ -165,9 +177,10 @@ class MLInfrastructureAPIClient:
         if model_type:
             params["model_type"] = model_type
         
-        return await self._make_async_request("GET", "models", params=params)
+        response = await self._make_async_request("GET", "models", params=params)
+        return ModelList(**response)
 
-    async def get_model(self, model_id: str) -> Dict[str, Any]:
+    async def get_model(self, model_id: str) -> ModelDetail:
         """
         Get model details.
 
@@ -177,7 +190,8 @@ class MLInfrastructureAPIClient:
         Returns:
             Model details
         """
-        return await self._make_async_request("GET", f"models/{model_id}")
+        response = await self._make_async_request("GET", f"models/{model_id}")
+        return ModelDetail(**response)
 
 
     async def create_fine_tuning_job(
@@ -186,7 +200,7 @@ class MLInfrastructureAPIClient:
         training_data_path: str,
         validation_data_path: Optional[str] = None,
         hyperparameters: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+    ) -> FineTuningJobDetail:
         """
         Create a fine-tuning job.
 
@@ -199,20 +213,22 @@ class MLInfrastructureAPIClient:
         Returns:
             Job details
         """
-        data = {
-            "model_type": model_type,
-            "training_data_path": training_data_path,
-        }
+        job_create = FineTuningJobCreate(
+            model_type=model_type,
+            training_data_path=training_data_path,
+            validation_data_path=validation_data_path,
+            hyperparameters=HyperParameters(**hyperparameters) if hyperparameters else None
+        )
         
-        if validation_data_path:
-            data["validation_data_path"] = validation_data_path
+        response = await self._make_async_request(
+            "POST", 
+            "fine-tuning/jobs", 
+            data=job_create.model_dump(exclude_none=True)
+        )
         
-        if hyperparameters:
-            data["hyperparameters"] = hyperparameters
-        
-        return await self._make_async_request("POST", "fine-tuning/jobs", data=data)
+        return FineTuningJobDetail(**response)
 
-    async def get_fine_tuning_job(self, job_id: str) -> Dict[str, Any]:
+    async def get_fine_tuning_job(self, job_id: str) -> FineTuningJobDetail:
         """
         Get fine-tuning job details.
 
@@ -222,14 +238,15 @@ class MLInfrastructureAPIClient:
         Returns:
             Job details
         """
-        return await self._make_async_request("GET", f"fine-tuning/jobs/{job_id}")
+        response = await self._make_async_request("GET", f"fine-tuning/jobs/{job_id}")
+        return FineTuningJobDetail(**response)
 
     async def list_fine_tuning_jobs(
         self,
         model_type: Optional[str] = None,
         status: Optional[str] = None,
         limit: int = 10,
-    ) -> List[Dict[str, Any]]:
+    ) -> FineTuningJobList:
         """
         List fine-tuning jobs.
 
@@ -249,9 +266,10 @@ class MLInfrastructureAPIClient:
         if status:
             params["status"] = status
         
-        return await self._make_async_request("GET", "fine-tuning/jobs", params=params)
+        response = await self._make_async_request("GET", "fine-tuning/jobs", params=params)
+        return FineTuningJobList(**response)
 
-    async def cancel_fine_tuning_job(self, job_id: str) -> Dict[str, Any]:
+    async def cancel_fine_tuning_job(self, job_id: str) -> FineTuningJobDetail:
         """
         Cancel a fine-tuning job.
 
@@ -261,14 +279,15 @@ class MLInfrastructureAPIClient:
         Returns:
             Job details
         """
-        return await self._make_async_request("POST", f"fine-tuning/jobs/{job_id}/cancel")
+        response = await self._make_async_request("POST", f"fine-tuning/jobs/{job_id}/cancel")
+        return FineTuningJobDetail(**response)
 
 
     async def upload_training_data(
         self,
         file_path: str,
         dataset_name: Optional[str] = None,
-    ) -> Dict[str, Any]:
+    ) -> DatasetDetail:
         """
         Upload training data.
 
@@ -281,14 +300,14 @@ class MLInfrastructureAPIClient:
         """
         with open(file_path, "rb") as f:
             files = {"file": f}
-            data = {}
             
-            if dataset_name:
-                data["dataset_name"] = dataset_name
+            upload_request = DatasetUpload(dataset_name=dataset_name)
+            data = upload_request.model_dump(exclude_none=True)
             
-            return await self._make_async_request("POST", "datasets/upload", data=data, files=files)
+            response = await self._make_async_request("POST", "datasets/upload", data=data, files=files)
+            return DatasetDetail(**response)
 
-    async def list_datasets(self, limit: int = 10) -> List[Dict[str, Any]]:
+    async def list_datasets(self, limit: int = 10) -> DatasetList:
         """
         List available datasets.
 
@@ -299,9 +318,10 @@ class MLInfrastructureAPIClient:
             List of datasets
         """
         params = {"limit": limit}
-        return await self._make_async_request("GET", "datasets", params=params)
+        response = await self._make_async_request("GET", "datasets", params=params)
+        return DatasetList(**response)
 
-    async def get_dataset(self, dataset_id: str) -> Dict[str, Any]:
+    async def get_dataset(self, dataset_id: str) -> DatasetDetail:
         """
         Get dataset details.
 
@@ -311,7 +331,8 @@ class MLInfrastructureAPIClient:
         Returns:
             Dataset details
         """
-        return await self._make_async_request("GET", f"datasets/{dataset_id}")
+        response = await self._make_async_request("GET", f"datasets/{dataset_id}")
+        return DatasetDetail(**response)
 
     async def delete_dataset(self, dataset_id: str) -> Dict[str, Any]:
         """
@@ -332,7 +353,7 @@ class MLInfrastructureAPIClient:
         service_name: str,
         replicas: int = 1,
         resources: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+    ) -> InferenceServiceDetail:
         """
         Create an inference service.
 
@@ -345,18 +366,22 @@ class MLInfrastructureAPIClient:
         Returns:
             Service details
         """
-        data = {
-            "model_id": model_id,
-            "service_name": service_name,
-            "replicas": replicas,
-        }
+        service_create = InferenceServiceCreate(
+            model_id=model_id,
+            service_name=service_name,
+            replicas=replicas,
+            resources=ResourceRequirements(**resources) if resources else None
+        )
         
-        if resources:
-            data["resources"] = resources
+        response = await self._make_async_request(
+            "POST", 
+            "inference/services", 
+            data=service_create.model_dump(exclude_none=True)
+        )
         
-        return await self._make_async_request("POST", "inference/services", data=data)
+        return InferenceServiceDetail(**response)
 
-    async def get_inference_service(self, service_id: str) -> Dict[str, Any]:
+    async def get_inference_service(self, service_id: str) -> InferenceServiceDetail:
         """
         Get inference service details.
 
@@ -366,13 +391,14 @@ class MLInfrastructureAPIClient:
         Returns:
             Service details
         """
-        return await self._make_async_request("GET", f"inference/services/{service_id}")
+        response = await self._make_async_request("GET", f"inference/services/{service_id}")
+        return InferenceServiceDetail(**response)
 
     async def list_inference_services(
         self,
         model_id: Optional[str] = None,
         limit: int = 10,
-    ) -> List[Dict[str, Any]]:
+    ) -> InferenceServiceList:
         """
         List inference services.
 
@@ -388,7 +414,8 @@ class MLInfrastructureAPIClient:
         if model_id:
             params["model_id"] = model_id
         
-        return await self._make_async_request("GET", "inference/services", params=params)
+        response = await self._make_async_request("GET", "inference/services", params=params)
+        return InferenceServiceList(**response)
 
     async def delete_inference_service(self, service_id: str) -> Dict[str, Any]:
         """
@@ -407,7 +434,7 @@ class MLInfrastructureAPIClient:
         service_id: str,
         input_text: str,
         parameters: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+    ) -> PredictionResponse:
         """
         Make a prediction using an inference service.
 
@@ -419,17 +446,21 @@ class MLInfrastructureAPIClient:
         Returns:
             Prediction result
         """
-        data = {
-            "input_text": input_text,
-        }
+        prediction_request = PredictionRequest(
+            input_text=input_text,
+            parameters=parameters
+        )
         
-        if parameters:
-            data["parameters"] = parameters
+        response = await self._make_async_request(
+            "POST", 
+            f"inference/services/{service_id}/predict", 
+            data=prediction_request.model_dump(exclude_none=True)
+        )
         
-        return await self._make_async_request("POST", f"inference/services/{service_id}/predict", data=data)
+        return PredictionResponse(**response)
 
 
-    async def get_experiments(self, limit: int = 10) -> List[Dict[str, Any]]:
+    async def get_experiments(self, limit: int = 10) -> ExperimentList:
         """
         Get MLFlow experiments.
 
@@ -440,9 +471,10 @@ class MLInfrastructureAPIClient:
             List of experiments
         """
         params = {"limit": limit}
-        return await self._make_async_request("GET", "mlflow/experiments", params=params)
+        response = await self._make_async_request("GET", "mlflow/experiments", params=params)
+        return ExperimentList(**response)
 
-    async def get_experiment(self, experiment_id: str) -> Dict[str, Any]:
+    async def get_experiment(self, experiment_id: str) -> ExperimentDetail:
         """
         Get MLFlow experiment details.
 
@@ -452,14 +484,15 @@ class MLInfrastructureAPIClient:
         Returns:
             Experiment details
         """
-        return await self._make_async_request("GET", f"mlflow/experiments/{experiment_id}")
+        response = await self._make_async_request("GET", f"mlflow/experiments/{experiment_id}")
+        return ExperimentDetail(**response)
 
     async def create_experiment(
         self,
         name: str,
         artifact_location: Optional[str] = None,
         tags: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, Any]:
+    ) -> ExperimentDetail:
         """
         Create MLFlow experiment.
 
@@ -471,24 +504,26 @@ class MLInfrastructureAPIClient:
         Returns:
             Experiment details
         """
-        data = {
-            "name": name,
-        }
+        experiment_create = ExperimentCreate(
+            name=name,
+            artifact_location=artifact_location,
+            tags=tags
+        )
         
-        if artifact_location:
-            data["artifact_location"] = artifact_location
+        response = await self._make_async_request(
+            "POST", 
+            "mlflow/experiments", 
+            data=experiment_create.model_dump(exclude_none=True)
+        )
         
-        if tags:
-            data["tags"] = tags
-        
-        return await self._make_async_request("POST", "mlflow/experiments", data=data)
+        return ExperimentDetail(**response)
 
     async def get_runs(
         self,
         experiment_id: str,
         status: Optional[str] = None,
         limit: int = 10,
-    ) -> List[Dict[str, Any]]:
+    ) -> RunList:
         """
         Get MLFlow runs.
 
@@ -508,9 +543,10 @@ class MLInfrastructureAPIClient:
         if status:
             params["status"] = status
         
-        return await self._make_async_request("GET", "mlflow/runs", params=params)
+        response = await self._make_async_request("GET", "mlflow/runs", params=params)
+        return RunList(**response)
 
-    async def get_run(self, run_id: str) -> Dict[str, Any]:
+    async def get_run(self, run_id: str) -> RunDetail:
         """
         Get MLFlow run details.
 
@@ -520,14 +556,15 @@ class MLInfrastructureAPIClient:
         Returns:
             Run details
         """
-        return await self._make_async_request("GET", f"mlflow/runs/{run_id}")
+        response = await self._make_async_request("GET", f"mlflow/runs/{run_id}")
+        return RunDetail(**response)
 
     async def create_run(
         self,
         experiment_id: str,
         run_name: Optional[str] = None,
         tags: Optional[Dict[str, str]] = None,
-    ) -> Dict[str, Any]:
+    ) -> RunDetail:
         """
         Create MLFlow run.
 
@@ -539,17 +576,19 @@ class MLInfrastructureAPIClient:
         Returns:
             Run details
         """
-        data = {
-            "experiment_id": experiment_id,
-        }
+        run_create = RunCreate(
+            experiment_id=experiment_id,
+            run_name=run_name,
+            tags=tags
+        )
         
-        if run_name:
-            data["run_name"] = run_name
+        response = await self._make_async_request(
+            "POST", 
+            "mlflow/runs", 
+            data=run_create.model_dump(exclude_none=True)
+        )
         
-        if tags:
-            data["tags"] = tags
-        
-        return await self._make_async_request("POST", "mlflow/runs", data=data)
+        return RunDetail(**response)
 
     async def log_metrics(
         self,
@@ -568,14 +607,16 @@ class MLInfrastructureAPIClient:
         Returns:
             Log details
         """
-        data = {
-            "metrics": metrics,
-        }
+        metrics_log = MetricsLog(
+            metrics=metrics,
+            step=step
+        )
         
-        if step is not None:
-            data["step"] = step
-        
-        return await self._make_async_request("POST", f"mlflow/runs/{run_id}/metrics", data=data)
+        return await self._make_async_request(
+            "POST", 
+            f"mlflow/runs/{run_id}/metrics", 
+            data=metrics_log.model_dump(exclude_none=True)
+        )
 
     async def log_params(
         self,
@@ -592,11 +633,15 @@ class MLInfrastructureAPIClient:
         Returns:
             Log details
         """
-        data = {
-            "params": params,
-        }
+        params_log = ParamsLog(
+            params=params
+        )
         
-        return await self._make_async_request("POST", f"mlflow/runs/{run_id}/params", data=data)
+        return await self._make_async_request(
+            "POST", 
+            f"mlflow/runs/{run_id}/params", 
+            data=params_log.model_dump(exclude_none=True)
+        )
 
 
     async def create_pipeline_run(
@@ -604,7 +649,7 @@ class MLInfrastructureAPIClient:
         pipeline_id: str,
         run_name: str,
         parameters: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+    ) -> PipelineRunDetail:
         """
         Create a KubeFlow pipeline run.
 
@@ -616,17 +661,21 @@ class MLInfrastructureAPIClient:
         Returns:
             Run details
         """
-        data = {
-            "pipeline_id": pipeline_id,
-            "run_name": run_name,
-        }
+        pipeline_run_create = PipelineRunCreate(
+            pipeline_id=pipeline_id,
+            run_name=run_name,
+            parameters=parameters
+        )
         
-        if parameters:
-            data["parameters"] = parameters
+        response = await self._make_async_request(
+            "POST", 
+            "kubeflow/pipelines/runs", 
+            data=pipeline_run_create.model_dump(exclude_none=True)
+        )
         
-        return await self._make_async_request("POST", "kubeflow/pipelines/runs", data=data)
+        return PipelineRunDetail(**response)
 
-    async def get_pipeline_run(self, run_id: str) -> Dict[str, Any]:
+    async def get_pipeline_run(self, run_id: str) -> PipelineRunDetail:
         """
         Get KubeFlow pipeline run details.
 
@@ -636,14 +685,15 @@ class MLInfrastructureAPIClient:
         Returns:
             Run details
         """
-        return await self._make_async_request("GET", f"kubeflow/pipelines/runs/{run_id}")
+        response = await self._make_async_request("GET", f"kubeflow/pipelines/runs/{run_id}")
+        return PipelineRunDetail(**response)
 
     async def list_pipeline_runs(
         self,
         pipeline_id: Optional[str] = None,
         status: Optional[str] = None,
         limit: int = 10,
-    ) -> List[Dict[str, Any]]:
+    ) -> PipelineRunList:
         """
         List KubeFlow pipeline runs.
 
@@ -663,7 +713,8 @@ class MLInfrastructureAPIClient:
         if status:
             params["status"] = status
         
-        return await self._make_async_request("GET", "kubeflow/pipelines/runs", params=params)
+        response = await self._make_async_request("GET", "kubeflow/pipelines/runs", params=params)
+        return PipelineRunList(**response)
 
 
     async def create_kserve_model(
@@ -673,7 +724,7 @@ class MLInfrastructureAPIClient:
         model_format: str = "pytorch",
         resources: Optional[Dict[str, Any]] = None,
         env: Optional[List[Dict[str, Any]]] = None,
-    ) -> Dict[str, Any]:
+    ) -> KServeModelDetail:
         """
         Create a KServe model.
 
@@ -687,21 +738,27 @@ class MLInfrastructureAPIClient:
         Returns:
             Model details
         """
-        data = {
-            "name": name,
-            "model_uri": model_uri,
-            "model_format": model_format,
-        }
-        
+        resource_requirements = None
         if resources:
-            data["resources"] = resources
+            resource_requirements = ResourceRequirements(**resources)
+            
+        kserve_model = KServeModelCreate(
+            name=name,
+            model_uri=model_uri,
+            model_format=model_format,
+            resources=resource_requirements,
+            env=env
+        )
         
-        if env:
-            data["env"] = env
+        response = await self._make_async_request(
+            "POST", 
+            "kserve/models", 
+            data=kserve_model.model_dump(exclude_none=True)
+        )
         
-        return await self._make_async_request("POST", "kserve/models", data=data)
+        return KServeModelDetail(**response)
 
-    async def get_kserve_model(self, name: str) -> Dict[str, Any]:
+    async def get_kserve_model(self, name: str) -> KServeModelDetail:
         """
         Get KServe model details.
 
@@ -711,9 +768,10 @@ class MLInfrastructureAPIClient:
         Returns:
             Model details
         """
-        return await self._make_async_request("GET", f"kserve/models/{name}")
+        response = await self._make_async_request("GET", f"kserve/models/{name}")
+        return KServeModelDetail(**response)
 
-    async def list_kserve_models(self, limit: int = 10) -> List[Dict[str, Any]]:
+    async def list_kserve_models(self, limit: int = 10) -> KServeModelList:
         """
         List KServe models.
 
@@ -724,7 +782,8 @@ class MLInfrastructureAPIClient:
             List of models
         """
         params = {"limit": limit}
-        return await self._make_async_request("GET", "kserve/models", params=params)
+        response = await self._make_async_request("GET", "kserve/models", params=params)
+        return KServeModelList(**response)
 
     async def delete_kserve_model(self, name: str) -> Dict[str, Any]:
         """
@@ -736,7 +795,8 @@ class MLInfrastructureAPIClient:
         Returns:
             Deletion details
         """
-        return await self._make_async_request("DELETE", f"kserve/models/{name}")
+        response = await self._make_async_request("DELETE", f"kserve/models/{name}")
+        return response
 
 
     async def get_feature_values(
@@ -744,7 +804,7 @@ class MLInfrastructureAPIClient:
         entity_name: str,
         entity_ids: List[str],
         feature_names: List[str],
-    ) -> Dict[str, Any]:
+    ) -> FeatureResponse:
         """
         Get feature values from Feast.
 
@@ -756,13 +816,19 @@ class MLInfrastructureAPIClient:
         Returns:
             Feature values
         """
-        data = {
-            "entity_name": entity_name,
-            "entity_ids": entity_ids,
-            "feature_names": feature_names,
-        }
+        feature_request = FeatureRequest(
+            entity_name=entity_name,
+            entity_ids=entity_ids,
+            feature_names=feature_names
+        )
         
-        return await self._make_async_request("POST", "feast/features", data=data)
+        response = await self._make_async_request(
+            "POST", 
+            "feast/features", 
+            data=feature_request.model_dump()
+        )
+        
+        return FeatureResponse(**response)
 
 
     def run_async(self, coroutine):
@@ -777,7 +843,7 @@ class MLInfrastructureAPIClient:
         """
         return asyncio.run(coroutine)
 
-    def get_models_sync(self, model_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    def get_models_sync(self, model_type: Optional[str] = None) -> ModelList:
         """
         Get available models (synchronous version).
 
@@ -791,14 +857,15 @@ class MLInfrastructureAPIClient:
         if model_type:
             params["model_type"] = model_type
         
-        return self._make_request("GET", "models", params=params)
+        response = self._make_request("GET", "models", params=params)
+        return ModelList(**response)
 
     def predict_sync(
         self,
         service_id: str,
         input_text: str,
         parameters: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+    ) -> PredictionResponse:
         """
         Make a prediction using an inference service (synchronous version).
 
@@ -810,11 +877,15 @@ class MLInfrastructureAPIClient:
         Returns:
             Prediction result
         """
-        data = {
-            "input_text": input_text,
-        }
+        prediction_request = PredictionRequest(
+            input_text=input_text,
+            parameters=parameters
+        )
         
-        if parameters:
-            data["parameters"] = parameters
+        response = self._make_request(
+            "POST", 
+            f"inference/services/{service_id}/predict", 
+            data=prediction_request.model_dump(exclude_none=True)
+        )
         
-        return self._make_request("POST", f"inference/services/{service_id}/predict", data=data)
+        return PredictionResponse(**response)
