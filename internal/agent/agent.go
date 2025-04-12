@@ -17,7 +17,6 @@ import (
 	"github.com/spectrumwebco/agent_runtime/pkg/tools"
 )
 
-// Message represents a communication between the agent and its environment
 type Message struct {
 	Role        string                 `json:"role"`         // system, assistant, user
 	Content     string                 `json:"content"`      // The actual message content
@@ -28,7 +27,7 @@ type Message struct {
 	RawOutput   string                 `json:"raw_output,omitempty"`
 	ExtraInfo   map[string]interface{} `json:"extra_info,omitempty"`
 }
-// Info contains metadata about the agent's execution and state
+
 type Info struct {
 	Submission      string                 `json:"submission"`
 	ExitStatus      string                 `json:"exit_status"`
