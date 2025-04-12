@@ -161,3 +161,17 @@ module "vault" {
   vault_resources_requests_cpu    = var.vault_resources_requests_cpu
   vault_resources_requests_memory = var.vault_resources_requests_memory
 }
+
+module "vnode_runtime" {
+  source = "./modules/vnode-runtime"
+
+  kubeconfig_path           = var.kubeconfig_path
+  namespace                 = var.vnode_runtime_namespace
+  vnode_runtime_version     = var.vnode_runtime_version
+  replica_count             = var.vnode_runtime_replica_count
+  resources_limits_cpu      = var.vnode_runtime_resources_limits_cpu
+  resources_limits_memory   = var.vnode_runtime_resources_limits_memory
+  resources_requests_cpu    = var.vnode_runtime_resources_requests_cpu
+  resources_requests_memory = var.vnode_runtime_resources_requests_memory
+  depends_on                = [module.kubeflow, module.mlflow, module.kserve]
+}

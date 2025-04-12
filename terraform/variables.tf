@@ -59,6 +59,42 @@ variable "vnode_runtime_version" {
   default     = "0.0.2"
 }
 
+variable "vnode_runtime_namespace" {
+  description = "Namespace for vNode runtime deployment"
+  type        = string
+  default     = "vnode-runtime"
+}
+
+variable "vnode_runtime_replica_count" {
+  description = "Number of vNode runtime replicas"
+  type        = number
+  default     = 1
+}
+
+variable "vnode_runtime_resources_limits_cpu" {
+  description = "CPU limits for vNode runtime"
+  type        = string
+  default     = "500m"
+}
+
+variable "vnode_runtime_resources_limits_memory" {
+  description = "Memory limits for vNode runtime"
+  type        = string
+  default     = "512Mi"
+}
+
+variable "vnode_runtime_resources_requests_cpu" {
+  description = "CPU requests for vNode runtime"
+  type        = string
+  default     = "250m"
+}
+
+variable "vnode_runtime_resources_requests_memory" {
+  description = "Memory requests for vNode runtime"
+  type        = string
+  default     = "256Mi"
+}
+
 variable "vault_namespace" {
   description = "Namespace for Vault deployment"
   type        = string
