@@ -18,6 +18,7 @@ resource "kubernetes_config_map" "vnode_config" {
     labels = {
       "app.kubernetes.io/name"       = "vnode"
       "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
     }
   }
 
@@ -40,6 +41,7 @@ resource "kubernetes_daemon_set" "vnode_runtime" {
     labels = {
       "app.kubernetes.io/name"       = "vnode"
       "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
     }
   }
 
@@ -60,8 +62,8 @@ resource "kubernetes_daemon_set" "vnode_runtime" {
 
       spec {
         container {
-          name            = "vnode"
-          image           = "ghcr.io/loft-sh/vnode-runtime:${var.vnode_version}"
+          name  = "vnode"
+          image = "ghcr.io/loft-sh/vnode-runtime:${var.vnode_version}"
           image_pull_policy = "Always"
           
           security_context {
@@ -116,6 +118,7 @@ resource "kubernetes_service" "vnode_runtime" {
     labels = {
       "app.kubernetes.io/name"       = "vnode"
       "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
     }
   }
 

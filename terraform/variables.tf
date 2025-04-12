@@ -114,3 +114,77 @@ variable "flux_sync_interval" {
   type        = string
   default     = "1m0s"
 }
+
+variable "vnode_version" {
+  description = "Version of vNode runtime to deploy"
+  type        = string
+  default     = "0.0.2"
+}
+
+variable "jspolicy_version" {
+  description = "Version of jsPolicy to deploy"
+  type        = string
+  default     = "0.3.0-beta.5"
+}
+
+variable "vcluster_version" {
+  description = "Version of vCluster to deploy"
+  type        = string
+  default     = "0.15.0"
+}
+
+variable "argocd_chart_version" {
+  description = "Version of ArgoCD Helm chart to deploy"
+  type        = string
+  default     = "5.16.14"
+}
+
+variable "argocd_values_yaml" {
+  description = "Values YAML for ArgoCD Helm chart"
+  type        = string
+  default     = ""
+}
+
+variable "flux_git_repository_url" {
+  description = "Git repository URL for Flux"
+  type        = string
+  default     = "https://github.com/spectrumwebco/agent_runtime"
+}
+
+variable "flux_git_branch" {
+  description = "Git branch for Flux"
+  type        = string
+  default     = "main"
+}
+
+variable "flux_sync_interval" {
+  description = "Sync interval for Flux"
+  type        = string
+  default     = "1m"
+}
+
+variable "dragonfly_password" {
+  description = "Password for DragonflyDB"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "mcp_host_url" {
+  description = "URL for MCP host"
+  type        = string
+  default     = "http://mcp-host.mcp-system.svc.cluster.local:8080"
+}
+
+variable "mcp_server_url" {
+  description = "URL for MCP server"
+  type        = string
+  default     = "http://mcp-server.mcp-system.svc.cluster.local:8080"
+}
+
+variable "librechat_code_api_key" {
+  description = "API key for LibreChat Code Interpreter"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

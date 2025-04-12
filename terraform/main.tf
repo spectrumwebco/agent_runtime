@@ -224,3 +224,30 @@ module "vcluster" {
   
   depends_on = [module.k8s]
 }
+
+module "supabase" {
+  source = "./modules/supabase"
+  
+  namespace = "supabase-system"
+  create_namespace = true
+  
+  depends_on = [module.k8s]
+}
+
+module "dragonfly" {
+  source = "./modules/dragonfly"
+  
+  namespace = "dragonfly-system"
+  create_namespace = true
+  
+  password = var.dragonfly_password
+  
+  depends_on = [module.k8s]
+}
+
+module "k8s_base" {
+  source = "./modules/k8s-base"
+  
+  namespace = "agent-runtime-system"
+  create_namespace = true
+}

@@ -13,5 +13,12 @@ variable "create_namespace" {
 variable "vcluster_version" {
   description = "Version of vCluster to deploy"
   type        = string
-  default     = "v1.21.4-k3s1"
+  default     = "0.15.0"
+}
+
+variable "kube_config" {
+  description = "Kubernetes config for vCluster"
+  type        = string
+  sensitive   = true
+  default     = ""
 }

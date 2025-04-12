@@ -11,28 +11,6 @@ resource "kubernetes_namespace" "vcluster_system" {
   }
 }
 
-resource "kubernetes_config_map" "vcluster_config" {
-  metadata {
-    name      = "vcluster-config"
-    namespace = var.namespace
-    labels = {
-      "app.kubernetes.io/name"       = "vcluster"
-      "app.kubernetes.io/part-of"    = "agent-runtime"
-    }
-  }
-
-  data = {
-    "config.yaml" = <<-EOT
-      vcluster:
-        image: rancher/k3s:v1.21.4-k3s1
-        imagePullPolicy: Always
-      networking:
-        hostPort: 8443
-        containerPort: 8443
-    EOT
-  }
-}
-
 resource "kubernetes_deployment" "vcluster_controller" {
   metadata {
     name      = "vcluster-controller"
@@ -41,6 +19,7 @@ resource "kubernetes_deployment" "vcluster_controller" {
       "app.kubernetes.io/name"       = "vcluster"
       "app.kubernetes.io/component"  = "controller"
       "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
     }
   }
 
@@ -64,42 +43,86 @@ resource "kubernetes_deployment" "vcluster_controller" {
       }
 
       spec {
-        service_account_name = kubernetes_service_account.vcluster_controller.metadata[0].name
-        
         container {
-          name            = "controller"
-          image           = "rancher/k3s:v1.21.4-k3s1"
-          image_pull_policy = "Always"
+          name  = "controller"
+          image = "ghcr.io/loft-sh/vcluster:${var.vcluster_version}"
           
           args = [
-            "--config=/etc/vcluster/config.yaml"
+            "--name=vcluster",
+            "--service-name=vcluster",
+            "--kube-config=/etc/kubernetes/admin.conf"
           ]
+          
+          env {
+            name  = "POD_NAMESPACE"
+            value_from {
+              field_ref {
+                field_path = "metadata.namespace"
+              }
+            }
+          }
+          
+          port {
+            container_port = 8443
+            name           = "https"
+          }
           
           volume_mount {
             name       = "config"
-            mount_path = "/etc/vcluster"
+            mount_path = "/etc/kubernetes"
+            read_only  = true
           }
           
           resources {
             requests = {
-              cpu    = "100m"
-              memory = "128Mi"
+              memory = "256Mi"
+              cpu    = "250m"
             }
             limits = {
-              cpu    = "500m"
               memory = "512Mi"
+              cpu    = "500m"
             }
           }
         }
         
         volume {
           name = "config"
-          config_map {
-            name = kubernetes_config_map.vcluster_config.metadata[0].name
+          secret {
+            secret_name = kubernetes_secret.vcluster_config.metadata[0].name
           }
         }
+        
+        service_account_name = kubernetes_service_account.vcluster_controller.metadata[0].name
       }
     }
+  }
+}
+
+resource "kubernetes_service" "vcluster" {
+  metadata {
+    name      = "vcluster"
+    namespace = var.namespace
+    labels = {
+      "app.kubernetes.io/name"       = "vcluster"
+      "app.kubernetes.io/component"  = "api"
+      "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
+    }
+  }
+
+  spec {
+    selector = {
+      "app.kubernetes.io/name"      = "vcluster"
+      "app.kubernetes.io/component" = "controller"
+    }
+    
+    port {
+      port        = 443
+      target_port = "https"
+      name        = "https"
+    }
+    
+    type = "ClusterIP"
   }
 }
 
@@ -110,6 +133,7 @@ resource "kubernetes_service_account" "vcluster_controller" {
     labels = {
       "app.kubernetes.io/name"       = "vcluster"
       "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
     }
   }
 }
@@ -120,21 +144,22 @@ resource "kubernetes_cluster_role" "vcluster_controller" {
     labels = {
       "app.kubernetes.io/name"       = "vcluster"
       "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
     }
   }
 
   rule {
     api_groups = [""]
-    resources  = ["namespaces", "pods", "services", "configmaps", "secrets"]
+    resources  = ["pods", "services", "configmaps", "secrets", "persistentvolumeclaims"]
     verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
   }
-
+  
   rule {
     api_groups = ["apps"]
     resources  = ["deployments", "statefulsets", "daemonsets"]
     verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
   }
-
+  
   rule {
     api_groups = ["networking.k8s.io"]
     resources  = ["ingresses"]
@@ -148,6 +173,7 @@ resource "kubernetes_cluster_role_binding" "vcluster_controller" {
     labels = {
       "app.kubernetes.io/name"       = "vcluster"
       "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
     }
   }
 
@@ -160,33 +186,47 @@ resource "kubernetes_cluster_role_binding" "vcluster_controller" {
   subject {
     kind      = "ServiceAccount"
     name      = kubernetes_service_account.vcluster_controller.metadata[0].name
-    namespace = var.namespace
+    namespace = kubernetes_service_account.vcluster_controller.metadata[0].namespace
   }
 }
 
-resource "kubernetes_service" "vcluster_webhook" {
+resource "kubernetes_secret" "vcluster_config" {
   metadata {
-    name      = "vcluster-webhook"
+    name      = "vcluster-config"
     namespace = var.namespace
     labels = {
       "app.kubernetes.io/name"       = "vcluster"
-      "app.kubernetes.io/component"  = "webhook"
       "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
     }
   }
 
-  spec {
-    selector = {
-      "app.kubernetes.io/name"      = "vcluster"
-      "app.kubernetes.io/component" = "controller"
+  data = {
+    "admin.conf" = var.kube_config
+  }
+
+  type = "Opaque"
+}
+
+resource "kubernetes_config_map" "vcluster_config" {
+  metadata {
+    name      = "vcluster-config"
+    namespace = var.namespace
+    labels = {
+      "app.kubernetes.io/name"       = "vcluster"
+      "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
     }
-    
-    port {
-      port        = 443
-      target_port = 8443
-      name        = "webhook"
-    }
-    
-    type = "ClusterIP"
+  }
+
+  data = {
+    "config.yaml" = <<-EOT
+      syncer:
+        extraArgs: []
+      networking:
+        resolveDNS: true
+      storage:
+        persistence: true
+    EOT
   }
 }

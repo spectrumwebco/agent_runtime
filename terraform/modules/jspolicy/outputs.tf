@@ -1,24 +1,24 @@
 output "namespace" {
-  description = "The namespace where JSPolicy resources are deployed"
+  description = "The namespace where jsPolicy resources are deployed"
   value       = var.namespace
 }
 
-output "controller_service_name" {
-  description = "The name of the JSPolicy controller service"
-  value       = kubernetes_service.jspolicy_controller.metadata[0].name
+output "webhook_service_name" {
+  description = "The name of the jsPolicy webhook service"
+  value       = kubernetes_service.jspolicy_webhook.metadata[0].name
 }
 
-output "controller_service_port" {
-  description = "The port of the JSPolicy controller service"
-  value       = kubernetes_service.jspolicy_controller.spec[0].port[0].port
+output "webhook_service_port" {
+  description = "The port of the jsPolicy webhook service"
+  value       = kubernetes_service.jspolicy_webhook.spec[0].port[0].port
 }
 
-output "validator_service_name" {
-  description = "The name of the JSPolicy validator service"
-  value       = kubernetes_service.jspolicy_validator.metadata[0].name
+output "controller_deployment_name" {
+  description = "The name of the jsPolicy controller deployment"
+  value       = kubernetes_deployment.jspolicy_controller.metadata[0].name
 }
 
-output "validator_service_port" {
-  description = "The port of the JSPolicy validator service"
-  value       = kubernetes_service.jspolicy_validator.spec[0].port[0].port
+output "config_map_name" {
+  description = "The name of the jsPolicy config map"
+  value       = kubernetes_config_map.jspolicy_config.metadata[0].name
 }
