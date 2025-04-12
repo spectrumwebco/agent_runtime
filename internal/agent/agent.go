@@ -168,7 +168,7 @@ func NewDefaultAgent(options ...Option) (*DefaultAgent, error) {
 	}
 
 	agent := &DefaultAgent{
-		Name:         "default-go-agent",
+		Name:         "samsepi0l",
 		MaxRequeries: 3, // Default from Python
 		History:      make([]Message, 0),
 		trajectory:   make([]TrajectoryStep, 0),
@@ -608,12 +608,25 @@ func (a *DefaultAgent) _appendHistory(item Message) {
 
 func (a *DefaultAgent) addSystemMessageToHistory() error {
 	fmt.Println("Adding system message to history...")
-	systemTemplate := "You are SWE-Agent, an autonomous software development agent. Follow the instructions carefully and use the provided tools to solve the task." // Placeholder template
-
-	systemMsg := systemTemplate // Use raw template for now
-
+	
+	promptsPath := filepath.Join("pkg", "prompts", "prompts.txt")
+	promptsContent, err := os.ReadFile(promptsPath)
+	if err != nil {
+		fmt.Printf("Warning: Failed to read prompts.txt: %v. Using default system prompt.\n", err)
+		systemTemplate := "You are samsepi0l, a software engineer using a real computer operating system. You are a real code-wiz: few programmers are as talented as you at understanding codebases, writing functional and clean code, and iterating on your changes until they are correct. Follow the instructions carefully and use the provided tools to solve the task."
+		a._appendHistory(Message{
+			Role:        "system",
+			Content:     systemTemplate,
+			Agent:       a.Name,
+			MessageType: "system_prompt",
+		})
+		return nil
+	}
+	
+	systemMsg := string(promptsContent)
+	
 	if systemMsg != "" {
-		fmt.Printf("SYSTEM (%s)\n%s\n", a.Name, systemMsg)
+		fmt.Printf("SYSTEM (%s)\nLoaded system prompt from prompts.txt\n", a.Name)
 		a._appendHistory(Message{
 			Role:        "system",
 			Content:     systemMsg,
@@ -636,9 +649,23 @@ func (a *DefaultAgent) addDemonstrationsToHistory() error {
 
 func (a *DefaultAgent) addInstanceTemplateToHistory(initialState map[string]interface{}) error {
 	fmt.Println("Adding instance template to history...")
-	instanceTemplate := "Solve the following task:\n{{problem_statement}}\n\nAvailable tools:\n{{command_docs}}\n\nInitial State:\n{{initial_state}}" // Placeholder template
+	
+	instanceTemplate := "Solve the following task as samsepi0l, Senior Software Engineering Lead & Technical Authority AI/ML:\n{{problem_statement}}\n\nAvailable tools:\n{{command_docs}}\n\nInitial State:\n{{initial_state}}\n\nYou have access to three tiers of tools:\n1. Core Tools: Basic operations like file, shell, and browser interactions\n2. Specialized Toolchain: Domain-specific tools for advanced operations\n3. MCP Toolbelt: Dynamically discovered tools for specialized capabilities"
 
-	instanceMsg := fmt.Sprintf("Solve the following task:\n%s\n\nInitial State: %+v", a.problemStatement.GetProblemStatement(), initialState) // Basic placeholder rendering
+	availableTools := ""
+	if a.Tools != nil {
+		availableTools = strings.Join(a.Tools.ListCommands(), "\n- ")
+		if availableTools != "" {
+			availableTools = "- " + availableTools
+		}
+	}
+
+	instanceMsg := fmt.Sprintf(
+		"Solve the following task as samsepi0l, Senior Software Engineering Lead & Technical Authority AI/ML:\n%s\n\nAvailable tools:\n%s\n\nInitial State: %+v",
+		a.problemStatement.GetProblemStatement(),
+		availableTools,
+		initialState,
+	)
 
 	if instanceMsg != "" {
 		fmt.Printf("USER (%s)\n%s\n", a.Name, instanceMsg)
