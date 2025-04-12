@@ -123,9 +123,9 @@ spec:
           service ssh start
           systemctl start e2b-surf
           
-          export SSH_HOST="185.196.220.224"
-          export SSH_USERNAME="ove"
-          export SSH_PASSWORD="3threeguy"
+          export SSH_HOST="${SSH_HOST}"
+          export SSH_USERNAME="${SSH_USERNAME}"
+          export SSH_PASSWORD="${SSH_PASSWORD}"
           export LIBRECHAT_CODE_API_KEY=${LIBRECHAT_CODE_API_KEY}
           
           /usr/local/bin/gitops-mcp-server
