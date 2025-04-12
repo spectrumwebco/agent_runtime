@@ -10,6 +10,7 @@ from typing import Dict, List, Any, Optional, Set, Tuple
 from datetime import datetime
 
 from .integration import GiteeIntegration
+from .models import GiteeRepository, GiteeIssue, TrainingExample
 
 
 class GiteeScraper:
@@ -69,9 +70,11 @@ class GiteeScraper:
                     )
 
                     response = await self.gitee_integration.search_repositories(
-                        query=language_query,
-                        page=1,
-                        per_page=min(max_repos, 100),
+                                                                               query=language_query,
+                                                                               page=1,
+                                                                               per_page=min(max_repos,
+                                                                               100
+                                                                           ),
                         order="desc",
                     )
 
@@ -110,7 +113,8 @@ class GiteeScraper:
             if repo.get("stargazers_count", 0) >= min_stars
         ]
 
-        repositories.sort(key=lambda x: x.get("stargazers_count", 0), reverse=True)
+        repositories.sort(key=
+    lambda x: x.get("stargazers_count", 0), reverse=True)
 
         repositories = repositories[:max_repos]
 
@@ -142,9 +146,11 @@ class GiteeScraper:
         all_issues = []
 
         for repo in repositories:
-            owner = repo.get("owner", {}).get("login") or repo.get("namespace", {}).get(
-                "path"
-            )
+            owner = repo.get(
+                            "owner",
+                            {}).get("login") or repo.get("namespace",
+                            {}).get(                "path"
+                        )
             name = repo.get("name") or repo.get("path")
 
             if not owner or not name:
@@ -253,7 +259,8 @@ class GiteeScraper:
                 continue
 
             repo = issue["repository"]
-            repo_name = f"{repo.get('namespace', {}).get('path') or repo.get('owner', {}).get('login')}/{repo.get('path') or repo.get('name')}"
+            repo_name = (f"{repo.get('namespace', {}).get('path') or repo.get('owner', {}).get('login')}/"
+                      f"{repo.get('path') or repo.get('name')}")
             repo_topics = repo.get("topics", [])
 
             issue_title = issue["title"]
@@ -307,14 +314,14 @@ class GiteeScraper:
                 },
             ]
 
-            training_data.append(
-                {
-                    "input": input_text,
-                    "output": output_text,
-                    "metadata": metadata,
-                    "trajectory": trajectory,
-                }
+            training_example = TrainingExample(
+                input=input_text,
+                output=output_text,
+                metadata=metadata,
+                trajectory=trajectory
             )
+            
+            training_data.append(training_example.dict())
 
         output_path = os.path.join(self.output_dir, filename)
 

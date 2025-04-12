@@ -1,0 +1,111 @@
+apiVersion: kubeflow.org/v1
+kind: PyTorchJob
+metadata:
+  name: llama4-fine-tuning-job
+  namespace: kubeflow
+spec:
+  pytorchReplicaSpecs:
+    Master:
+      replicas: 1
+      restartPolicy: OnFailure
+      template:
+        spec:
+          containers:
+            - name: pytorch
+              image: fine-tune/llama4-training:latest
+              command:
+                - "python"
+                - "-m"
+                - "torch.distributed.launch"
+                - "--nproc_per_node=1"
+                - "train.py"
+              args:
+                - "--model-type"
+                - "llama4-maverick"
+                - "--data-path"
+                - "/data/training/combined_training_data.json"
+                - "--output-dir"
+                - "/models/llama4-maverick"
+                - "--epochs"
+                - "3"
+                - "--learning-rate"
+                - "5e-5"
+                - "--batch-size"
+                - "8"
+              resources:
+                limits:
+                  nvidia.com/gpu: 1
+                  memory: "32Gi"
+                  cpu: "8"
+                requests:
+                  memory: "16Gi"
+                  cpu: "4"
+              volumeMounts:
+                - name: data-volume
+                  mountPath: /data
+                - name: models-volume
+                  mountPath: /models
+                - name: config-volume
+                  mountPath: /config
+          volumes:
+            - name: data-volume
+              persistentVolumeClaim:
+                claimName: data-pvc
+            - name: models-volume
+              persistentVolumeClaim:
+                claimName: models-pvc
+            - name: config-volume
+              configMap:
+                name: llama4-training-config
+    Worker:
+      replicas: 2
+      restartPolicy: OnFailure
+      template:
+        spec:
+          containers:
+            - name: pytorch
+              image: fine-tune/llama4-training:latest
+              command:
+                - "python"
+                - "-m"
+                - "torch.distributed.launch"
+                - "--nproc_per_node=1"
+                - "train.py"
+              args:
+                - "--model-type"
+                - "llama4-maverick"
+                - "--data-path"
+                - "/data/training/combined_training_data.json"
+                - "--output-dir"
+                - "/models/llama4-maverick"
+                - "--epochs"
+                - "3"
+                - "--learning-rate"
+                - "5e-5"
+                - "--batch-size"
+                - "8"
+              resources:
+                limits:
+                  nvidia.com/gpu: 1
+                  memory: "32Gi"
+                  cpu: "8"
+                requests:
+                  memory: "16Gi"
+                  cpu: "4"
+              volumeMounts:
+                - name: data-volume
+                  mountPath: /data
+                - name: models-volume
+                  mountPath: /models
+                - name: config-volume
+                  mountPath: /config
+          volumes:
+            - name: data-volume
+              persistentVolumeClaim:
+                claimName: data-pvc
+            - name: models-volume
+              persistentVolumeClaim:
+                claimName: models-pvc
+            - name: config-volume
+              configMap:
+                name: llama4-training-config

@@ -1,0 +1,158 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: llama4-fine-tuning-pipeline-
+  namespace: kubeflow
+  labels:
+    workflows.argoproj.io/workflow-template: llama4-fine-tuning
+spec:
+  entrypoint: llama4-fine-tuning
+  arguments:
+    parameters:
+    - name: model-type
+      value: "llama4-maverick"
+    - name: data-path
+      value: "/data/training/combined_training_data.json"
+    - name: epochs
+      value: "3"
+    - name: learning-rate
+      value: "5e-5"
+    - name: batch-size
+      value: "8"
+  
+  templates:
+  - name: llama4-fine-tuning
+    steps:
+    - - name: data-preparation
+        template: data-preparation
+        arguments:
+          parameters:
+          - name: data-path
+            value: "{{workflow.parameters.data-path}}"
+    
+    - - name: model-training
+        template: model-training
+        arguments:
+          parameters:
+          - name: model-type
+            value: "{{workflow.parameters.model-type}}"
+          - name: prepared-data-path
+            value: "{{steps.data-preparation.outputs.parameters.prepared-data-path}}"
+          - name: epochs
+            value: "{{workflow.parameters.epochs}}"
+          - name: learning-rate
+            value: "{{workflow.parameters.learning-rate}}"
+          - name: batch-size
+            value: "{{workflow.parameters.batch-size}}"
+    
+    - - name: model-evaluation
+        template: model-evaluation
+        arguments:
+          parameters:
+          - name: model-path
+            value: "{{steps.model-training.outputs.parameters.model-path}}"
+          - name: test-data-path
+            value: "{{steps.data-preparation.outputs.parameters.test-data-path}}"
+    
+    - - name: model-registration
+        template: model-registration
+        arguments:
+          parameters:
+          - name: model-path
+            value: "{{steps.model-training.outputs.parameters.model-path}}"
+          - name: model-metrics
+            value: "{{steps.model-evaluation.outputs.parameters.model-metrics}}"
+  
+  - name: data-preparation
+    inputs:
+      parameters:
+      - name: data-path
+    container:
+      image: fine-tune/data-preparation:latest
+      command: ["python", "prepare_data.py"]
+      args:
+      - "--data-path"
+      - "{{inputs.parameters.data-path}}"
+      - "--output-dir"
+      - "/data/prepared"
+    outputs:
+      parameters:
+      - name: prepared-data-path
+        valueFrom:
+          path: /data/prepared/train_data_path.txt
+      - name: test-data-path
+        valueFrom:
+          path: /data/prepared/test_data_path.txt
+  
+  - name: model-training
+    inputs:
+      parameters:
+      - name: model-type
+      - name: prepared-data-path
+      - name: epochs
+      - name: learning-rate
+      - name: batch-size
+    container:
+      image: fine-tune/model-training:latest
+      command: ["python", "train_model.py"]
+      args:
+      - "--model-type"
+      - "{{inputs.parameters.model-type}}"
+      - "--data-path"
+      - "{{inputs.parameters.prepared-data-path}}"
+      - "--epochs"
+      - "{{inputs.parameters.epochs}}"
+      - "--learning-rate"
+      - "{{inputs.parameters.learning-rate}}"
+      - "--batch-size"
+      - "{{inputs.parameters.batch-size}}"
+      - "--output-dir"
+      - "/models/{{inputs.parameters.model-type}}"
+      resources:
+        limits:
+          nvidia.com/gpu: 1
+    outputs:
+      parameters:
+      - name: model-path
+        valueFrom:
+          path: /models/model_path.txt
+  
+  - name: model-evaluation
+    inputs:
+      parameters:
+      - name: model-path
+      - name: test-data-path
+    container:
+      image: fine-tune/model-evaluation:latest
+      command: ["python", "evaluate_model.py"]
+      args:
+      - "--model-path"
+      - "{{inputs.parameters.model-path}}"
+      - "--test-data-path"
+      - "{{inputs.parameters.test-data-path}}"
+      - "--output-dir"
+      - "/metrics"
+    outputs:
+      parameters:
+      - name: model-metrics
+        valueFrom:
+          path: /metrics/metrics.json
+  
+  - name: model-registration
+    inputs:
+      parameters:
+      - name: model-path
+      - name: model-metrics
+    container:
+      image: fine-tune/model-registration:latest
+      command: ["python", "register_model.py"]
+      args:
+      - "--model-path"
+      - "{{inputs.parameters.model-path}}"
+      - "--model-metrics"
+      - "{{inputs.parameters.model-metrics}}"
+      - "--model-name"
+      - "llama4-fine-tuned"
+      env:
+      - name: MLFLOW_TRACKING_URI
+        value: "http://mlflow-server.mlflow.svc.cluster.local:5000"
