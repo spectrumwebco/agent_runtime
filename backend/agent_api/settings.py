@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 import logging
+import socket
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -25,17 +26,41 @@ class ApiSettings(BaseSettings):
     debug: bool = True
     allowed_hosts: list[str] = ["*"]
 
-    # Database settings
-    db_engine: str = "django.db.backends.postgresql"
-    db_name: str = "postgres"
-    db_user: str = "postgres"
-    db_password: str = "postgres"
-    db_host: str = "supabase-db.default.svc.cluster.local"
-    db_port: int = 5432
+    # Database settings - Apache Doris (primary database)
+    doris_host: str = "doris-fe.default.svc.cluster.local"
+    doris_port: int = 9030
+    doris_user: str = "root"
+    doris_password: str = ""
+    doris_db: str = "agent_runtime"
+
+    postgres_host: str = "agent-postgres-cluster-primary.default.svc.cluster.local"
+    postgres_port: int = 5432
+    postgres_user: str = "agent_user"
+    postgres_password: str = ""
+    postgres_db: str = "agent_runtime"
+
+    kafka_bootstrap_servers: str = "kafka.default.svc.cluster.local:9092"
+    kafka_topic_prefix: str = "agent_runtime"
+
+    # Supabase settings
+    supabase_url: str = "http://supabase-db.default.svc.cluster.local:8000"
+    supabase_key: str = ""
+    
+    dragonfly_host: str = "dragonfly.default.svc.cluster.local"
+    dragonfly_port: int = 6379
+    dragonfly_password: str = ""
+    dragonfly_ssl: bool = False
+    dragonfly_db: int = 0
+
+    ragflow_url: str = "http://ragflow.default.svc.cluster.local:8000"
+    ragflow_api_key: str = ""
+
+    rocketmq_name_server: str = "rocketmq-namesrv.default.svc.cluster.local:9876"
+    rocketmq_producer_group: str = "agent_runtime_producer"
+    rocketmq_consumer_group: str = "agent_runtime_consumer"
 
     grpc_host: str = "0.0.0.0"
     grpc_port: int = 50051
-
     ml_api_url: str = "http://localhost:8000"
     ml_api_key: str = ""
 
@@ -91,26 +116,91 @@ INSTALLED_APPS = [
 
 ASGI_APPLICATION = 'agent_api.routing.application'
 
-from .database_config import REDIS_CONFIG, VECTOR_DB_CONFIG, ROCKETMQ_CONFIG, DATABASE_ROUTERS, DATABASES
+from .database_config import REDIS_CONFIG, VECTOR_DB_CONFIG, ROCKETMQ_CONFIG
+
+try:
+    from .database_config_doris import DORIS_DATABASES
+    logger.info("Loaded Apache Doris database configuration")
+except ImportError:
+    logger.warning("Apache Doris database configuration not found")
+    DORIS_DATABASES = {}
+
+try:
+    from .database_config_postgres import POSTGRES_DATABASES
+    logger.info("Loaded PostgreSQL database configuration")
+except ImportError:
+    logger.warning("PostgreSQL database configuration not found")
+    POSTGRES_DATABASES = {}
+
+try:
+    from .database_config_kafka import KAFKA_CONFIG
+    logger.info("Loaded Kafka configuration")
+except ImportError:
+    logger.warning("Kafka configuration not found")
+    KAFKA_CONFIG = {
+        'bootstrap_servers': api_settings.kafka_bootstrap_servers,
+        'topic_prefix': api_settings.kafka_topic_prefix,
+    }
+
+DATABASE_ROUTERS = ['agent_api.database_routers.AgentRuntimeRouter']
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',  # Apache Doris uses MySQL protocol
+        'NAME': api_settings.doris_db,
+        'USER': api_settings.doris_user,
+        'PASSWORD': api_settings.doris_password,
+        'HOST': api_settings.doris_host,
+        'PORT': api_settings.doris_port,
+        'OPTIONS': {
+            'charset': 'utf8mb4',
+            'use_pure': True,  # Use pure Python MySQL client
+        },
+    },
+}
+
+DATABASES.update(POSTGRES_DATABASES)
+
+if DORIS_DATABASES:
+    for db_name, db_config in DORIS_DATABASES.items():
+        if db_name != 'default':  # Don't override default
+            DATABASES[db_name] = db_config
 
 try:
     from .vault import database_secrets
     vault_databases = database_secrets.configure_django_databases()
     if vault_databases:
         logger.info("Using database credentials from Vault")
-        DATABASES = vault_databases
+        for db_name, db_config in vault_databases.items():
+            if db_name in DATABASES:
+                DATABASES[db_name]['USER'] = db_config.get('USER', DATABASES[db_name]['USER'])
+                DATABASES[db_name]['PASSWORD'] = db_config.get('PASSWORD', DATABASES[db_name]['PASSWORD'])
+                DATABASES[db_name]['HOST'] = db_config.get('HOST', DATABASES[db_name]['HOST'])
+                DATABASES[db_name]['PORT'] = db_config.get('PORT', DATABASES[db_name]['PORT'])
+            else:
+                DATABASES[db_name] = db_config
 except Exception as e:
     logger.warning(f"Failed to get database credentials from Vault: {e}")
-    logger.info("Using database credentials from database_config.py")
+    logger.info("Using database credentials from configuration files")
+
+DRAGONFLY_CONFIG = {
+    'host': api_settings.dragonfly_host,
+    'port': api_settings.dragonfly_port,
+    'password': api_settings.dragonfly_password,
+    'ssl': api_settings.dragonfly_ssl,
+    'db': api_settings.dragonfly_db,
+}
 
 CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [(REDIS_CONFIG['host'], REDIS_CONFIG['port'])],
+            'hosts': [(DRAGONFLY_CONFIG['host'], DRAGONFLY_CONFIG['port'])],
             'prefix': 'agent_api:',
             'capacity': 1500,
             'expiry': 60,
+            'password': DRAGONFLY_CONFIG['password'] if DRAGONFLY_CONFIG['password'] else None,
+            'ssl': DRAGONFLY_CONFIG['ssl'],
         },
     },
 }
