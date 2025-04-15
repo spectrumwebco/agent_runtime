@@ -10,9 +10,9 @@ import (
 
 func main() {
 	rootCmd := &cobra.Command{
-		Use:   "sam",
-		Short: "Sam Sepiol - Autonomous Software Engineering Agent",
-		Long: `Sam Sepiol is an autonomous software engineering agent that can help you with various software engineering tasks.
+		Use:   "kled",
+		Short: "Kled - Senior Software Engineering Lead & Technical Authority for AI/ML",
+		Long: `Kled is a Senior Software Engineering Lead & Technical Authority for AI/ML that can help you with various software engineering tasks.
 It is a Go port of the SWE-Agent and SWE-ReX frameworks, providing a high-performance, extensible system for autonomous software engineering.`,
 		Version: "0.1.0",
 	}
@@ -22,6 +22,7 @@ It is a Go port of the SWE-Agent and SWE-ReX frameworks, providing a high-perfor
 	rootCmd.AddCommand(commands.NewToolsCommand())
 	rootCmd.AddCommand(commands.NewConfigCommand())
 	rootCmd.AddCommand(commands.NewVersionCommand())
+	rootCmd.AddCommand(commands.NewLangChainCommand())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
