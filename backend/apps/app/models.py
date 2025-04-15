@@ -5,6 +5,7 @@ class AgentConfig(models.Model):
     """
     Model for storing agent configuration settings.
     """
+
     name = models.CharField(max_length=100, unique=True)
     description = models.TextField(blank=True)
     config_json = models.JSONField()
@@ -24,17 +25,20 @@ class AgentSession(models.Model):
     """
     Model for tracking agent execution sessions.
     """
+
     session_id = models.CharField(max_length=100, unique=True)
-    agent_config = models.ForeignKey(AgentConfig, on_delete=models.CASCADE, related_name='sessions')
+    agent_config = models.ForeignKey(
+        AgentConfig, on_delete=models.CASCADE, related_name="sessions"
+    )
     status = models.CharField(
         max_length=20,
         choices=[
-            ('pending', 'Pending'),
-            ('running', 'Running'),
-            ('completed', 'Completed'),
-            ('failed', 'Failed'),
+            ("pending", "Pending"),
+            ("running", "Running"),
+            ("completed", "Completed"),
+            ("failed", "Failed"),
         ],
-        default='pending'
+        default="pending",
     )
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True, blank=True)
@@ -53,7 +57,10 @@ class AgentEvent(models.Model):
     """
     Model for tracking events during agent execution.
     """
-    session = models.ForeignKey(AgentSession, on_delete=models.CASCADE, related_name='events')
+
+    session = models.ForeignKey(
+        AgentSession, on_delete=models.CASCADE, related_name="events"
+    )
     event_type = models.CharField(max_length=50)
     event_data = models.JSONField()
     timestamp = models.DateTimeField(auto_now_add=True)
@@ -61,7 +68,7 @@ class AgentEvent(models.Model):
     class Meta:
         verbose_name = "Agent Event"
         verbose_name_plural = "Agent Events"
-        ordering = ['timestamp']
+        ordering = ["timestamp"]
 
     def __str__(self):
         return f"{self.event_type} at {self.timestamp}"
