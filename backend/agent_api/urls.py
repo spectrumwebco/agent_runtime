@@ -32,5 +32,6 @@ urlpatterns = [
     path('agent/', include('apps.python_agent.urls')),
     path('ml/', include('apps.python_ml.urls')),
     path('tools/', include('apps.tools.urls')),
+    path('app/', include('apps.app.urls')),
     path('', RedirectView.as_view(url='/api/', permanent=False)),
 ]
