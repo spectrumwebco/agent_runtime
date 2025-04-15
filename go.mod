@@ -14,7 +14,6 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/lib/pq v1.10.9
 	github.com/mark3labs/mcp-go v0.19.0
-	github.com/micro/go-micro/v2 v2.9.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.10.0
@@ -106,3 +105,11 @@ require (
 	sigs.k8s.io/yaml v1.4.0 // indirect
 	stathat.com/c/consistent v1.0.0 // indirect
 )
+
+replace k8s.io/api => k8s.io/api v0.26.3
+
+replace k8s.io/apimachinery => k8s.io/apimachinery v0.26.3
+
+replace k8s.io/client-go => k8s.io/client-go v0.26.3
+
+replace google.golang.org/grpc => google.golang.org/grpc v1.38.0
