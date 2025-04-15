@@ -6,7 +6,7 @@ from typing import Any, Literal, Protocol
 from git import InvalidGitRepositoryError
 from git import Repo as GitRepo
 from pydantic import BaseModel, ConfigDict, Field
-from swerex.deployment.abstract import AbstractDeployment
+from ..swerex.deployment.abstract import AbstractDeployment
 from swerex.runtime.abstract import Command, UploadRequest
 from typing_extensions import Self
 
