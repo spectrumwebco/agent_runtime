@@ -23,12 +23,12 @@ class ApiSettings(BaseSettings):
     allowed_hosts: list[str] = ["*"]
 
     # Database settings
-    db_engine: str = "django.db.backends.mysql"
-    db_name: str = "agent_runtime"
-    db_user: str = "agent_user"
+    db_engine: str = "django.db.backends.sqlite3"
+    db_name: str = "agent_runtime.sqlite3"
+    db_user: str = ""
     db_password: str = ""
-    db_host: str = "localhost"
-    db_port: int = 3306
+    db_host: str = ""
+    db_port: int = 0
 
     grpc_host: str = "0.0.0.0"
     grpc_port: int = 50051
