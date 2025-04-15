@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package agent;
 
+option go_package = "github.com/spectrumwebco/agent_runtime/internal/server/proto";
+
 service AgentService {
   // Execute a task using the agent runtime
   rpc ExecuteTask(ExecuteTaskRequest) returns (ExecuteTaskResponse);
