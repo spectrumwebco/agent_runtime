@@ -20,6 +20,7 @@ from .integration.eventstream_integration import (
 )
 from .integration.k8s_integration import k8s_client
 from .scrapers.github_scraper import GitHubScraper
+from .scrapers.gitee_scraper import GiteeScraper
 from .trajectories.generator import TrajectoryGenerator
 from .benchmarking.historical_benchmark import HistoricalBenchmark
 
@@ -31,6 +32,7 @@ data_dir = os.path.join(
     os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "data"
 )
 github_scraper = GitHubScraper(output_dir=os.path.join(data_dir, "github"))
+gitee_scraper = GiteeScraper(output_dir=os.path.join(data_dir, "gitee"))
 trajectory_generator = TrajectoryGenerator(
     output_dir=os.path.join(data_dir, "trajectories")
 )
@@ -57,6 +59,7 @@ def ml_info(request):
             "version": "1.0.0",
             "components": [
                 "GitHub Scraper",
+                "Gitee Scraper",
                 "Trajectory Generator",
                 "Historical Benchmark",
                 "Eventstream Integration",
@@ -107,6 +110,7 @@ def scrape_github(request):
                 if event_stream:
                     event_data = {
                         "action": "scrape_complete",
+                        "source": "github",
                         "issues_path": issues_path,
                         "training_data_path": training_data_path,
                     }
@@ -136,6 +140,75 @@ def scrape_github(request):
         )
     except Exception as e:
         logger.error(f"Error in scrape_github: {e}")
+        return JsonResponse({"status": "error", "message": str(e)}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def scrape_gitee(request):
+    """
+    Scrape Gitee repositories and issues.
+
+    Request body:
+    {
+        "topics": ["gitops", "terraform", "kubernetes"],
+        "languages": ["python", "go"],
+        "max_repos": 25,
+        "max_issues_per_repo": 50,
+        "include_pull_requests": false
+    }
+    """
+    try:
+        data = json.loads(request.body)
+
+        topics = data.get("topics", ["gitops", "terraform", "kubernetes"])
+        languages = data.get("languages")
+        max_repos = data.get("max_repos", 25)
+        max_issues_per_repo = data.get("max_issues_per_repo", 50)
+        include_pull_requests = data.get("include_pull_requests", False)
+
+        async def scrape():
+            try:
+                issues_path, training_data_path = await gitee_scraper.scrape_and_save(
+                    topics=topics,
+                    languages=languages,
+                    max_repos=max_repos,
+                    max_issues_per_repo=max_issues_per_repo,
+                    include_pull_requests=include_pull_requests,
+                )
+
+                if event_stream:
+                    event_data = {
+                        "action": "scrape_complete",
+                        "source": "gitee",
+                        "issues_path": issues_path,
+                        "training_data_path": training_data_path,
+                    }
+                    await event_stream.publish(
+                        Event.new(EventType.STATE_UPDATE, EventSource.ML, event_data)
+                    )
+            except Exception as e:
+                logger.error(f"Error in background Gitee scraping: {e}")
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.create_task(scrape())
+
+        return JsonResponse(
+            {
+                "status": "started",
+                "message": "Gitee scraping started in background",
+                "config": {
+                    "topics": topics,
+                    "languages": languages,
+                    "max_repos": max_repos,
+                    "max_issues_per_repo": max_issues_per_repo,
+                    "include_pull_requests": include_pull_requests,
+                },
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error in scrape_gitee: {e}")
         return JsonResponse({"status": "error", "message": str(e)}, status=500)
 
 
@@ -352,7 +425,7 @@ def run_inference_view(request):
         if hasattr(result, "model_dump"):
             result_dict = result.model_dump()
         else:
-            result_dict = result.dict()
+            result_dict = result.model_dump()
 
         event_data = {
             "service_id": service_id,
@@ -425,7 +498,7 @@ def fine_tune_model_view(request):
         if hasattr(result, "model_dump"):
             result_dict = result.model_dump()
         else:
-            result_dict = result.dict()
+            result_dict = result.model_dump()
 
         event_data = {
             "job_id": result_dict.get("id", ""),

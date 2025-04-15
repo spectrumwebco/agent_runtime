@@ -2,14 +2,14 @@
 Trajectory generator for AI Agent benchmarking.
 
 This module provides functionality to generate realistic trajectories
-for AI Agent benchmarking from historical GitHub issues.
+for AI Agent benchmarking from historical GitHub and Gitee issues.
 """
 
 import os
 import json
 import logging
 import random
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any
 from pydantic import BaseModel, Field
 from datetime import datetime
 
@@ -43,6 +43,7 @@ class BenchmarkTrajectory(BaseModel):
         default_factory=lambda: datetime.now().isoformat(),
         description="Creation timestamp",
     )
+    source: str = Field("github", description="Source of the issue (github or gitee)")
 
 
 class TrajectoryGenerator:
@@ -199,11 +200,20 @@ class TrajectoryGenerator:
             raise ValueError("Issue must have a repository")
 
         repo = issue["repository"]
-        repo_name = repo["full_name"]
+
+        if "full_name" in repo:
+            repo_name = repo["full_name"]
+            source = "github"
+        else:
+            repo_name = f"{repo['owner']['login']}/{repo['name']}"
+            source = "gitee"
+
         issue_number = issue["number"]
         issue_title = issue["title"]
         issue_body = issue.get("body", "")
-        issue_url = issue["html_url"]
+        issue_url = issue.get(
+            "html_url", f"https://gitee.com/{repo_name}/issues/{issue_number}"
+        )
 
         issue_type = self._get_issue_type(issue)
 
@@ -313,6 +323,7 @@ class TrajectoryGenerator:
                 "issue_created_at": issue.get("created_at"),
                 "issue_closed_at": issue.get("closed_at"),
             },
+            source=source,
         )
 
         if self.event_stream:
@@ -380,7 +391,7 @@ class TrajectoryGenerator:
         output_path = os.path.join(self.output_dir, filename)
 
         with open(output_path, "w") as f:
-            json.dump([t.dict() for t in trajectories], f, indent=2)
+            json.dump([t.model_dump() for t in trajectories], f, indent=2)
 
         self.logger.info(f"Saved {len(trajectories)} trajectories to {output_path}")
 

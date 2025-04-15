@@ -16,6 +16,7 @@ urlpatterns = [
         "deploy/", views.deploy_ml_infrastructure_view, name="deploy_ml_infrastructure"
     ),
     path("github/scrape/", views.scrape_github, name="scrape_github"),
+    path("gitee/scrape/", views.scrape_gitee, name="scrape_gitee"),
     path(
         "trajectories/generate/",
         views.generate_trajectories,
