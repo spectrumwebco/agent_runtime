@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: database-config
+  namespace: default
+data:
+  POSTGRES_HOST: "supabase-db.default.svc.cluster.local"
+  POSTGRES_PORT: "5432"
+  POSTGRES_USER: "postgres"
+  POSTGRES_DB: "postgres"
+  
+  REDIS_HOST: "dragonfly-db.default.svc.cluster.local"
+  REDIS_PORT: "6379"
+  
+  RAGFLOW_HOST: "ragflow.default.svc.cluster.local"
+  RAGFLOW_PORT: "8000"
+  
+  ROCKETMQ_HOST: "rocketmq.default.svc.cluster.local"
+  ROCKETMQ_PORT: "9876"
