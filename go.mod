@@ -1,6 +1,6 @@
 module github.com/spectrumwebco/agent_runtime
 
-go 1.21
+go 1.18
 
 require (
 	github.com/alicebob/miniredis/v2 v2.34.0
@@ -14,11 +14,11 @@ require (
 	github.com/gorilla/websocket v1.5.0
 	github.com/lib/pq v1.10.9
 	github.com/mark3labs/mcp-go v0.19.0
+	github.com/micro/go-micro/v2 v2.9.1
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.10.0
 	github.com/tmc/langchaingo v0.1.13
-	go-micro.dev/v4 v4.10.2
 	google.golang.org/grpc v1.67.3
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/postgres v1.5.11
