@@ -12,8 +12,7 @@ sys.path.append(str(settings.SRC_DIR))
 
 try:
     from models.api.ml_infrastructure_api_models import (
-        ModelDetail, ModelList, FineTuningJobDetail, FineTuningJobCreate,
-        InferenceServiceDetail, InferenceServiceCreate
+        ModelDetail
     )
     PYDANTIC_MODELS_AVAILABLE = True
 except ImportError:
@@ -22,7 +21,7 @@ except ImportError:
 
 class ApiKey(APIKeyHeader):
     param_name = "X-API-Key"
-    
+
     def authenticate(self, request, key):
         if key == settings.API_KEY:
             return key
@@ -77,7 +76,7 @@ if PYDANTIC_MODELS_AVAILABLE:
     def list_models(request):
         """List all available models."""
         return []
-    
+
     @api.get("/models/{model_id}", response=ModelDetail)
     def get_model(request, model_id: str):
         """Get a specific model by ID."""

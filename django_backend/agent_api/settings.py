@@ -17,21 +17,21 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class ApiSettings(BaseSettings):
     """Pydantic settings for the API."""
-    
+
     api_key: str = "dev-api-key"  # Default value for development
     debug: bool = True
     allowed_hosts: list[str] = ["*"]
-    
+
     # Database settings
     db_engine: str = "django.db.backends.sqlite3"
     db_name: str = "db.sqlite3"
-    
+
     grpc_host: str = "0.0.0.0"
     grpc_port: int = 50051
-    
+
     ml_api_url: str = "http://localhost:8000"
     ml_api_key: str = ""
-    
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -50,7 +50,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('AGENT_SECRET_KEY', 'django-insecure-darztxot86at54=)1oisit@34zow4b$@&&kv4ka$(j%mlis6u3')
+SECRET_KEY = os.environ.get(
+    'AGENT_SECRET_KEY',
+    'django-insecure-darztxot86at54=)1oisit@34zow4b$@&&kv4ka$(j%mlis6u3')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = api_settings.debug
@@ -133,16 +135,20 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'NAME': ('django.contrib.auth.password_validation'
+                 '.UserAttributeSimilarityValidator'),
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'NAME': ('django.contrib.auth.password_validation'
+                 '.MinimumLengthValidator'),
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        'NAME': ('django.contrib.auth.password_validation'
+                 '.CommonPasswordValidator'),
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        'NAME': ('django.contrib.auth.password_validation'
+                 '.NumericPasswordValidator'),
     },
 ]
 

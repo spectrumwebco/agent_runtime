@@ -9,7 +9,6 @@ from django.contrib.auth.models import User
 from .serializers import UserSerializer
 
 import sys
-import os
 from django.conf import settings
 
 sys.path.append(str(settings.SRC_DIR))

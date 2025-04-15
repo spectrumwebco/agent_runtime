@@ -4,24 +4,14 @@ Serializers for the ML API app.
 
 from rest_framework import serializers
 import sys
-import os
 from django.conf import settings
 
 sys.path.append(str(settings.SRC_DIR))
 
-from models.api.ml_infrastructure_api_models import (
-    ModelDetail, ModelList, FineTuningJobDetail, FineTuningJobCreate,
-    InferenceServiceDetail, InferenceServiceCreate
-)
-from models.data_validation.validation_models import (
-    RawDataModel, ChatFormatModel, CompletionFormatModel,
-    ValidationResult, QualityMetrics
-)
-
 
 class PydanticModelSerializer(serializers.Serializer):
     """Base serializer for Pydantic models."""
-    
+
     @classmethod
     def from_pydantic(cls, pydantic_instance):
         """Convert a Pydantic model instance to a serializer instance."""

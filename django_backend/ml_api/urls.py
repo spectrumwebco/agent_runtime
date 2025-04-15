@@ -8,7 +8,10 @@ from . import views
 
 router = DefaultRouter()
 router.register(r'models', views.MLModelViewSet, basename='model')
-router.register(r'fine-tuning-jobs', views.FineTuningJobViewSet, basename='fine-tuning-job')
+router.register(
+    r'fine-tuning-jobs',
+    views.FineTuningJobViewSet,
+    basename='fine-tuning-job')
 
 urlpatterns = [
     path('', views.ml_api_root, name='ml-api-root'),
