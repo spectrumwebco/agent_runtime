@@ -23,12 +23,12 @@ class ApiSettings(BaseSettings):
     allowed_hosts: list[str] = ["*"]
 
     # Database settings
-    db_engine: str = "django.db.backends.sqlite3"
-    db_name: str = "agent_runtime.sqlite3"
-    db_user: str = ""
-    db_password: str = ""
-    db_host: str = ""
-    db_port: int = 0
+    db_engine: str = "django.db.backends.postgresql"
+    db_name: str = "postgres"
+    db_user: str = "postgres"
+    db_password: str = "postgres"
+    db_host: str = "supabase-db.default.svc.cluster.local"
+    db_port: int = 5432
 
     grpc_host: str = "0.0.0.0"
     grpc_port: int = 50051
@@ -87,9 +87,18 @@ INSTALLED_APPS = [
 ]
 
 ASGI_APPLICATION = 'agent_api.routing.application'
+
+from .database_config import DATABASES, REDIS_CONFIG, VECTOR_DB_CONFIG, ROCKETMQ_CONFIG, DATABASE_ROUTERS
+
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            'hosts': [(REDIS_CONFIG['host'], REDIS_CONFIG['port'])],
+            'prefix': 'agent_api:',
+            'capacity': 1500,
+            'expiry': 60,
+        },
     },
 }
 
@@ -131,7 +140,7 @@ WSGI_APPLICATION = 'agent_api.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-from .database_config import DATABASES, REDIS_CONFIG, VECTOR_DB_CONFIG
+# Database configuration is imported at the top of the file
 
 CACHES = {
     'default': {
