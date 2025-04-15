@@ -99,7 +99,6 @@ def run():
         return _build_cors_preflight_response()
     # While we're running as a local UI, let's make sure that there's at most
     # one run at a time
-    global THREADS
     for thread in THREADS.values():
         if thread.is_alive():
             thread.stop()
@@ -148,7 +147,6 @@ def run():
 @app.route("/stop")
 def stop():
     session_id = ensure_session_id_set()
-    global THREADS
     print(f"Stopping session {session_id}")
     print(THREADS)
     thread = THREADS.get(session_id)

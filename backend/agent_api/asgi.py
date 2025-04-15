@@ -19,6 +19,7 @@ django.setup()
 
 from api.websocket import AgentConsumer  # noqa
 from api.websocket_state import SharedStateConsumer  # noqa
+from api.socketio_consumer import OpenHandsSocketIOConsumer  # noqa
 
 # Get the Django ASGI application
 django_asgi_app = get_asgi_application()
@@ -28,6 +29,7 @@ websocket_urlpatterns = [
     path('ws/agent/<str:client_id>/<str:task_id>/', AgentConsumer.as_asgi()),
     path('ws/state/<str:state_type>/<str:state_id>/', SharedStateConsumer.as_asgi()),
     path('ws/state/', SharedStateConsumer.as_asgi()),
+    path('socket.io/', OpenHandsSocketIOConsumer.as_asgi()),
 ]
 
 # Configure the ASGI application

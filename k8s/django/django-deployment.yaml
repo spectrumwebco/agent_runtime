@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-backend
+  namespace: agent-runtime
+  labels:
+    app: django-backend
+    component: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: django-backend
+  template:
+    metadata:
+      labels:
+        app: django-backend
+        component: backend
+    spec:
+      containers:
+      - name: django
+        image: spectrumwebco/agent-runtime-django:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: django-db-credentials
+              key: database_url
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: django-secrets
+              key: secret_key
+        - name: ALLOWED_HOSTS
+          value: "*"
+        - name: DEBUG
+          value: "False"
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: django-redis-credentials
+              key: redis_url
+        - name: GITHUB_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: oauth-credentials
+              key: github_client_id
+        - name: GITHUB_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: oauth-credentials
+              key: github_client_secret
+        - name: GITEE_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: oauth-credentials
+              key: gitee_client_id
+        - name: GITEE_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: oauth-credentials
+              key: gitee_client_secret
+        - name: POLAR_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: billing-credentials
+              key: polar_api_key
+        - name: DEVIN_API_URL
+          value: "http://185.196.220.224:8000"
+        - name: DEVIN_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-credentials
+              key: devin_api_key
+        resources:
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+        livenessProbe:
+          httpGet:
+            path: /api/health/
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/health/
+            port: http
+          initialDelaySeconds: 15
+          periodSeconds: 5
+        volumeMounts:
+        - name: django-config
+          mountPath: /app/config
+        - name: workspaces
+          mountPath: /app/workspaces
+        - name: vault-token
+          mountPath: /vault/token
+          readOnly: true
+      volumes:
+      - name: django-config
+        configMap:
+          name: django-config
+      - name: workspaces
+        persistentVolumeClaim:
+          claimName: workspaces-pvc
+      - name: vault-token
+        secret:
+          secretName: vault-token
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000

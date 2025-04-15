@@ -1,0 +1,73 @@
+syntax = "proto3";
+
+package agent_bridge;
+
+option go_package = "github.com/spectrumwebco/agent_runtime/protos/gen/go;pb";
+option java_multiple_files = true;
+option java_package = "com.spectrumwebco.agent_runtime.protos";
+option java_outer_classname = "AgentBridgeProto";
+
+// AgentBridge service provides a bridge between Django and Go components
+service AgentBridge {
+  // SendEvent sends an event to the event stream
+  rpc SendEvent(SendEventRequest) returns (SendEventResponse) {}
+  
+  // GetState gets a state from the state manager
+  rpc GetState(GetStateRequest) returns (GetStateResponse) {}
+  
+  // SetState sets a state in the state manager
+  rpc SetState(SetStateRequest) returns (SetStateResponse) {}
+  
+  // StreamEvents streams events from the event stream
+  rpc StreamEvents(StreamEventsRequest) returns (stream EventMessage) {}
+}
+
+// SendEventRequest is the request for SendEvent
+message SendEventRequest {
+  string event_type = 1;
+  map<string, string> data = 2;
+}
+
+// SendEventResponse is the response for SendEvent
+message SendEventResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// GetStateRequest is the request for GetState
+message GetStateRequest {
+  string state_type = 1;
+  string state_id = 2;
+}
+
+// GetStateResponse is the response for GetState
+message GetStateResponse {
+  bool success = 1;
+  string message = 2;
+  map<string, string> state = 3;
+}
+
+// SetStateRequest is the request for SetState
+message SetStateRequest {
+  string state_type = 1;
+  string state_id = 2;
+  map<string, string> state = 3;
+}
+
+// SetStateResponse is the response for SetState
+message SetStateResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// StreamEventsRequest is the request for StreamEvents
+message StreamEventsRequest {
+  repeated string event_types = 1;
+}
+
+// EventMessage is a message containing an event
+message EventMessage {
+  string event_type = 1;
+  map<string, string> data = 2;
+  int64 timestamp = 3;
+}

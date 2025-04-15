@@ -1,4 +1,4 @@
-package interface
+package stateinterface
 
 import (
 	"context"

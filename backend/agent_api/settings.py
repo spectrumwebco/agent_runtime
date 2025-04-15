@@ -23,8 +23,12 @@ class ApiSettings(BaseSettings):
     allowed_hosts: list[str] = ["*"]
 
     # Database settings
-    db_engine: str = "django.db.backends.sqlite3"
-    db_name: str = "db.sqlite3"
+    db_engine: str = "django.db.backends.mysql"
+    db_name: str = "agent_runtime"
+    db_user: str = "agent_user"
+    db_password: str = ""
+    db_host: str = "localhost"
+    db_port: int = 3306
 
     grpc_host: str = "0.0.0.0"
     grpc_port: int = 50051
@@ -79,6 +83,7 @@ INSTALLED_APPS = [
     'apps.python_agent',
     'apps.python_ml',
     'apps.tools',
+    'apps.app',
 ]
 
 ASGI_APPLICATION = 'agent_api.routing.application'
@@ -125,12 +130,22 @@ WSGI_APPLICATION = 'agent_api.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
+from .database_config import DATABASES, REDIS_CONFIG, VECTOR_DB_CONFIG
+
+CACHES = {
     'default': {
-        'ENGINE': api_settings.db_engine,
-        'NAME': BASE_DIR / api_settings.db_name,
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f"redis://{REDIS_CONFIG['host']}:{REDIS_CONFIG['port']}/{REDIS_CONFIG['db']}",
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'PASSWORD': REDIS_CONFIG['password'] if REDIS_CONFIG['password'] else None,
+            'SSL': REDIS_CONFIG['ssl'],
+        },
     }
 }
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
 
 
 # Password validation
