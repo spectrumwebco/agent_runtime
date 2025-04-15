@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vnode-system
+  labels:
+    app.kubernetes.io/name: vnode
+    app.kubernetes.io/part-of: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vnode-config
+  namespace: vnode-system
+  labels:
+    app.kubernetes.io/name: vnode
+    app.kubernetes.io/part-of: agent-runtime
+data:
+  config.yaml: |
+    runtime:
+      image: ghcr.io/loft-sh/vnode-runtime:0.0.2
+      imagePullPolicy: Always
+    networking:
+      hostPort: 8080
+      containerPort: 8080
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: vnode-runtime
+  namespace: vnode-system
+  labels:
+    app.kubernetes.io/name: vnode
+    app.kubernetes.io/part-of: agent-runtime
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: vnode-runtime
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vnode-runtime
+        app.kubernetes.io/part-of: agent-runtime
+    spec:
+      containers:
+      - name: vnode
+        image: ghcr.io/loft-sh/vnode-runtime:0.0.2
+        imagePullPolicy: Always
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - name: config
+          mountPath: /etc/vnode
+        - name: runtime
+          mountPath: /var/run/vnode
+        resources:
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+      volumes:
+      - name: config
+        configMap:
+          name: vnode-config
+      - name: runtime
+        hostPath:
+          path: /var/run/vnode
+          type: DirectoryOrCreate
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vnode-runtime
+  namespace: vnode-system
+  labels:
+    app.kubernetes.io/name: vnode
+    app.kubernetes.io/part-of: agent-runtime
+spec:
+  selector:
+    app.kubernetes.io/name: vnode-runtime
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+  type: ClusterIP

@@ -1,87 +1,25 @@
-resource "helm_release" "vcluster" {
-  name       = var.vcluster_name
-  namespace  = var.vcluster_namespace
-  repository = "https://charts.loft.sh"
-  chart      = "vcluster"
-  version    = "0.15.0"
+resource "kubernetes_namespace" "vcluster_system" {
+  count = var.create_namespace ? 1 : 0
 
-  set {
-    name  = "syncer.extraArgs"
-    value = "{--tls-san=${var.vcluster_name}.${var.vcluster_namespace}}"
-  }
-
-  set {
-    name  = "vcluster.image"
-    value = "rancher/k3s:v${var.kubernetes_version}-k3s1"
-  }
-
-  set {
-    name  = "persistent"
-    value = var.persistent
-  }
-
-  set {
-    name  = "storage.persistence.enabled"
-    value = var.persistent
-  }
-
-  set {
-    name  = "storage.persistence.size"
-    value = "10Gi"
-  }
-
-  set {
-    name  = "distro"
-    value = var.distro
-  }
-
-  set {
-    name  = "sync.nodes.enabled"
-    value = "true"
-  }
-
-  set {
-    name  = "sync.ingresses.enabled"
-    value = "true"
-  }
-
-  set {
-    name  = "isolation.enabled"
-    value = "true"
-  }
-
-  set {
-    name  = "replicas"
-    value = "3"
-  }
-
-  set {
-    name  = "vcluster.resources.requests.cpu"
-    value = "500m"
-  }
-
-  set {
-    name  = "vcluster.resources.requests.memory"
-    value = "1Gi"
-  }
-
-  set {
-    name  = "vcluster.resources.limits.cpu"
-    value = "2000m"
-  }
-
-  set {
-    name  = "vcluster.resources.limits.memory"
-    value = "4Gi"
+  metadata {
+    name = var.namespace
+    labels = {
+      "app.kubernetes.io/name"       = "vcluster"
+      "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
+    }
   }
 }
 
-resource "kubernetes_deployment" "vnode_integration" {
+resource "kubernetes_deployment" "vcluster_controller" {
   metadata {
-    name      = "vnode-integration"
-    namespace = var.vcluster_namespace
+    name      = "vcluster-controller"
+    namespace = var.namespace
     labels = {
-      app = "vnode-integration"
+      "app.kubernetes.io/name"       = "vcluster"
+      "app.kubernetes.io/component"  = "controller"
+      "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
     }
   }
 
@@ -90,134 +28,205 @@ resource "kubernetes_deployment" "vnode_integration" {
 
     selector {
       match_labels = {
-        app = "vnode-integration"
+        "app.kubernetes.io/name"      = "vcluster"
+        "app.kubernetes.io/component" = "controller"
       }
     }
 
     template {
       metadata {
         labels = {
-          app = "vnode-integration"
+          "app.kubernetes.io/name"      = "vcluster"
+          "app.kubernetes.io/component" = "controller"
+          "app.kubernetes.io/part-of"   = "agent-runtime"
         }
       }
 
       spec {
         container {
-          image = "ghcr.io/loft-sh/vnode-runtime:0.0.1-alpha.1"
-          name  = "vnode-runtime"
-
+          name  = "controller"
+          image = "ghcr.io/loft-sh/vcluster:${var.vcluster_version}"
+          
+          args = [
+            "--name=vcluster",
+            "--service-name=vcluster",
+            "--kube-config=/etc/kubernetes/admin.conf"
+          ]
+          
           env {
-            name  = "VCLUSTER_NAME"
-            value = var.vcluster_name
-          }
-
-          env {
-            name  = "VCLUSTER_NAMESPACE"
-            value = var.vcluster_namespace
-          }
-
-          resources {
-            limits = {
-              cpu    = "500m"
-              memory = "512Mi"
+            name  = "POD_NAMESPACE"
+            value_from {
+              field_ref {
+                field_path = "metadata.namespace"
+              }
             }
+          }
+          
+          port {
+            container_port = 8443
+            name           = "https"
+          }
+          
+          volume_mount {
+            name       = "config"
+            mount_path = "/etc/kubernetes"
+            read_only  = true
+          }
+          
+          resources {
             requests = {
-              cpu    = "250m"
               memory = "256Mi"
+              cpu    = "250m"
+            }
+            limits = {
+              memory = "512Mi"
+              cpu    = "500m"
             }
           }
         }
+        
+        volume {
+          name = "config"
+          secret {
+            secret_name = kubernetes_secret.vcluster_config.metadata[0].name
+          }
+        }
+        
+        service_account_name = kubernetes_service_account.vcluster_controller.metadata[0].name
       }
     }
   }
-
-  depends_on = [helm_release.vcluster]
 }
 
-resource "kubernetes_service_account" "vcluster" {
+resource "kubernetes_service" "vcluster" {
   metadata {
-    name      = "${var.vcluster_name}-sa"
-    namespace = var.vcluster_namespace
+    name      = "vcluster"
+    namespace = var.namespace
+    labels = {
+      "app.kubernetes.io/name"       = "vcluster"
+      "app.kubernetes.io/component"  = "api"
+      "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
+    }
+  }
+
+  spec {
+    selector = {
+      "app.kubernetes.io/name"      = "vcluster"
+      "app.kubernetes.io/component" = "controller"
+    }
+    
+    port {
+      port        = 443
+      target_port = "https"
+      name        = "https"
+    }
+    
+    type = "ClusterIP"
   }
 }
 
-resource "kubernetes_cluster_role" "vcluster" {
+resource "kubernetes_service_account" "vcluster_controller" {
   metadata {
-    name = "${var.vcluster_name}-role"
+    name      = "vcluster-controller"
+    namespace = var.namespace
+    labels = {
+      "app.kubernetes.io/name"       = "vcluster"
+      "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
+    }
+  }
+}
+
+resource "kubernetes_cluster_role" "vcluster_controller" {
+  metadata {
+    name = "vcluster-controller"
+    labels = {
+      "app.kubernetes.io/name"       = "vcluster"
+      "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
+    }
   }
 
   rule {
     api_groups = [""]
-    resources  = ["nodes", "namespaces", "pods", "services", "configmaps", "secrets", "serviceaccounts", "persistentvolumes", "persistentvolumeclaims"]
+    resources  = ["pods", "services", "configmaps", "secrets", "persistentvolumeclaims"]
     verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
   }
-
+  
   rule {
     api_groups = ["apps"]
-    resources  = ["deployments", "statefulsets", "daemonsets", "replicasets"]
+    resources  = ["deployments", "statefulsets", "daemonsets"]
     verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
   }
-
+  
   rule {
     api_groups = ["networking.k8s.io"]
-    resources  = ["ingresses", "networkpolicies"]
-    verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
-  }
-
-  rule {
-    api_groups = ["rbac.authorization.k8s.io"]
-    resources  = ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
-    verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
-  }
-
-  rule {
-    api_groups = ["storage.k8s.io"]
-    resources  = ["storageclasses"]
-    verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
-  }
-
-  rule {
-    api_groups = ["batch"]
-    resources  = ["jobs", "cronjobs"]
-    verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
-  }
-
-  rule {
-    api_groups = ["policy"]
-    resources  = ["podsecuritypolicies", "poddisruptionbudgets"]
-    verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
-  }
-
-  rule {
-    api_groups = ["autoscaling"]
-    resources  = ["horizontalpodautoscalers"]
+    resources  = ["ingresses"]
     verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
   }
 }
 
-resource "kubernetes_cluster_role_binding" "vcluster" {
+resource "kubernetes_cluster_role_binding" "vcluster_controller" {
   metadata {
-    name = "${var.vcluster_name}-rolebinding"
+    name = "vcluster-controller"
+    labels = {
+      "app.kubernetes.io/name"       = "vcluster"
+      "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
+    }
   }
 
   role_ref {
     api_group = "rbac.authorization.k8s.io"
     kind      = "ClusterRole"
-    name      = kubernetes_cluster_role.vcluster.metadata[0].name
+    name      = kubernetes_cluster_role.vcluster_controller.metadata[0].name
   }
 
   subject {
     kind      = "ServiceAccount"
-    name      = kubernetes_service_account.vcluster.metadata[0].name
-    namespace = kubernetes_service_account.vcluster.metadata[0].namespace
+    name      = kubernetes_service_account.vcluster_controller.metadata[0].name
+    namespace = kubernetes_service_account.vcluster_controller.metadata[0].namespace
   }
 }
 
-data "kubernetes_secret" "vcluster_kubeconfig" {
+resource "kubernetes_secret" "vcluster_config" {
   metadata {
-    name      = "vc-${var.vcluster_name}"
-    namespace = var.vcluster_namespace
+    name      = "vcluster-config"
+    namespace = var.namespace
+    labels = {
+      "app.kubernetes.io/name"       = "vcluster"
+      "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
+    }
   }
 
-  depends_on = [helm_release.vcluster]
+  data = {
+    "admin.conf" = var.kube_config
+  }
+
+  type = "Opaque"
+}
+
+resource "kubernetes_config_map" "vcluster_config" {
+  metadata {
+    name      = "vcluster-config"
+    namespace = var.namespace
+    labels = {
+      "app.kubernetes.io/name"       = "vcluster"
+      "app.kubernetes.io/part-of"    = "agent-runtime"
+      "app.kubernetes.io/managed-by" = "terraform"
+    }
+  }
+
+  data = {
+    "config.yaml" = <<-EOT
+      syncer:
+        extraArgs: []
+      networking:
+        resolveDNS: true
+      storage:
+        persistence: true
+    EOT
+  }
 }

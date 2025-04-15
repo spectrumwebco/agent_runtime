@@ -1,0 +1,66 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: agent-runtime-system
+  labels:
+    app.kubernetes.io/name: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: agent-runtime-controller
+  namespace: agent-runtime-system
+  labels:
+    app.kubernetes.io/name: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: agent-runtime-controller
+  labels:
+    app.kubernetes.io/name: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets", "daemonsets"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+- apiGroups: ["networking.k8s.io"]
+  resources: ["ingresses"]
+  verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: agent-runtime-controller
+  labels:
+    app.kubernetes.io/name: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+subjects:
+- kind: ServiceAccount
+  name: agent-runtime-controller
+  namespace: agent-runtime-system
+roleRef:
+  kind: ClusterRole
+  name: agent-runtime-controller
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: agent-runtime-config
+  namespace: agent-runtime-system
+  labels:
+    app.kubernetes.io/name: agent-runtime
+    app.kubernetes.io/managed-by: terraform
+data:
+  config.yaml: |
+    controller:
+      workers: 2
+      resyncPeriod: 30s
+    logging:
+      level: info

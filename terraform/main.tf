@@ -151,3 +151,103 @@ module "ragflow" {
   
   depends_on = [module.k8s, module.vcluster, module.kata]
 }
+
+module "mcp" {
+  source = "./modules/mcp"
+  
+  namespace = "${var.namespace}-mcp"
+  create_namespace = true
+  
+  mcp_host_url = var.mcp_host_url
+  mcp_server_url = var.mcp_server_url
+  librechat_code_api_key = var.librechat_code_api_key
+  
+  kata_container_integration = true
+  
+  depends_on = [module.k8s, module.kata]
+}
+
+module "argocd" {
+  source = "./modules/argocd"
+  
+  namespace = "argocd"
+  create_namespace = true
+  
+  chart_version = var.argocd_chart_version
+  values_yaml = var.argocd_values_yaml
+  
+  depends_on = [module.k8s]
+}
+
+module "flux_system" {
+  source = "./modules/flux-system"
+  
+  namespace = "flux-system"
+  create_namespace = true
+  
+  git_repository_url = var.flux_git_repository_url
+  git_branch = var.flux_git_branch
+  sync_interval = var.flux_sync_interval
+  
+  depends_on = [module.k8s]
+}
+
+module "vnode" {
+  source = "./modules/vnode"
+  
+  namespace = "vnode-system"
+  create_namespace = true
+  
+  vnode_version = var.vnode_version
+  
+  depends_on = [module.k8s]
+}
+
+module "jspolicy" {
+  source = "./modules/jspolicy"
+  
+  namespace = "jspolicy-system"
+  create_namespace = true
+  
+  jspolicy_version = var.jspolicy_version
+  
+  depends_on = [module.k8s]
+}
+
+module "vcluster" {
+  source = "./modules/vcluster"
+  
+  namespace = "vcluster-system"
+  create_namespace = true
+  
+  vcluster_version = var.vcluster_version
+  
+  depends_on = [module.k8s]
+}
+
+module "supabase" {
+  source = "./modules/supabase"
+  
+  namespace = "supabase-system"
+  create_namespace = true
+  
+  depends_on = [module.k8s]
+}
+
+module "dragonfly" {
+  source = "./modules/dragonfly"
+  
+  namespace = "dragonfly-system"
+  create_namespace = true
+  
+  password = var.dragonfly_password
+  
+  depends_on = [module.k8s]
+}
+
+module "k8s_base" {
+  source = "./modules/k8s-base"
+  
+  namespace = "agent-runtime-system"
+  create_namespace = true
+}
