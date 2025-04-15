@@ -1,132 +1,98 @@
 package service
 
 import (
-	"context"
 	"fmt"
+	"net/http"
 	"time"
 
-	"github.com/micro/go-micro/v2"
-	"github.com/micro/go-micro/v2/client"
-	"github.com/micro/go-micro/v2/registry"
-	"github.com/micro/go-micro/v2/server"
+	"github.com/gin-gonic/gin"
+	"github.com/spectrumwebco/agent_runtime/internal/kledframework"
 )
 
+// Service represents a microservice
 type Service struct {
-	micro.Service
-	Name    string
-	Version string
+	kledService *kledframework.Service
 }
 
+// ServiceOption represents an option for a microservice
 type ServiceOption func(*ServiceOptions)
 
+// ServiceOptions represents options for a microservice
 type ServiceOptions struct {
-	Name        string
-	Version     string
-	Description string
-	Metadata    map[string]string
-	Registry    registry.Registry
-	Address     string
-	Timeout     time.Duration
+	Name     string
+	Version  string
+	Address  string
+	Metadata map[string]string
+	Timeout  time.Duration
 }
 
+// WithName sets the name of the service
 func WithName(name string) ServiceOption {
 	return func(o *ServiceOptions) {
 		o.Name = name
 	}
 }
 
+// WithVersion sets the version of the service
 func WithVersion(version string) ServiceOption {
 	return func(o *ServiceOptions) {
 		o.Version = version
 	}
 }
 
-func WithDescription(description string) ServiceOption {
-	return func(o *ServiceOptions) {
-		o.Description = description
-	}
-}
-
-func WithMetadata(metadata map[string]string) ServiceOption {
-	return func(o *ServiceOptions) {
-		o.Metadata = metadata
-	}
-}
-
-func WithRegistry(registry registry.Registry) ServiceOption {
-	return func(o *ServiceOptions) {
-		o.Registry = registry
-	}
-}
-
+// WithAddress sets the address of the service
 func WithAddress(address string) ServiceOption {
 	return func(o *ServiceOptions) {
 		o.Address = address
 	}
 }
 
+// WithMetadata sets the metadata of the service
+func WithMetadata(metadata map[string]string) ServiceOption {
+	return func(o *ServiceOptions) {
+		o.Metadata = metadata
+	}
+}
+
+// WithTimeout sets the timeout of the service
 func WithTimeout(timeout time.Duration) ServiceOption {
 	return func(o *ServiceOptions) {
 		o.Timeout = timeout
 	}
 }
 
+// NewService creates a new microservice
 func NewService(opts ...ServiceOption) (*Service, error) {
 	options := &ServiceOptions{
-		Name:        "kled.service",
-		Version:     "latest",
-		Description: "Kled.io Framework Service",
-		Metadata:    make(map[string]string),
-		Timeout:     time.Second * 5,
+		Name:     "service",
+		Version:  "latest",
+		Address:  ":8080",
+		Metadata: map[string]string{},
+		Timeout:  time.Second * 5,
 	}
 
 	for _, o := range opts {
 		o(options)
 	}
 
-	service := micro.NewService(
-		micro.Name(options.Name),
-		micro.Version(options.Version),
-		micro.Metadata(options.Metadata),
-		micro.RegisterTTL(time.Second*30),
-		micro.RegisterInterval(time.Second*15),
-	)
-
-	if options.Registry != nil {
-		service.Init(
-			micro.Registry(options.Registry),
-		)
-	}
-
-	if options.Address != "" {
-		service.Init(
-			micro.Address(options.Address),
-		)
-	}
-
-	return &Service{
-		Service: service,
+	kledService := kledframework.NewService(kledframework.ServiceConfig{
 		Name:    options.Name,
 		Version: options.Version,
+		Address: options.Address,
+		Timeout: options.Timeout,
+	})
+
+	return &Service{
+		kledService: kledService,
 	}, nil
 }
 
+// Run runs the microservice
 func (s *Service) Run() error {
-	return s.Service.Run()
+	return s.kledService.Start()
 }
 
-func (s *Service) Client() client.Client {
-	return s.Service.Client()
-}
-
-func (s *Service) Server() server.Server {
-	return s.Service.Server()
-}
-
-func (s *Service) String() string {
-	return fmt.Sprintf("%s@%s", s.Name, s.Version)
-}
-
-func (s *Service) Context() context.Context {
-	return s.Service.Options().Context
+// Server returns the server of the microservice
+func (s *Service) Server() interface{} {
+	return s.kledService.Router
 }
