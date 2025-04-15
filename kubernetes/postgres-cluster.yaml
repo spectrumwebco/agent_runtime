@@ -1,0 +1,41 @@
+apiVersion: "acid.zalan.do/v1"
+kind: postgresql
+metadata:
+  name: agent-postgres-cluster
+  namespace: default
+spec:
+  teamId: "agent"
+  volume:
+    size: 10Gi
+  numberOfInstances: 2
+  users:
+    agent_user:  # database owner
+    - superuser
+    - createdb
+    app_user: []  # regular user
+  databases:
+    agent_runtime: agent_user
+    agent_db: agent_user
+    trajectory_db: agent_user
+    ml_db: agent_user
+  postgresql:
+    version: "15"
+    parameters:
+      shared_buffers: "256MB"
+      max_connections: "200"
+      log_statement: "all"
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  patroni:
+    initdb:
+      encoding: "UTF8"
+      locale: "en_US.UTF-8"
+      data-checksums: "true"
+    pg_hba:
+    - host all all 0.0.0.0/0 md5
+    - host all all ::/0 md5
