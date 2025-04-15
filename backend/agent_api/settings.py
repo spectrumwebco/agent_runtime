@@ -82,7 +82,7 @@ INSTALLED_APPS = [
     'ml_api',
     'apps.python_agent',
     'apps.python_ml',
-    'apps.tools',
+    'apps.python_agent.tools',
     'apps.app',
 ]
 
@@ -217,7 +217,7 @@ GRPC_SERVER_PORT = 50051
 
 SRC_DIR = BASE_DIR / 'apps' / 'python_ml'
 PYTHON_AGENT_DIR = BASE_DIR / 'apps' / 'python_agent'
-TOOLS_DIR = BASE_DIR / 'apps' / 'tools'
+TOOLS_DIR = BASE_DIR / 'apps' / 'python_agent' / 'tools'
 
 import sys
 sys.path.insert(0, str(BASE_DIR / 'apps'))
