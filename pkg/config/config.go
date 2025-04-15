@@ -20,8 +20,10 @@ type Config struct {
 }
 
 type ServerConfig struct {
-	Port int    `yaml:"port"`
-	Host string `yaml:"host"`
+	Port     int    `yaml:"port"`
+	Host     string `yaml:"host"`
+	GRPCPort int    `yaml:"grpcPort"`
+	GRPCHost string `yaml:"grpcHost"`
 }
 
 type LoggingConfig struct {
@@ -80,8 +82,10 @@ func DefaultConfig() *Config {
 			Version:     "0.1.0",
 		},
 		Server: ServerConfig{
-			Port: 8080,
-			Host: "0.0.0.0",
+			Port:     8080,
+			Host:     "0.0.0.0",
+			GRPCPort: 50051,
+			GRPCHost: "0.0.0.0",
 		},
 		Logging: LoggingConfig{
 			Level:  "info",
