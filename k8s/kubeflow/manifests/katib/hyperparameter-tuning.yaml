@@ -1,0 +1,79 @@
+apiVersion: kubeflow.org/v1beta1
+kind: Experiment
+metadata:
+  name: llama4-hyperparameter-tuning
+  namespace: kubeflow
+spec:
+  objective:
+    type: maximize
+    goal: 0.9
+    objectiveMetricName: validation-accuracy
+    additionalMetricNames:
+      - train-loss
+  algorithm:
+    algorithmName: random
+  parallelTrialCount: 3
+  maxTrialCount: 12
+  maxFailedTrialCount: 3
+  parameters:
+    - name: learning-rate
+      parameterType: double
+      feasibleSpace:
+        min: "0.00001"
+        max: "0.001"
+    - name: batch-size
+      parameterType: int
+      feasibleSpace:
+        min: "4"
+        max: "32"
+    - name: epochs
+      parameterType: int
+      feasibleSpace:
+        min: "1"
+        max: "5"
+  trialTemplate:
+    primaryContainerName: training-container
+    trialParameters:
+      - name: learning-rate
+        description: Learning rate for the optimizer
+        reference: ${trialParameters.learning-rate}
+      - name: batch-size
+        description: Batch size for training
+        reference: ${trialParameters.batch-size}
+      - name: epochs
+        description: Number of training epochs
+        reference: ${trialParameters.epochs}
+    trialSpec:
+      apiVersion: batch/v1
+      kind: Job
+      spec:
+        template:
+          spec:
+            containers:
+              - name: training-container
+                image: fine-tune/model-training:latest
+                command:
+                  - "python"
+                  - "train_model.py"
+                args:
+                  - "--model-type"
+                  - "llama4-maverick"
+                  - "--data-path"
+                  - "/data/training/combined_training_data.json"
+                  - "--learning-rate"
+                  - "${trialParameters.learning-rate}"
+                  - "--batch-size"
+                  - "${trialParameters.batch-size}"
+                  - "--epochs"
+                  - "${trialParameters.epochs}"
+                  - "--output-dir"
+                  - "/models/llama4-maverick"
+                resources:
+                  limits:
+                    nvidia.com/gpu: 1
+                    memory: "16Gi"
+                    cpu: "4"
+                  requests:
+                    memory: "8Gi"
+                    cpu: "2"
+            restartPolicy: Never

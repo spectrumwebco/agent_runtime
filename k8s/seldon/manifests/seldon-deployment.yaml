@@ -1,0 +1,79 @@
+apiVersion: machinelearning.seldon.io/v1
+kind: SeldonDeployment
+metadata:
+  name: llama4-inference-pipeline
+  namespace: seldon
+spec:
+  name: llama4-inference-pipeline
+  predictors:
+  - name: default
+    graph:
+      name: input-preprocessor
+      type: TRANSFORMER
+      children:
+      - name: feature-extractor
+        type: TRANSFORMER
+        children:
+        - name: llama4-model
+          type: MODEL
+          endpoint:
+            service_host: llama4-maverick-predictor-default.kserve
+            service_port: 8080
+            type: REST
+      - name: output-formatter
+        type: OUTPUT_TRANSFORMER
+    componentSpecs:
+    - spec:
+        containers:
+        - name: input-preprocessor
+          image: fine-tune/input-preprocessor:latest
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2Gi
+            requests:
+              cpu: "0.5"
+              memory: 1Gi
+    - spec:
+        containers:
+        - name: feature-extractor
+          image: fine-tune/feature-extractor:latest
+          imagePullPolicy: IfNotPresent
+          env:
+          - name: FEAST_FEATURE_SERVER_URL
+            value: http://feast-feature-server.feast.svc.cluster.local:6566
+          resources:
+            limits:
+              cpu: "2"
+              memory: 4Gi
+            requests:
+              cpu: "1"
+              memory: 2Gi
+    - spec:
+        containers:
+        - name: output-formatter
+          image: fine-tune/output-formatter:latest
+          imagePullPolicy: IfNotPresent
+          resources:
+            limits:
+              cpu: "1"
+              memory: 2Gi
+            requests:
+              cpu: "0.5"
+              memory: 1Gi
+    replicas: 1
+    traffic: 100
+    explainer:
+      type: AnchorText
+      containerSpec:
+        name: explainer
+        image: seldon/alibiexplainer:1.2.0
+        imagePullPolicy: IfNotPresent
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: seldon
+  labels:
+    name: seldon

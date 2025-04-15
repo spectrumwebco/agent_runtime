@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubeflow
+  namespace: kubeflow
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: kubeflow-vault-credentials
+  namespace: kubeflow
+  annotations:
+    vault.hashicorp.com/agent-inject: "true"
+    vault.hashicorp.com/agent-inject-secret-db-creds: "database/creds/ml-app"
+    vault.hashicorp.com/agent-inject-template-db-creds: |
+      {{- with secret "database/creds/ml-app" -}}
+      export POSTGRES_USER="{{ .Data.username }}"
+      export POSTGRES_PASSWORD="{{ .Data.password }}"
+      {{- end -}}
+    vault.hashicorp.com/agent-inject-secret-kubeflow-config: "kv/data/kubeflow/config"
+    vault.hashicorp.com/agent-inject-template-kubeflow-config: |
+      {{- with secret "kv/data/kubeflow/config" -}}
+      export MLFLOW_TRACKING_URI="{{ .Data.data.mlflow_tracking_uri }}"
+      export S3_ENDPOINT_URL="{{ .Data.data.s3_endpoint_url }}"
+      {{- end -}}
+    vault.hashicorp.com/role: "kubeflow"
+type: Opaque
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubeflow-metadata
+  namespace: kubeflow
+  labels:
+    app: kubeflow-metadata
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubeflow-metadata
+  template:
+    metadata:
+      labels:
+        app: kubeflow-metadata
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-inject-secret-db-creds: "database/creds/ml-app"
+        vault.hashicorp.com/agent-inject-template-db-creds: |
+          {{- with secret "database/creds/ml-app" -}}
+          export POSTGRES_USER="{{ .Data.username }}"
+          export POSTGRES_PASSWORD="{{ .Data.password }}"
+          {{- end -}}
+        vault.hashicorp.com/role: "kubeflow"
+    spec:
+      serviceAccountName: kubeflow
+      containers:
+      - name: kubeflow-metadata
+        image: gcr.io/kubeflow-images-public/metadata:v1.0.0
+        env:
+        - name: METADATA_GRPC_SERVICE_HOST
+          value: "kubeflow-metadata"
+        - name: METADATA_GRPC_SERVICE_PORT
+          value: "8080"
+        command: ["/bin/sh", "-c"]
+        args:
+        - |
+          source /vault/secrets/db-creds
+          
+          export MYSQL_DATABASE=kubeflow
+          export MYSQL_HOST=ml-postgres-cluster.postgres-operator.svc.cluster.local
+          export MYSQL_PORT=5432
+          export MYSQL_USERNAME=${POSTGRES_USER}
+          export MYSQL_PASSWORD=${POSTGRES_PASSWORD}
+          
+          /bin/metadata_store_server
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+          requests:
+            cpu: "500m"
+            memory: "512Mi"

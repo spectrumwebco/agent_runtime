@@ -1,0 +1,83 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mlflow-postgres-integration
+  namespace: mlflow
+data:
+  mlflow-postgres-integration.sh: |
+    
+    
+    until pg_isready -h ml-postgres-cluster.postgres-operator.svc.cluster.local -p 5432 -U mlflow; do
+      echo "Waiting for PostgreSQL to be ready..."
+      sleep 5
+    done
+    
+    export MLFLOW_TRACKING_URI="postgresql://mlflow:${MLFLOW_DB_PASSWORD}@ml-postgres-cluster.postgres-operator.svc.cluster.local:5432/mlflow"
+    
+    psql -h ml-postgres-cluster.postgres-operator.svc.cluster.local -p 5432 -U mlflow -d mlflow -c "
+    CREATE TABLE IF NOT EXISTS experiments (
+      experiment_id INTEGER PRIMARY KEY,
+      name VARCHAR(256) UNIQUE,
+      artifact_location VARCHAR(256),
+      lifecycle_stage VARCHAR(32)
+    );
+    
+    CREATE TABLE IF NOT EXISTS runs (
+      run_uuid VARCHAR(32) PRIMARY KEY,
+      experiment_id INTEGER,
+      name VARCHAR(256),
+      source_type VARCHAR(32),
+      source_name VARCHAR(256),
+      entry_point_name VARCHAR(256),
+      user_id VARCHAR(256),
+      status VARCHAR(32),
+      start_time BIGINT,
+      end_time BIGINT,
+      source_version VARCHAR(256),
+      lifecycle_stage VARCHAR(32),
+      artifact_uri VARCHAR(256),
+      FOREIGN KEY (experiment_id) REFERENCES experiments(experiment_id)
+    );
+    
+    CREATE TABLE IF NOT EXISTS metrics (
+      run_uuid VARCHAR(32),
+      key VARCHAR(256),
+      value DOUBLE PRECISION,
+      timestamp BIGINT,
+      step BIGINT,
+      PRIMARY KEY (run_uuid, key, timestamp, step),
+      FOREIGN KEY (run_uuid) REFERENCES runs(run_uuid)
+    );
+    
+    CREATE TABLE IF NOT EXISTS params (
+      run_uuid VARCHAR(32),
+      key VARCHAR(256),
+      value VARCHAR(8000),
+      PRIMARY KEY (run_uuid, key),
+      FOREIGN KEY (run_uuid) REFERENCES runs(run_uuid)
+    );
+    
+    CREATE TABLE IF NOT EXISTS tags (
+      run_uuid VARCHAR(32),
+      key VARCHAR(256),
+      value VARCHAR(8000),
+      PRIMARY KEY (run_uuid, key),
+      FOREIGN KEY (run_uuid) REFERENCES runs(run_uuid)
+    );"
+    
+    echo "MLflow PostgreSQL integration configured successfully"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mlflow-postgres-credentials
+  namespace: mlflow
+  annotations:
+    vault.hashicorp.com/agent-inject: "true"
+    vault.hashicorp.com/agent-inject-secret-mlflow-db: "database/creds/ml-app"
+    vault.hashicorp.com/role: "mlflow"
+    vault.hashicorp.com/agent-inject-template-mlflow-db: |
+      {{- with secret "database/creds/ml-app" -}}
+      export MLFLOW_DB_PASSWORD="{{ .Data.password }}"
+      {{- end -}}
+type: Opaque

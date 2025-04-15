@@ -1,0 +1,152 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vnode-runtime
+  labels:
+    app: vnode-runtime
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: vnode-runtime
+  namespace: vnode-runtime
+spec:
+  chart: vnode-runtime
+  repo: https://charts.loft.sh
+  version: 0.0.2
+  targetNamespace: vnode-runtime
+  valuesContent: |-
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 250m
+        memory: 256Mi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: vnode-runtime-integration
+  namespace: vnode-runtime
+data:
+  kubeflow-integration.yaml: |
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: vnode-kubeflow-integration
+      namespace: kubeflow
+    data:
+      vnode-runtime-enabled: "true"
+      vnode-runtime-endpoint: "http://vnode-runtime.vnode-runtime.svc.cluster.local:8080"
+  
+  mlflow-integration.yaml: |
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: vnode-mlflow-integration
+      namespace: mlflow
+    data:
+      vnode-runtime-enabled: "true"
+      vnode-runtime-endpoint: "http://vnode-runtime.vnode-runtime.svc.cluster.local:8080"
+  
+  kserve-integration.yaml: |
+    apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: vnode-kserve-integration
+      namespace: kserve
+    data:
+      vnode-runtime-enabled: "true"
+      vnode-runtime-endpoint: "http://vnode-runtime.vnode-runtime.svc.cluster.local:8080"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubeflow-vnode-integration
+  namespace: kubeflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubeflow-vnode-integration
+  template:
+    metadata:
+      labels:
+        app: kubeflow-vnode-integration
+    spec:
+      containers:
+      - name: vnode-integration
+        image: loftsh/vnode-runtime-agent:0.0.2
+        env:
+        - name: VNODE_RUNTIME_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: vnode-kubeflow-integration
+              key: vnode-runtime-endpoint
+        - name: VNODE_RUNTIME_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: vnode-kubeflow-integration
+              key: vnode-runtime-enabled
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow-vnode-integration
+  namespace: mlflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow-vnode-integration
+  template:
+    metadata:
+      labels:
+        app: mlflow-vnode-integration
+    spec:
+      containers:
+      - name: vnode-integration
+        image: loftsh/vnode-runtime-agent:0.0.2
+        env:
+        - name: VNODE_RUNTIME_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: vnode-mlflow-integration
+              key: vnode-runtime-endpoint
+        - name: VNODE_RUNTIME_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: vnode-mlflow-integration
+              key: vnode-runtime-enabled
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kserve-vnode-integration
+  namespace: kserve
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kserve-vnode-integration
+  template:
+    metadata:
+      labels:
+        app: kserve-vnode-integration
+    spec:
+      containers:
+      - name: vnode-integration
+        image: loftsh/vnode-runtime-agent:0.0.2
+        env:
+        - name: VNODE_RUNTIME_ENDPOINT
+          valueFrom:
+            configMapKeyRef:
+              name: vnode-kserve-integration
+              key: vnode-runtime-endpoint
+        - name: VNODE_RUNTIME_ENABLED
+          valueFrom:
+            configMapKeyRef:
+              name: vnode-kserve-integration
+              key: vnode-runtime-enabled
