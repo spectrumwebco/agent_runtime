@@ -102,6 +102,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'apps.python_agent.agent_framework.django_views.middleware.AgentFrameworkExceptionMiddleware',
 ]
 
 CORS_ALLOW_ALL_ORIGINS = True  # For development only, restrict in production
