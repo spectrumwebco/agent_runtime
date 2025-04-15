@@ -1,0 +1,5 @@
+p, admin, *, *
+p, user, /api/v1/tools/*, GET
+p, user, /api/v1/agents/*, GET
+p, user, /api/v1/agents/*/execute, POST
+g, admin, user
