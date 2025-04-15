@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	pb "../internal/server/proto"
+	pb "github.com/spectrumwebco/agent_runtime/internal/server/proto"
 )
 
 type Task struct {
