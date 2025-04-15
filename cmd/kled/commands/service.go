@@ -7,9 +7,9 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/micro/go-micro/v2/registry"
 	"github.com/spf13/cobra"
 	"github.com/spectrumwebco/agent_runtime/internal/microservices/service"
-	"github.com/spectrumwebco/agent_runtime/internal/microservices/registry"
 )
 
 var serviceCmd = &cobra.Command{

@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/micro/go-micro/v2/registry"
 	"github.com/spectrumwebco/agent_runtime/internal/database/models"
 	"github.com/spectrumwebco/agent_runtime/internal/microservices/service"
-	"go-micro.dev/v4/registry"
 )
 
 type AgentService struct {

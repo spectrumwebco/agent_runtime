@@ -3,7 +3,7 @@ package broker
 import (
 	"context"
 
-	"go-micro.dev/v4/broker"
+	"github.com/micro/go-micro/v2/broker"
 )
 
 type Broker struct {
