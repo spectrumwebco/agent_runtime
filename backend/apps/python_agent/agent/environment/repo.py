@@ -7,7 +7,7 @@ from git import InvalidGitRepositoryError
 from git import Repo as GitRepo
 from pydantic import BaseModel, ConfigDict, Field
 from ..swerex.deployment.abstract import AbstractDeployment
-from swerex.runtime.abstract import Command, UploadRequest
+from ..swerex.runtime.abstract import Command, UploadRequest
 from typing_extensions import Self
 
 from agent.utils.github import _parse_gh_repo_url
