@@ -2,14 +2,11 @@
 API client for ML infrastructure.
 """
 
-import os
-import json
 import logging
 import requests
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional
 import asyncio
 import aiohttp
-from datetime import datetime
 
 from .models import (
     ModelList,
