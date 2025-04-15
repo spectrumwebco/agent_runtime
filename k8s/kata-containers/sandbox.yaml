@@ -40,26 +40,102 @@ spec:
             nodejs \
             npm \
             python3 \
-            python3-pip
+            python3-pip \
+            python3-venv \
+            golang \
+            rustc \
+            cargo \
+            openjdk-17-jdk \
+            maven \
+            dotnet-sdk-6.0 \
+            php \
+            g++ \
+            cmake \
+            gnome-terminal \
+            gnome-tweaks
 
           systemctl enable xrdp
 
+          mkdir -p /workspace
+          chmod 777 /workspace
+          
+          mkdir -p /workspace/go
+          mkdir -p /workspace/python
+          mkdir -p /workspace/rust
+          mkdir -p /workspace/java
+          mkdir -p /workspace/dotnet
+          mkdir -p /workspace/web
+          
           wget -q https://packages.microsoft.com/keys/microsoft.asc -O- | apt-key add -
           add-apt-repository "deb [arch=amd64] https://packages.microsoft.com/repos/vscode stable main"
           apt-get update
           apt-get install -y code
-
+          
+          code --install-extension ms-python.python --user-data-dir=/usr/share/code
+          code --install-extension golang.go --user-data-dir=/usr/share/code
+          code --install-extension rust-lang.rust-analyzer --user-data-dir=/usr/share/code
+          code --install-extension ms-dotnettools.csharp --user-data-dir=/usr/share/code
+          code --install-extension vscjava.vscode-java-pack --user-data-dir=/usr/share/code
+          code --install-extension ms-vscode.cpptools --user-data-dir=/usr/share/code
+          code --install-extension dbaeumer.vscode-eslint --user-data-dir=/usr/share/code
+          code --install-extension esbenp.prettier-vscode --user-data-dir=/usr/share/code
+          code --install-extension ms-azuretools.vscode-docker --user-data-dir=/usr/share/code
+          code --install-extension ms-kubernetes-tools.vscode-kubernetes-tools --user-data-dir=/usr/share/code
+          
+          cat > /usr/share/applications/vscode.desktop <<EOF
+          [Desktop Entry]
+          Name=Visual Studio Code
+          Comment=Code Editing. Redefined.
+          GenericName=Text Editor
+          Exec=/usr/bin/code --unity-launch %F
+          Icon=/usr/share/pixmaps/vscode.png
+          Type=Application
+          StartupNotify=false
+          StartupWMClass=Code
+          Categories=Utility;TextEditor;Development;IDE;
+          MimeType=text/plain;inode/directory;
+          Actions=new-empty-window;
+          Keywords=vscode;
+          
+          [Desktop Action new-empty-window]
+          Name=New Empty Window
+          Exec=/usr/bin/code --new-window %F
+          Icon=/usr/share/pixmaps/vscode.png
+          EOF
+          
           TOOLBOX_VERSION=$(curl -s "https://data.services.jetbrains.com/products/releases?code=TBA&latest=true&type=release" | grep -Po '"version":"\K[^"]+')
           wget -q "https://download.jetbrains.com/toolbox/jetbrains-toolbox-$TOOLBOX_VERSION.tar.gz"
           tar -xzf "jetbrains-toolbox-$TOOLBOX_VERSION.tar.gz"
           mv jetbrains-toolbox-*/jetbrains-toolbox /usr/local/bin/
           rm -rf jetbrains-toolbox-*
-
+          
+          mkdir -p /opt/jetbrains
+          
+          IDEA_VERSION=$(curl -s "https://data.services.jetbrains.com/products/releases?code=IIC&latest=true&type=release" | grep -Po '"version":"\K[^"]+')
+          wget -q "https://download.jetbrains.com/idea/ideaIC-$IDEA_VERSION.tar.gz" -O /opt/jetbrains/ideaIC.tar.gz
+          
+          PYCHARM_VERSION=$(curl -s "https://data.services.jetbrains.com/products/releases?code=PCC&latest=true&type=release" | grep -Po '"version":"\K[^"]+')
+          wget -q "https://download.jetbrains.com/python/pycharm-community-$PYCHARM_VERSION.tar.gz" -O /opt/jetbrains/pycharm.tar.gz
+          
+          GOLAND_VERSION=$(curl -s "https://data.services.jetbrains.com/products/releases?code=GO&latest=true&type=release" | grep -Po '"version":"\K[^"]+')
+          wget -q "https://download.jetbrains.com/go/goland-$GOLAND_VERSION.tar.gz" -O /opt/jetbrains/goland.tar.gz
+          
+          cat > /usr/share/applications/jetbrains-toolbox.desktop <<EOF
+          [Desktop Entry]
+          Name=JetBrains Toolbox
+          Comment=JetBrains Toolbox
+          Exec=/usr/local/bin/jetbrains-toolbox
+          Icon=/opt/jetbrains/toolbox.png
+          Terminal=false
+          Type=Application
+          Categories=Development;IDE;
+          StartupWMClass=jetbrains-toolbox
+          EOF
+          
           git clone https://github.com/e2b-dev/surf.git /opt/e2b-surf
-
           cd /opt/e2b-surf
           npm install
-
+          
           cat > /opt/e2b-surf/config.json <<EOF
           {
             "browser": {
@@ -77,33 +153,62 @@ spec:
             "server": {
               "port": 3000,
               "host": "0.0.0.0"
+            },
+            "workspace": {
+              "path": "/workspace",
+              "defaultEditor": "vscode"
+            },
+            "features": {
+              "terminal": true,
+              "fileExplorer": true,
+              "codeEditor": true
             }
           }
           EOF
-
+          
           cat > /etc/systemd/system/e2b-surf.service <<EOF
           [Unit]
           Description=E2B Surf Browser Agent
           After=network.target
-
+          
           [Service]
           Type=simple
           User=root
           WorkingDirectory=/opt/e2b-surf
           ExecStart=/usr/bin/node /opt/e2b-surf/src/index.js
           Restart=always
-
+          
           [Install]
           WantedBy=multi-user.target
           EOF
-
-          mkdir -p /workspace
-          chmod 777 /workspace
+          
+          cat > /usr/share/applications/windsurf.desktop <<EOF
+          [Desktop Entry]
+          Name=Windsurf
+          Comment=Browser-based IDE
+          Exec=firefox http://localhost:3000
+          Icon=/opt/e2b-surf/icon.png
+          Terminal=false
+          Type=Application
+          Categories=Development;IDE;
+          StartupWMClass=firefox
+          EOF
+          
+          mkdir -p /var/run/kata-containers/runtime-rs
+          mkdir -p /var/run/kata-containers/mem-agent
+          
+          mkdir -p /home/ubuntu/Desktop
+          cp /usr/share/applications/vscode.desktop /home/ubuntu/Desktop/
+          cp /usr/share/applications/jetbrains-toolbox.desktop /home/ubuntu/Desktop/
+          cp /usr/share/applications/windsurf.desktop /home/ubuntu/Desktop/
+          chmod +x /home/ubuntu/Desktop/*.desktop
         securityContext:
           privileged: true
         volumeMounts:
         - name: workspace
           mountPath: /workspace
+        - name: runtime-data
+          mountPath: /var/run/kata-containers
       containers:
       - name: sandbox
         image: ubuntu:22.04
@@ -111,29 +216,85 @@ spec:
         args:
         - |
           apt-get update && \
-          apt-get install -y golang git curl jq
+          apt-get install -y golang git curl jq build-essential
 
           git clone https://github.com/spectrumwebco/gitops-go.git /opt/gitops-go
           cd /opt/gitops-go
           go mod download
           go build -o /usr/local/bin/gitops-mcp-server
 
+          mkdir -p /etc/librechat
+          
+          cat > /etc/librechat/config.json <<EOF
+          {
+            "api_key": "${LIBRECHAT_CODE_API_KEY}",
+            "api_base_url": "https://api.librechat.ai",
+            "timeout": 300,
+            "max_tokens": 4096,
+            "model": "gpt-4"
+          }
+          EOF
+          
+          mkdir -p /etc/mcp-server
+          cat > /etc/mcp-server/config.json <<EOF
+          {
+            "server": {
+              "host": "0.0.0.0",
+              "port": 8080
+            },
+            "librechat": {
+              "config_path": "/etc/librechat/config.json"
+            },
+            "runtime": {
+              "workspace_path": "/workspace",
+              "tools_path": "/opt/gitops-go/tools",
+              "enable_runtime_rs": true,
+              "enable_mem_agent": true
+            },
+            "logging": {
+              "level": "info",
+              "format": "json"
+            }
+          }
+          EOF
+          
+          mkdir -p /var/run/kata-containers/runtime-rs
+          mkdir -p /var/run/kata-containers/mem-agent
+          
           service xrdp start
           service ssh start
           systemctl start e2b-surf
-
+          
           export SSH_HOST="${SSH_HOST}"
           export SSH_USERNAME="${SSH_USERNAME}"
           export SSH_PASSWORD="${SSH_PASSWORD}"
-          export LIBRECHAT_CODE_API_KEY=${LIBRECHAT_CODE_API_KEY}
-
-          /usr/local/bin/gitops-mcp-server
+          export LIBRECHAT_CODE_API_KEY="${LIBRECHAT_CODE_API_KEY}"
+          
+          /usr/local/bin/gitops-mcp-server --config /etc/mcp-server/config.json
         env:
         - name: LIBRECHAT_CODE_API_KEY
           valueFrom:
             secretKeyRef:
               name: agent-runtime-secrets
               key: librechat_code_api_key
+        - name: SSH_HOST
+          valueFrom:
+            secretKeyRef:
+              name: agent-runtime-secrets
+              key: ssh_host
+              optional: true
+        - name: SSH_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: agent-runtime-secrets
+              key: ssh_username
+              optional: true
+        - name: SSH_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: agent-runtime-secrets
+              key: ssh_password
+              optional: true
         ports:
         - containerPort: 3389
           name: rdp
@@ -141,6 +302,8 @@ spec:
           name: e2b-surf
         - containerPort: 22
           name: ssh
+        - containerPort: 8080
+          name: mcp-server
         resources:
           requests:
             memory: "4Gi"
@@ -151,6 +314,8 @@ spec:
         volumeMounts:
         - name: workspace
           mountPath: /workspace
+        - name: runtime-data
+          mountPath: /var/run/kata-containers
         securityContext:
           privileged: true
       volumes:
