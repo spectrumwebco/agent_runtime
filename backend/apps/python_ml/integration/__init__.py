@@ -2,7 +2,7 @@
 Integration module for ML infrastructure.
 """
 
-from .scrapers import ScraperMLConnector
-from .api import MLInfrastructureClient
+from .eventstream_integration import event_stream, Event, EventType, EventSource
+from .k8s_integration import k8s_client
 
-__all__ = ["ScraperMLConnector", "MLInfrastructureClient"]
+__all__ = ["event_stream", "Event", "EventType", "EventSource", "k8s_client"]
