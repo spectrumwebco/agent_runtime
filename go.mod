@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/alicebob/miniredis/v2 v2.34.0
 	github.com/apache/rocketmq-client-go/v2 v2.1.2
+	github.com/casbin/casbin/v2 v2.104.0
 	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-redis/redis/v8 v8.11.5
@@ -16,8 +17,13 @@ require (
 	github.com/spf13/cobra v1.6.1
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.10.0
+	github.com/tmc/langchaingo v0.1.13
+	go-micro.dev/v4 v4.10.2
 	google.golang.org/grpc v1.67.3
 	gopkg.in/yaml.v3 v3.0.1
+	gorm.io/driver/postgres v1.5.11
+	gorm.io/driver/sqlite v1.5.5
+	gorm.io/gorm v1.25.12
 	k8s.io/api v0.26.3
 	k8s.io/apimachinery v0.26.3
 	k8s.io/client-go v0.20.0-beta.1
