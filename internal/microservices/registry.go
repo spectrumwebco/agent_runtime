@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"go-micro.dev/v4/registry"
-	"go-micro.dev/v4/registry/mdns"
-	"go-micro.dev/v4/registry/memory"
+	"github.com/micro/go-micro/v2/registry"
+	"github.com/micro/go-micro/v2/registry/mdns"
+	"github.com/micro/go-micro/v2/registry/memory"
 )
 
 // RegistryType represents the type of registry

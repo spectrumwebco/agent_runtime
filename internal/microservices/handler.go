@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"go-micro.dev/v4/server"
+	"github.com/micro/go-micro/v2/server"
 )
 
 // Handler represents a handler for a microservice

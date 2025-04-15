@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"time"
 
-	"go-micro.dev/v4/client"
+	"github.com/micro/go-micro/v2/client"
+	"github.com/micro/go-micro/v2/registry"
 )
 
 // Client represents a client for a microservice
