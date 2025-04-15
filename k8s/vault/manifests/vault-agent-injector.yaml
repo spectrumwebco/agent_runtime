@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault-agent-injector
+  namespace: vault
+  labels:
+    app: vault-agent-injector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault-agent-injector
+  template:
+    metadata:
+      labels:
+        app: vault-agent-injector
+    spec:
+      serviceAccountName: vault-agent-injector
+      containers:
+      - name: vault-agent-injector
+        image: hashicorp/vault-k8s:1.1.0
+        args:
+        - agent-inject
+        - -tls-auto=vault-agent-injector
+        - -tls-auto-hosts=vault-agent-injector,vault-agent-injector.vault,vault-agent-injector.vault.svc
+        - -log-level=info
+        - -log-format=standard
+        env:
+        - name: AGENT_INJECT_LISTEN
+          value: ":8080"
+        - name: AGENT_INJECT_VAULT_ADDR
+          value: "http://vault.vault.svc.cluster.local:8200"
+        - name: AGENT_INJECT_VAULT_AUTH_PATH
+          value: "auth/kubernetes"
+        - name: AGENT_INJECT_LOG_LEVEL
+          value: "info"
+        - name: AGENT_INJECT_LOG_FORMAT
+          value: "standard"
+        - name: AGENT_INJECT_REVOKE_ON_SHUTDOWN
+          value: "false"
+        - name: AGENT_INJECT_CPU_REQUEST
+          value: "250m"
+        - name: AGENT_INJECT_CPU_LIMIT
+          value: "500m"
+        - name: AGENT_INJECT_MEM_REQUEST
+          value: "64Mi"
+        - name: AGENT_INJECT_MEM_LIMIT
+          value: "128Mi"
+        - name: AGENT_INJECT_DEFAULT_TEMPLATE
+          value: "map"
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "128Mi"
+          requests:
+            cpu: "250m"
+            memory: "64Mi"
+        ports:
+        - containerPort: 8080
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8080
+            scheme: HTTPS
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8080
+            scheme: HTTPS
+          initialDelaySeconds: 10
+          periodSeconds: 15

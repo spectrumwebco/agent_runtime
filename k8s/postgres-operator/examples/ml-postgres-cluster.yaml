@@ -1,0 +1,77 @@
+apiVersion: postgres-operator.crunchydata.com/v1beta1
+kind: PostgresCluster
+metadata:
+  name: ml-postgres-cluster
+  namespace: postgres-operator
+spec:
+  image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres:ubi8-15.1-0
+  postgresVersion: 15
+  instances:
+    - name: instance1
+      replicas: 3
+      dataVolumeClaimSpec:
+        accessModes:
+        - "ReadWriteOnce"
+        resources:
+          requests:
+            storage: 10Gi
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              topologyKey: kubernetes.io/hostname
+              labelSelector:
+                matchLabels:
+                  postgres-operator.crunchydata.com/cluster: ml-postgres-cluster
+                  postgres-operator.crunchydata.com/instance-set: instance1
+  backups:
+    pgbackrest:
+      image: registry.developers.crunchydata.com/crunchydata/crunchy-pgbackrest:ubi8-2.41-0
+      repos:
+      - name: repo1
+        volume:
+          volumeClaimSpec:
+            accessModes:
+            - "ReadWriteOnce"
+            resources:
+              requests:
+                storage: 20Gi
+  patroni:
+    dynamicConfiguration:
+      postgresql:
+        parameters:
+          max_connections: "100"
+          shared_buffers: "256MB"
+          work_mem: "16MB"
+          maintenance_work_mem: "64MB"
+          effective_cache_size: "1GB"
+          checkpoint_timeout: "15min"
+          checkpoint_completion_target: "0.9"
+          max_wal_size: "1GB"
+          min_wal_size: "128MB"
+          random_page_cost: "1.1"
+          effective_io_concurrency: "200"
+          log_min_duration_statement: "1000"
+          log_checkpoints: "on"
+          log_connections: "on"
+          log_disconnections: "on"
+          log_lock_waits: "on"
+          log_temp_files: "0"
+  users:
+    - name: mlflow
+      databases:
+        - mlflow
+      options: "CREATEDB"
+    - name: jupyterlab
+      databases:
+        - jupyterlab
+      options: "CREATEDB"
+    - name: kubeflow
+      databases:
+        - kubeflow
+      options: "CREATEDB"
+  monitoring:
+    pgmonitor:
+      exporter:
+        image: registry.developers.crunchydata.com/crunchydata/crunchy-postgres-exporter:ubi8-5.3.1-0

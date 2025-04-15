@@ -2,13 +2,21 @@ name: CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, staging ]
     tags: [ 'v*' ]
+    paths:
+      - 'src/ml_infrastructure/**'
+      - 'terraform/**'
+      - 'k8s/**'
+      - 'cmd/**'
+      - 'pkg/**'
+      - 'internal/**'
+      - '.github/workflows/cd.yml'
 
 jobs:
   build-and-push:
     name: Build and Push
-    runs-on: ubuntu-latest
+    runs-on: MIC_GITHUB_spectrumwebco
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -35,19 +43,35 @@ jobs:
             type=ref,event=branch
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
 
-      - name: Build and push
+      - name: Build and push agent-runtime
         uses: docker/build-push-action@v4
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: ghcr.io/${{ github.repository }}/agent-runtime:${{ github.sha }},ghcr.io/${{ github.repository }}/agent-runtime:latest
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          
+      - name: Build and push ML API image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile.api
+          push: true
+          tags: ghcr.io/${{ github.repository }}/ml-api:${{ github.sha }},ghcr.io/${{ github.repository }}/ml-api:latest
+          
+      - name: Build and push ML Training image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile.training
+          push: true
+          tags: ghcr.io/${{ github.repository }}/ml-training:${{ github.sha }},ghcr.io/${{ github.repository }}/ml-training:latest
 
   deploy-fluxcd:
     name: Deploy with FluxCD
-    runs-on: ubuntu-latest
+    runs-on: MIC_GITHUB_spectrumwebco
     needs: build-and-push
     steps:
       - name: Checkout code
@@ -114,7 +138,7 @@ jobs:
 
   deploy-argocd:
     name: Deploy with ArgoCD
-    runs-on: ubuntu-latest
+    runs-on: MIC_GITHUB_spectrumwebco
     needs: build-and-push
     steps:
       - name: Checkout code
@@ -141,8 +165,9 @@ jobs:
         run: |
           argocd login ${{ secrets.ARGOCD_SERVER }} --username ${{ secrets.ARGOCD_USERNAME }} --password ${{ secrets.ARGOCD_PASSWORD }} --insecure
 
-      - name: Create ArgoCD Application
+      - name: Create ArgoCD Applications
         run: |
+          # Create agent-runtime application
           argocd app create agent-runtime \
             --repo https://github.com/${{ github.repository }}.git \
             --path k8s \
@@ -153,8 +178,73 @@ jobs:
             --self-heal \
             --revision main \
             --upsert
+            
+          # Create ml-infrastructure application
+          argocd app create ml-infrastructure \
+            --repo https://github.com/${{ github.repository }}.git \
+            --path k8s/ml-infrastructure \
+            --dest-server https://kubernetes.default.svc \
+            --dest-namespace ml-infrastructure \
+            --sync-policy automated \
+            --auto-prune \
+            --self-heal \
+            --revision main \
+            --upsert
 
-      - name: Sync ArgoCD Application
+      - name: Sync ArgoCD Applications
         run: |
           argocd app sync agent-runtime
           argocd app wait agent-runtime --health
+          argocd app sync ml-infrastructure
+          argocd app wait ml-infrastructure --health
+
+  deploy-to-fly:
+    name: Deploy to Fly.io
+    runs-on: MIC_GITHUB_spectrumwebco
+    needs: [deploy-argocd]
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Fly CLI
+        run: |
+          curl -L https://fly.io/install.sh | sh
+          export FLYCTL_INSTALL="/home/runner/.fly"
+          export PATH="$FLYCTL_INSTALL/bin:$PATH"
+      - name: Login to Fly
+        run: |
+          flyctl auth token ${{ secrets.FLY_API_TOKEN }}
+      - name: Deploy API to Fly.io
+        run: |
+          cd src/ml_infrastructure/api
+          flyctl deploy --remote-only
+
+  notify-deployment:
+    name: Notify Deployment Status
+    runs-on: MIC_GITHUB_spectrumwebco
+    needs: [deploy-argocd, deploy-to-fly]
+    steps:
+      - name: Send Slack Notification
+        uses: slackapi/slack-github-action@v1.23.0
+        with:
+          payload: |
+            {
+              "text": "Agent Runtime & ML Infrastructure Deployment Status",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Deployment Completed*\n\nRepository: ${{ github.repository }}\nBranch: ${{ github.ref_name }}\nCommit: ${{ github.sha }}\nDeployed by: ${{ github.actor }}"
+                  }
+                },
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "View deployments:\n- Agent Runtime: https://argocd.example.com/applications/agent-runtime\n- ML Infrastructure: https://argocd.example.com/applications/ml-infrastructure"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK

@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: vnode-runtime
+---
+apiVersion: helm.cattle.io/v1
+kind: HelmChart
+metadata:
+  name: vnode-runtime
+  namespace: vnode-runtime
+spec:
+  chart: vnode-runtime
+  version: 0.0.2
+  repo: https://charts.loft.sh
+  targetNamespace: vnode-runtime
+  valuesContent: |-
+    global:
+      imageRegistry: ""
+    
+    vnodeRuntime:
+      enabled: true
+      image:
+        repository: loftsh/vnode-runtime
+        tag: 0.0.2
+        pullPolicy: IfNotPresent
+      
+      resources:
+        limits:
+          cpu: 1
+          memory: 1Gi
+        requests:
+          cpu: 500m
+          memory: 512Mi
+      
+      nodeSelector: {}
+      tolerations: []
+      affinity: {}
+      
+      integrations:
+        postgres:
+          enabled: true
+          operatorNamespace: postgres-operator

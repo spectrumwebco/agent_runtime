@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llama4-experiment-config
+  namespace: mlflow
+data:
+  experiment_config.json: |
+    {
+      "experiments": [
+        {
+          "name": "llama4-maverick-fine-tuning",
+          "artifact_location": "s3://mlflow/artifacts/llama4-maverick-fine-tuning",
+          "lifecycle_stage": "active",
+          "tags": {
+            "model_type": "llama4-maverick",
+            "task": "fine-tuning",
+            "domain": "software-engineering"
+          }
+        },
+        {
+          "name": "llama4-scout-fine-tuning",
+          "artifact_location": "s3://mlflow/artifacts/llama4-scout-fine-tuning",
+          "lifecycle_stage": "active",
+          "tags": {
+            "model_type": "llama4-scout",
+            "task": "fine-tuning",
+            "domain": "software-engineering"
+          }
+        }
+      ],
+      "metrics": [
+        {
+          "name": "training_loss",
+          "description": "Training loss during fine-tuning"
+        },
+        {
+          "name": "validation_loss",
+          "description": "Validation loss during fine-tuning"
+        },
+        {
+          "name": "accuracy",
+          "description": "Accuracy on validation set"
+        },
+        {
+          "name": "f1_score",
+          "description": "F1 score on validation set"
+        },
+        {
+          "name": "rouge_l",
+          "description": "ROUGE-L score for text generation"
+        },
+        {
+          "name": "bleu",
+          "description": "BLEU score for text generation"
+        }
+      ],
+      "parameters": [
+        {
+          "name": "learning_rate",
+          "type": "float",
+          "default": 5e-5
+        },
+        {
+          "name": "batch_size",
+          "type": "int",
+          "default": 8
+        },
+        {
+          "name": "epochs",
+          "type": "int",
+          "default": 3
+        },
+        {
+          "name": "max_seq_length",
+          "type": "int",
+          "default": 4096
+        },
+        {
+          "name": "gradient_accumulation_steps",
+          "type": "int",
+          "default": 4
+        },
+        {
+          "name": "warmup_steps",
+          "type": "int",
+          "default": 500
+        }
+      ]
+    }

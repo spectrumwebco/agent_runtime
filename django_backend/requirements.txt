@@ -1,0 +1,1 @@
+Django==5.2\ndjangorestframework==3.16.0\ndjango-cors-headers==4.7.0\ngrpcio==1.71.0\ngrpcio-tools==1.71.0\npydantic>=2.0.0

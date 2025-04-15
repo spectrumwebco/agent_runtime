@@ -2,15 +2,60 @@ name: CI Pipeline
 
 on:
   push:
-    branches: [ main, develop, 'feature/**', 'release/**' ]
+    branches: [ main, develop, staging, 'feature/**', 'release/**' ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ main, develop, staging ]
 
 jobs:
-
-  test:
-    name: Test
+  go-lint:
+    name: Go Lint
     runs-on: MIC_GITHUB_spectrumwebco
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          cache: true
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: latest
+
+  python-lint:
+    name: Python Lint
+    runs-on: MIC_GITHUB_spectrumwebco
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Lint with flake8
+        run: |
+          flake8 src/ tests/ python_agent/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          
+      - name: Format check with black
+        run: |
+          black --check src/ tests/ python_agent/
+
+  go-test:
+    name: Go Tests
+    runs-on: MIC_GITHUB_spectrumwebco
+    needs: go-lint
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -33,10 +78,35 @@ jobs:
           file: ./coverage.txt
           fail_ci_if_error: true
 
+  python-test:
+    name: Python Tests
+    runs-on: MIC_GITHUB_spectrumwebco
+    needs: python-lint
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          
+      - name: Run unit tests
+        run: |
+          python -m unittest discover -s tests/unit
+          
+      - name: Run integration tests
+        run: |
+          python -m unittest discover -s tests/integration
+
   build:
     name: Build
     runs-on: MIC_GITHUB_spectrumwebco
-    needs: test
+    needs: [go-test, python-test]
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -47,7 +117,7 @@ jobs:
           go-version: '1.21'
           cache: true
 
-      - name: Build
+      - name: Build Go components
         run: go build -v ./...
 
       - name: Build Docker image
@@ -95,6 +165,15 @@ jobs:
       - name: Validate Kubernetes manifests
         run: |
           find ./k8s -name "*.yaml" -type f -exec kubeval --strict {} \;
+          
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+          
+      - name: Validate ML infrastructure manifests
+        run: |
+          find src/ml_infrastructure -name "*.yaml" -type f -exec kubectl apply --dry-run=client -f {} \;
 
   security-scan:
     name: Security Scan
@@ -117,3 +196,44 @@ jobs:
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: 'trivy-results.sarif'
+
+  build-and-push:
+    name: Build and Push Docker Images
+    runs-on: MIC_GITHUB_spectrumwebco
+    needs: [build, terraform-validate, k8s-manifests-validate]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/staging')
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Build and push Agent Runtime image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository }}/agent-runtime:${{ github.sha }},ghcr.io/${{ github.repository }}/agent-runtime:latest
+          
+      - name: Build and push ML API image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile.api
+          push: true
+          tags: ghcr.io/${{ github.repository }}/ml-api:${{ github.sha }},ghcr.io/${{ github.repository }}/ml-api:latest
+          
+      - name: Build and push ML Training image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile.training
+          push: true
+          tags: ghcr.io/${{ github.repository }}/ml-training:${{ github.sha }},ghcr.io/${{ github.repository }}/ml-training:latest

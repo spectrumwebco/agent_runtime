@@ -16,10 +16,11 @@ import (
 )
 
 type Server struct {
-	router *gin.Engine
-	config *config.Config
-	mcp    *mcp.Manager
-	agent  *agent.Agent
+	router     *gin.Engine
+	config     *config.Config
+	mcp        *mcp.Manager
+	agent      *agent.Agent
+	grpcServer *GRPCServer
 }
 
 func New(cfg *config.Config) (*Server, error) {
@@ -44,11 +45,17 @@ func New(cfg *config.Config) (*Server, error) {
 		return nil, fmt.Errorf("failed to create agent: %w", err)
 	}
 	
+	grpcServer, err := NewGRPCServer(cfg, agentInstance)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create gRPC server: %w", err)
+	}
+	
 	server := &Server{
-		router: router,
-		config: cfg,
-		mcp:    mcpManager,
-		agent:  agentInstance,
+		router:     router,
+		config:     cfg,
+		mcp:        mcpManager,
+		agent:      agentInstance,
+		grpcServer: grpcServer,
 	}
 	
 	server.registerRoutes()
@@ -57,6 +64,10 @@ func New(cfg *config.Config) (*Server, error) {
 }
 
 func (s *Server) Start() error {
+	if err := s.grpcServer.Start(); err != nil {
+		return fmt.Errorf("failed to start gRPC server: %w", err)
+	}
+	
 	addr := fmt.Sprintf("%s:%d", s.config.Server.Host, s.config.Server.Port)
 	srv := &http.Server{
 		Addr:    addr,
@@ -76,6 +87,8 @@ func (s *Server) Start() error {
 	
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+	
+	s.grpcServer.Stop()
 	
 	if err := srv.Shutdown(ctx); err != nil {
 		return fmt.Errorf("server shutdown failed: %w", err)

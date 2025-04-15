@@ -1,0 +1,47 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: llama4-training-config
+  namespace: kubeflow
+data:
+  config.json: |
+    {
+      "llama4-maverick": {
+        "model_id": "meta-llama/llama-4-maverick",
+        "training_args": {
+          "per_device_train_batch_size": 8,
+          "gradient_accumulation_steps": 4,
+          "warmup_steps": 500,
+          "max_steps": 5000,
+          "learning_rate": 5e-5,
+          "fp16": true,
+          "logging_steps": 100,
+          "save_steps": 1000,
+          "evaluation_strategy": "steps",
+          "eval_steps": 500,
+          "save_total_limit": 3
+        }
+      },
+      "llama4-scout": {
+        "model_id": "meta-llama/llama-4-scout",
+        "training_args": {
+          "per_device_train_batch_size": 8,
+          "gradient_accumulation_steps": 4,
+          "warmup_steps": 500,
+          "max_steps": 5000,
+          "learning_rate": 5e-5,
+          "fp16": true,
+          "logging_steps": 100,
+          "save_steps": 1000,
+          "evaluation_strategy": "steps",
+          "eval_steps": 500,
+          "save_total_limit": 3
+        }
+      }
+    }
+  tokenizer_config.json: |
+    {
+      "padding_side": "right",
+      "truncation_side": "right",
+      "model_max_length": 4096
+    }
