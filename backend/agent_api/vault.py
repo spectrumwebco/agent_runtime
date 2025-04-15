@@ -45,6 +45,12 @@ class VaultClient:
     def initialize(self):
         """Initialize the Vault client and authenticate."""
         try:
+            is_local = not os.path.exists('/var/run/secrets/kubernetes.io/serviceaccount/token')
+            
+            if is_local and 'vault.default.svc.cluster.local' in self.url:
+                self.url = 'http://localhost:8200'
+                logger.info(f"Local development detected, using Vault URL: {self.url}")
+            
             self.client = hvac.Client(url=self.url)
             
             if self.token:
@@ -56,7 +62,10 @@ class VaultClient:
                 self._authenticate_kubernetes()
             
             if not self.authenticated:
-                logger.warning("Failed to authenticate with Vault")
+                if is_local:
+                    logger.warning("Failed to authenticate with Vault in local development mode")
+                else:
+                    logger.warning("Failed to authenticate with Vault")
         
         except Exception as e:
             logger.error(f"Error initializing Vault client: {e}")
@@ -77,6 +86,10 @@ class VaultClient:
     
     def _authenticate_kubernetes(self):
         """Authenticate with Vault using Kubernetes."""
+        if not os.path.exists('/var/run/secrets/kubernetes.io/serviceaccount/token'):
+            logger.warning("Not running in Kubernetes, skipping Kubernetes authentication")
+            return
+            
         try:
             with open('/var/run/secrets/kubernetes.io/serviceaccount/token', 'r') as f:
                 jwt = f.read()
@@ -102,11 +115,16 @@ class VaultClient:
         Returns:
             Dict[str, Any]: Secret data, or None if an error occurred
         """
+        is_local = not os.path.exists('/var/run/secrets/kubernetes.io/serviceaccount/token')
+        
         if not self.authenticated:
             self.initialize()
             
             if not self.authenticated:
-                logger.error("Not authenticated with Vault")
+                if is_local:
+                    logger.warning("Not authenticated with Vault in local development mode")
+                else:
+                    logger.error("Not authenticated with Vault")
                 return None
         
         try:
@@ -115,7 +133,10 @@ class VaultClient:
             return response['data']['data']
         
         except Exception as e:
-            logger.error(f"Error reading secret from Vault: {e}")
+            if is_local:
+                logger.warning(f"Error reading secret from Vault in local development mode: {e}")
+            else:
+                logger.error(f"Error reading secret from Vault: {e}")
             return None
     
     def write_secret(self, path: str, data: Dict[str, Any]) -> bool:

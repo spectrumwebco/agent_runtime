@@ -91,14 +91,17 @@ INSTALLED_APPS = [
 
 ASGI_APPLICATION = 'agent_api.routing.application'
 
-from .vault import database_secrets
-from .database_config import REDIS_CONFIG, VECTOR_DB_CONFIG, ROCKETMQ_CONFIG, DATABASE_ROUTERS
+from .database_config import REDIS_CONFIG, VECTOR_DB_CONFIG, ROCKETMQ_CONFIG, DATABASE_ROUTERS, DATABASES
 
 try:
-    DATABASES = database_secrets.configure_django_databases()
+    from .vault import database_secrets
+    vault_databases = database_secrets.configure_django_databases()
+    if vault_databases:
+        logger.info("Using database credentials from Vault")
+        DATABASES = vault_databases
 except Exception as e:
     logger.warning(f"Failed to get database credentials from Vault: {e}")
-    from .database_config import DATABASES
+    logger.info("Using database credentials from database_config.py")
 
 CHANNEL_LAYERS = {
     'default': {
