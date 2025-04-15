@@ -12,14 +12,38 @@ import aiohttp
 from datetime import datetime
 
 from .models import (
-    ModelList, ModelDetail, FineTuningJobCreate, FineTuningJobDetail, 
-    FineTuningJobList, DatasetUpload, DatasetDetail, DatasetList,
-    InferenceServiceCreate, InferenceServiceDetail, InferenceServiceList,
-    PredictionRequest, PredictionResponse, ExperimentList, ExperimentDetail,
-    ExperimentCreate, RunList, RunDetail, RunCreate, MetricsLog, ParamsLog,
-    PipelineRunCreate, PipelineRunDetail, PipelineRunList, KServeModelCreate,
-    KServeModelDetail, KServeModelList, FeatureRequest, FeatureResponse,
-    ErrorResponse, HyperParameters, ResourceRequirements
+    ModelList,
+    ModelDetail,
+    FineTuningJobCreate,
+    FineTuningJobDetail,
+    FineTuningJobList,
+    DatasetUpload,
+    DatasetDetail,
+    DatasetList,
+    InferenceServiceCreate,
+    InferenceServiceDetail,
+    InferenceServiceList,
+    PredictionRequest,
+    PredictionResponse,
+    ExperimentList,
+    ExperimentDetail,
+    ExperimentCreate,
+    RunList,
+    RunDetail,
+    RunCreate,
+    MetricsLog,
+    ParamsLog,
+    PipelineRunCreate,
+    PipelineRunDetail,
+    PipelineRunList,
+    KServeModelCreate,
+    KServeModelDetail,
+    KServeModelList,
+    FeatureRequest,
+    FeatureResponse,
+    ErrorResponse,
+    HyperParameters,
+    ResourceRequirements,
 )
 
 
@@ -45,10 +69,10 @@ class MLInfrastructureAPIClient:
         self.headers = {
             "Content-Type": "application/json",
         }
-        
+
         if api_key:
             self.headers["Authorization"] = f"Bearer {api_key}"
-        
+
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -77,11 +101,13 @@ class MLInfrastructureAPIClient:
             Response data
         """
         url = f"{self.base_url}/{endpoint}"
-        
+
         try:
             async with aiohttp.ClientSession() as session:
                 if method == "GET":
-                    async with session.get(url, headers=self.headers, params=params) as response:
+                    async with session.get(
+                        url, headers=self.headers, params=params
+                    ) as response:
                         response.raise_for_status()
                         return await response.json()
                 elif method == "POST":
@@ -91,27 +117,37 @@ class MLInfrastructureAPIClient:
                             form_data.add_field(key, str(value))
                         for key, file_obj in files.items():
                             form_data.add_field(key, file_obj)
-                        
-                        headers = {k: v for k, v in self.headers.items() if k != "Content-Type"}
-                        
-                        async with session.post(url, headers=headers, params=params, data=form_data) as response:
+
+                        headers = {
+                            k: v for k, v in self.headers.items() if k != "Content-Type"
+                        }
+
+                        async with session.post(
+                            url, headers=headers, params=params, data=form_data
+                        ) as response:
                             response.raise_for_status()
                             return await response.json()
                     else:
-                        async with session.post(url, headers=self.headers, params=params, json=data) as response:
+                        async with session.post(
+                            url, headers=self.headers, params=params, json=data
+                        ) as response:
                             response.raise_for_status()
                             return await response.json()
                 elif method == "PUT":
-                    async with session.put(url, headers=self.headers, params=params, json=data) as response:
+                    async with session.put(
+                        url, headers=self.headers, params=params, json=data
+                    ) as response:
                         response.raise_for_status()
                         return await response.json()
                 elif method == "DELETE":
-                    async with session.delete(url, headers=self.headers, params=params, json=data) as response:
+                    async with session.delete(
+                        url, headers=self.headers, params=params, json=data
+                    ) as response:
                         response.raise_for_status()
                         return await response.json()
                 else:
                     raise ValueError(f"Unsupported HTTP method: {method}")
-        
+
         except aiohttp.ClientError as e:
             self.logger.error(f"Error making request: {str(e)}")
             raise
@@ -138,30 +174,39 @@ class MLInfrastructureAPIClient:
             Response data
         """
         url = f"{self.base_url}/{endpoint}"
-        
+
         try:
             if method == "GET":
                 response = requests.get(url, headers=self.headers, params=params)
             elif method == "POST":
                 if files:
-                    headers = {k: v for k, v in self.headers.items() if k != "Content-Type"}
-                    response = requests.post(url, headers=headers, params=params, data=data, files=files)
+                    headers = {
+                        k: v for k, v in self.headers.items() if k != "Content-Type"
+                    }
+                    response = requests.post(
+                        url, headers=headers, params=params, data=data, files=files
+                    )
                 else:
-                    response = requests.post(url, headers=self.headers, params=params, json=data)
+                    response = requests.post(
+                        url, headers=self.headers, params=params, json=data
+                    )
             elif method == "PUT":
-                response = requests.put(url, headers=self.headers, params=params, json=data)
+                response = requests.put(
+                    url, headers=self.headers, params=params, json=data
+                )
             elif method == "DELETE":
-                response = requests.delete(url, headers=self.headers, params=params, json=data)
+                response = requests.delete(
+                    url, headers=self.headers, params=params, json=data
+                )
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
-            
+
             response.raise_for_status()
             return response.json()
-        
+
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Error making request: {str(e)}")
             raise
-
 
     async def get_models(self, model_type: Optional[str] = None) -> ModelList:
         """
@@ -176,7 +221,7 @@ class MLInfrastructureAPIClient:
         params = {}
         if model_type:
             params["model_type"] = model_type
-        
+
         response = await self._make_async_request("GET", "models", params=params)
         return ModelList(**response)
 
@@ -192,7 +237,6 @@ class MLInfrastructureAPIClient:
         """
         response = await self._make_async_request("GET", f"models/{model_id}")
         return ModelDetail(**response)
-
 
     async def create_fine_tuning_job(
         self,
@@ -217,15 +261,15 @@ class MLInfrastructureAPIClient:
             model_type=model_type,
             training_data_path=training_data_path,
             validation_data_path=validation_data_path,
-            hyperparameters=HyperParameters(**hyperparameters) if hyperparameters else None
+            hyperparameters=(
+                HyperParameters(**hyperparameters) if hyperparameters else None
+            ),
         )
-        
+
         response = await self._make_async_request(
-            "POST", 
-            "fine-tuning/jobs", 
-            data=job_create.model_dump(exclude_none=True)
+            "POST", "fine-tuning/jobs", data=job_create.model_dump(exclude_none=True)
         )
-        
+
         return FineTuningJobDetail(**response)
 
     async def get_fine_tuning_job(self, job_id: str) -> FineTuningJobDetail:
@@ -259,14 +303,16 @@ class MLInfrastructureAPIClient:
             List of jobs
         """
         params = {"limit": limit}
-        
+
         if model_type:
             params["model_type"] = model_type
-        
+
         if status:
             params["status"] = status
-        
-        response = await self._make_async_request("GET", "fine-tuning/jobs", params=params)
+
+        response = await self._make_async_request(
+            "GET", "fine-tuning/jobs", params=params
+        )
         return FineTuningJobList(**response)
 
     async def cancel_fine_tuning_job(self, job_id: str) -> FineTuningJobDetail:
@@ -279,9 +325,10 @@ class MLInfrastructureAPIClient:
         Returns:
             Job details
         """
-        response = await self._make_async_request("POST", f"fine-tuning/jobs/{job_id}/cancel")
+        response = await self._make_async_request(
+            "POST", f"fine-tuning/jobs/{job_id}/cancel"
+        )
         return FineTuningJobDetail(**response)
-
 
     async def upload_training_data(
         self,
@@ -300,11 +347,13 @@ class MLInfrastructureAPIClient:
         """
         with open(file_path, "rb") as f:
             files = {"file": f}
-            
+
             upload_request = DatasetUpload(dataset_name=dataset_name)
             data = upload_request.model_dump(exclude_none=True)
-            
-            response = await self._make_async_request("POST", "datasets/upload", data=data, files=files)
+
+            response = await self._make_async_request(
+                "POST", "datasets/upload", data=data, files=files
+            )
             return DatasetDetail(**response)
 
     async def list_datasets(self, limit: int = 10) -> DatasetList:
@@ -346,7 +395,6 @@ class MLInfrastructureAPIClient:
         """
         return await self._make_async_request("DELETE", f"datasets/{dataset_id}")
 
-
     async def create_inference_service(
         self,
         model_id: str,
@@ -370,15 +418,15 @@ class MLInfrastructureAPIClient:
             model_id=model_id,
             service_name=service_name,
             replicas=replicas,
-            resources=ResourceRequirements(**resources) if resources else None
+            resources=ResourceRequirements(**resources) if resources else None,
         )
-        
+
         response = await self._make_async_request(
-            "POST", 
-            "inference/services", 
-            data=service_create.model_dump(exclude_none=True)
+            "POST",
+            "inference/services",
+            data=service_create.model_dump(exclude_none=True),
         )
-        
+
         return InferenceServiceDetail(**response)
 
     async def get_inference_service(self, service_id: str) -> InferenceServiceDetail:
@@ -391,7 +439,9 @@ class MLInfrastructureAPIClient:
         Returns:
             Service details
         """
-        response = await self._make_async_request("GET", f"inference/services/{service_id}")
+        response = await self._make_async_request(
+            "GET", f"inference/services/{service_id}"
+        )
         return InferenceServiceDetail(**response)
 
     async def list_inference_services(
@@ -410,11 +460,13 @@ class MLInfrastructureAPIClient:
             List of services
         """
         params = {"limit": limit}
-        
+
         if model_id:
             params["model_id"] = model_id
-        
-        response = await self._make_async_request("GET", "inference/services", params=params)
+
+        response = await self._make_async_request(
+            "GET", "inference/services", params=params
+        )
         return InferenceServiceList(**response)
 
     async def delete_inference_service(self, service_id: str) -> Dict[str, Any]:
@@ -427,7 +479,9 @@ class MLInfrastructureAPIClient:
         Returns:
             Deletion details
         """
-        return await self._make_async_request("DELETE", f"inference/services/{service_id}")
+        return await self._make_async_request(
+            "DELETE", f"inference/services/{service_id}"
+        )
 
     async def predict(
         self,
@@ -447,18 +501,16 @@ class MLInfrastructureAPIClient:
             Prediction result
         """
         prediction_request = PredictionRequest(
-            input_text=input_text,
-            parameters=parameters
+            input_text=input_text, parameters=parameters
         )
-        
-        response = await self._make_async_request(
-            "POST", 
-            f"inference/services/{service_id}/predict", 
-            data=prediction_request.model_dump(exclude_none=True)
-        )
-        
-        return PredictionResponse(**response)
 
+        response = await self._make_async_request(
+            "POST",
+            f"inference/services/{service_id}/predict",
+            data=prediction_request.model_dump(exclude_none=True),
+        )
+
+        return PredictionResponse(**response)
 
     async def get_experiments(self, limit: int = 10) -> ExperimentList:
         """
@@ -471,7 +523,9 @@ class MLInfrastructureAPIClient:
             List of experiments
         """
         params = {"limit": limit}
-        response = await self._make_async_request("GET", "mlflow/experiments", params=params)
+        response = await self._make_async_request(
+            "GET", "mlflow/experiments", params=params
+        )
         return ExperimentList(**response)
 
     async def get_experiment(self, experiment_id: str) -> ExperimentDetail:
@@ -484,7 +538,9 @@ class MLInfrastructureAPIClient:
         Returns:
             Experiment details
         """
-        response = await self._make_async_request("GET", f"mlflow/experiments/{experiment_id}")
+        response = await self._make_async_request(
+            "GET", f"mlflow/experiments/{experiment_id}"
+        )
         return ExperimentDetail(**response)
 
     async def create_experiment(
@@ -505,17 +561,15 @@ class MLInfrastructureAPIClient:
             Experiment details
         """
         experiment_create = ExperimentCreate(
-            name=name,
-            artifact_location=artifact_location,
-            tags=tags
+            name=name, artifact_location=artifact_location, tags=tags
         )
-        
+
         response = await self._make_async_request(
-            "POST", 
-            "mlflow/experiments", 
-            data=experiment_create.model_dump(exclude_none=True)
+            "POST",
+            "mlflow/experiments",
+            data=experiment_create.model_dump(exclude_none=True),
         )
-        
+
         return ExperimentDetail(**response)
 
     async def get_runs(
@@ -539,10 +593,10 @@ class MLInfrastructureAPIClient:
             "experiment_id": experiment_id,
             "limit": limit,
         }
-        
+
         if status:
             params["status"] = status
-        
+
         response = await self._make_async_request("GET", "mlflow/runs", params=params)
         return RunList(**response)
 
@@ -577,17 +631,13 @@ class MLInfrastructureAPIClient:
             Run details
         """
         run_create = RunCreate(
-            experiment_id=experiment_id,
-            run_name=run_name,
-            tags=tags
+            experiment_id=experiment_id, run_name=run_name, tags=tags
         )
-        
+
         response = await self._make_async_request(
-            "POST", 
-            "mlflow/runs", 
-            data=run_create.model_dump(exclude_none=True)
+            "POST", "mlflow/runs", data=run_create.model_dump(exclude_none=True)
         )
-        
+
         return RunDetail(**response)
 
     async def log_metrics(
@@ -607,15 +657,12 @@ class MLInfrastructureAPIClient:
         Returns:
             Log details
         """
-        metrics_log = MetricsLog(
-            metrics=metrics,
-            step=step
-        )
-        
+        metrics_log = MetricsLog(metrics=metrics, step=step)
+
         return await self._make_async_request(
-            "POST", 
-            f"mlflow/runs/{run_id}/metrics", 
-            data=metrics_log.model_dump(exclude_none=True)
+            "POST",
+            f"mlflow/runs/{run_id}/metrics",
+            data=metrics_log.model_dump(exclude_none=True),
         )
 
     async def log_params(
@@ -633,16 +680,13 @@ class MLInfrastructureAPIClient:
         Returns:
             Log details
         """
-        params_log = ParamsLog(
-            params=params
-        )
-        
-        return await self._make_async_request(
-            "POST", 
-            f"mlflow/runs/{run_id}/params", 
-            data=params_log.model_dump(exclude_none=True)
-        )
+        params_log = ParamsLog(params=params)
 
+        return await self._make_async_request(
+            "POST",
+            f"mlflow/runs/{run_id}/params",
+            data=params_log.model_dump(exclude_none=True),
+        )
 
     async def create_pipeline_run(
         self,
@@ -662,17 +706,15 @@ class MLInfrastructureAPIClient:
             Run details
         """
         pipeline_run_create = PipelineRunCreate(
-            pipeline_id=pipeline_id,
-            run_name=run_name,
-            parameters=parameters
+            pipeline_id=pipeline_id, run_name=run_name, parameters=parameters
         )
-        
+
         response = await self._make_async_request(
-            "POST", 
-            "kubeflow/pipelines/runs", 
-            data=pipeline_run_create.model_dump(exclude_none=True)
+            "POST",
+            "kubeflow/pipelines/runs",
+            data=pipeline_run_create.model_dump(exclude_none=True),
         )
-        
+
         return PipelineRunDetail(**response)
 
     async def get_pipeline_run(self, run_id: str) -> PipelineRunDetail:
@@ -685,7 +727,9 @@ class MLInfrastructureAPIClient:
         Returns:
             Run details
         """
-        response = await self._make_async_request("GET", f"kubeflow/pipelines/runs/{run_id}")
+        response = await self._make_async_request(
+            "GET", f"kubeflow/pipelines/runs/{run_id}"
+        )
         return PipelineRunDetail(**response)
 
     async def list_pipeline_runs(
@@ -706,16 +750,17 @@ class MLInfrastructureAPIClient:
             List of runs
         """
         params = {"limit": limit}
-        
+
         if pipeline_id:
             params["pipeline_id"] = pipeline_id
-        
+
         if status:
             params["status"] = status
-        
-        response = await self._make_async_request("GET", "kubeflow/pipelines/runs", params=params)
-        return PipelineRunList(**response)
 
+        response = await self._make_async_request(
+            "GET", "kubeflow/pipelines/runs", params=params
+        )
+        return PipelineRunList(**response)
 
     async def create_kserve_model(
         self,
@@ -741,21 +786,19 @@ class MLInfrastructureAPIClient:
         resource_requirements = None
         if resources:
             resource_requirements = ResourceRequirements(**resources)
-            
+
         kserve_model = KServeModelCreate(
             name=name,
             model_uri=model_uri,
             model_format=model_format,
             resources=resource_requirements,
-            env=env
+            env=env,
         )
-        
+
         response = await self._make_async_request(
-            "POST", 
-            "kserve/models", 
-            data=kserve_model.model_dump(exclude_none=True)
+            "POST", "kserve/models", data=kserve_model.model_dump(exclude_none=True)
         )
-        
+
         return KServeModelDetail(**response)
 
     async def get_kserve_model(self, name: str) -> KServeModelDetail:
@@ -798,7 +841,6 @@ class MLInfrastructureAPIClient:
         response = await self._make_async_request("DELETE", f"kserve/models/{name}")
         return response
 
-
     async def get_feature_values(
         self,
         entity_name: str,
@@ -817,19 +859,14 @@ class MLInfrastructureAPIClient:
             Feature values
         """
         feature_request = FeatureRequest(
-            entity_name=entity_name,
-            entity_ids=entity_ids,
-            feature_names=feature_names
+            entity_name=entity_name, entity_ids=entity_ids, feature_names=feature_names
         )
-        
-        response = await self._make_async_request(
-            "POST", 
-            "feast/features", 
-            data=feature_request.model_dump()
-        )
-        
-        return FeatureResponse(**response)
 
+        response = await self._make_async_request(
+            "POST", "feast/features", data=feature_request.model_dump()
+        )
+
+        return FeatureResponse(**response)
 
     def run_async(self, coroutine):
         """
@@ -856,7 +893,7 @@ class MLInfrastructureAPIClient:
         params = {}
         if model_type:
             params["model_type"] = model_type
-        
+
         response = self._make_request("GET", "models", params=params)
         return ModelList(**response)
 
@@ -878,14 +915,13 @@ class MLInfrastructureAPIClient:
             Prediction result
         """
         prediction_request = PredictionRequest(
-            input_text=input_text,
-            parameters=parameters
+            input_text=input_text, parameters=parameters
         )
-        
+
         response = self._make_request(
-            "POST", 
-            f"inference/services/{service_id}/predict", 
-            data=prediction_request.model_dump(exclude_none=True)
+            "POST",
+            f"inference/services/{service_id}/predict",
+            data=prediction_request.model_dump(exclude_none=True),
         )
-        
+
         return PredictionResponse(**response)

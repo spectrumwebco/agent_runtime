@@ -31,10 +31,10 @@ class MLInfrastructureClient:
         self.headers = {
             "Content-Type": "application/json",
         }
-        
+
         if api_key:
             self.headers["Authorization"] = f"Bearer {api_key}"
-        
+
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -63,26 +63,36 @@ class MLInfrastructureClient:
             Response data
         """
         url = f"{self.base_url}/{endpoint}"
-        
+
         try:
             if method == "GET":
                 response = requests.get(url, headers=self.headers, params=params)
             elif method == "POST":
                 if files:
-                    headers = {k: v for k, v in self.headers.items() if k != "Content-Type"}
-                    response = requests.post(url, headers=headers, params=params, data=data, files=files)
+                    headers = {
+                        k: v for k, v in self.headers.items() if k != "Content-Type"
+                    }
+                    response = requests.post(
+                        url, headers=headers, params=params, data=data, files=files
+                    )
                 else:
-                    response = requests.post(url, headers=self.headers, params=params, json=data)
+                    response = requests.post(
+                        url, headers=self.headers, params=params, json=data
+                    )
             elif method == "PUT":
-                response = requests.put(url, headers=self.headers, params=params, json=data)
+                response = requests.put(
+                    url, headers=self.headers, params=params, json=data
+                )
             elif method == "DELETE":
-                response = requests.delete(url, headers=self.headers, params=params, json=data)
+                response = requests.delete(
+                    url, headers=self.headers, params=params, json=data
+                )
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
-            
+
             response.raise_for_status()
             return response.json()
-        
+
         except requests.exceptions.RequestException as e:
             self.logger.error(f"Error making request: {str(e)}")
             raise
@@ -100,7 +110,7 @@ class MLInfrastructureClient:
         params = {}
         if model_type:
             params["model_type"] = model_type
-        
+
         return self._make_request("GET", "models", params=params)
 
     def get_model(self, model_id: str) -> Dict[str, Any]:
@@ -138,13 +148,13 @@ class MLInfrastructureClient:
             "model_type": model_type,
             "training_data_path": training_data_path,
         }
-        
+
         if validation_data_path:
             data["validation_data_path"] = validation_data_path
-        
+
         if hyperparameters:
             data["hyperparameters"] = hyperparameters
-        
+
         return self._make_request("POST", "fine-tuning/jobs", data=data)
 
     def get_fine_tuning_job(self, job_id: str) -> Dict[str, Any]:
@@ -177,13 +187,13 @@ class MLInfrastructureClient:
             List of jobs
         """
         params = {"limit": limit}
-        
+
         if model_type:
             params["model_type"] = model_type
-        
+
         if status:
             params["status"] = status
-        
+
         return self._make_request("GET", "fine-tuning/jobs", params=params)
 
     def cancel_fine_tuning_job(self, job_id: str) -> Dict[str, Any]:
@@ -216,10 +226,10 @@ class MLInfrastructureClient:
         with open(file_path, "rb") as f:
             files = {"file": f}
             data = {}
-            
+
             if dataset_name:
                 data["dataset_name"] = dataset_name
-            
+
             return self._make_request("POST", "datasets/upload", data=data, files=files)
 
     def list_datasets(self, limit: int = 10) -> List[Dict[str, Any]]:
@@ -283,10 +293,10 @@ class MLInfrastructureClient:
             "service_name": service_name,
             "replicas": replicas,
         }
-        
+
         if resources:
             data["resources"] = resources
-        
+
         return self._make_request("POST", "inference/services", data=data)
 
     def get_inference_service(self, service_id: str) -> Dict[str, Any]:
@@ -317,10 +327,10 @@ class MLInfrastructureClient:
             List of services
         """
         params = {"limit": limit}
-        
+
         if model_id:
             params["model_id"] = model_id
-        
+
         return self._make_request("GET", "inference/services", params=params)
 
     def delete_inference_service(self, service_id: str) -> Dict[str, Any]:
@@ -355,11 +365,13 @@ class MLInfrastructureClient:
         data = {
             "input_text": input_text,
         }
-        
+
         if parameters:
             data["parameters"] = parameters
-        
-        return self._make_request("POST", f"inference/services/{service_id}/predict", data=data)
+
+        return self._make_request(
+            "POST", f"inference/services/{service_id}/predict", data=data
+        )
 
     def get_experiments(self, limit: int = 10) -> List[Dict[str, Any]]:
         """
@@ -406,13 +418,13 @@ class MLInfrastructureClient:
         data = {
             "name": name,
         }
-        
+
         if artifact_location:
             data["artifact_location"] = artifact_location
-        
+
         if tags:
             data["tags"] = tags
-        
+
         return self._make_request("POST", "mlflow/experiments", data=data)
 
     def get_runs(
@@ -436,10 +448,10 @@ class MLInfrastructureClient:
             "experiment_id": experiment_id,
             "limit": limit,
         }
-        
+
         if status:
             params["status"] = status
-        
+
         return self._make_request("GET", "mlflow/runs", params=params)
 
     def get_run(self, run_id: str) -> Dict[str, Any]:
@@ -474,13 +486,13 @@ class MLInfrastructureClient:
         data = {
             "experiment_id": experiment_id,
         }
-        
+
         if run_name:
             data["run_name"] = run_name
-        
+
         if tags:
             data["tags"] = tags
-        
+
         return self._make_request("POST", "mlflow/runs", data=data)
 
     def log_metrics(
@@ -503,10 +515,10 @@ class MLInfrastructureClient:
         data = {
             "metrics": metrics,
         }
-        
+
         if step is not None:
             data["step"] = step
-        
+
         return self._make_request("POST", f"mlflow/runs/{run_id}/metrics", data=data)
 
     def log_params(
@@ -527,7 +539,7 @@ class MLInfrastructureClient:
         data = {
             "params": params,
         }
-        
+
         return self._make_request("POST", f"mlflow/runs/{run_id}/params", data=data)
 
     def log_artifact(
@@ -550,11 +562,13 @@ class MLInfrastructureClient:
         with open(file_path, "rb") as f:
             files = {"file": f}
             data = {}
-            
+
             if artifact_path:
                 data["artifact_path"] = artifact_path
-            
-            return self._make_request("POST", f"mlflow/runs/{run_id}/artifacts", data=data, files=files)
+
+            return self._make_request(
+                "POST", f"mlflow/runs/{run_id}/artifacts", data=data, files=files
+            )
 
     def get_registered_models(self, limit: int = 10) -> List[Dict[str, Any]]:
         """
@@ -607,11 +621,11 @@ class MLInfrastructureClient:
             "model_path": model_path,
             "name": name,
         }
-        
+
         if description:
             data["description"] = description
-        
+
         if tags:
             data["tags"] = tags
-        
+
         return self._make_request("POST", "mlflow/registered-models", data=data)

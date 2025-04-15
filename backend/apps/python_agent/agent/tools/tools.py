@@ -19,7 +19,9 @@ from agent.utils.log import get_logger
 
 
 class ToolFilterConfig(BaseModel):
-    blocklist_error_template: str = "Operation '{{action}}' is not supported by this environment."
+    blocklist_error_template: str = (
+        "Operation '{{action}}' is not supported by this environment."
+    )
     blocklist: list[str] = [
         "vim",
         "vi",
@@ -149,13 +151,16 @@ class ToolConfig(BaseModel):
         # for caching:
         commands = self.commands
         multi_line_command_endings = {
-            command.name: command.end_name for command in commands if command.end_name is not None
+            command.name: command.end_name
+            for command in commands
+            if command.end_name is not None
         }
         self.tools
 
         # assert not self.enable_bash_tool and parse_function is FunctionCallingParser or JsonParser
         if not self.enable_bash_tool and not (
-            isinstance(self.parse_function, FunctionCallingParser) or isinstance(self.parse_function, JsonParser)
+            isinstance(self.parse_function, FunctionCallingParser)
+            or isinstance(self.parse_function, JsonParser)
         ):
             msg = f"Bash tool can only be disabled if {FunctionCallingParser.type} parser or {JsonParser.type} parser is used."
             raise ValueError(msg)
@@ -206,34 +211,52 @@ class ToolHandler:
     def reset(self, env: SWEEnv) -> None:
         self.logger.info("Resetting tools")
         env.set_env_variables(self.config.env_variables)
-        env.write_file("/root/.swe-agent-env", json.dumps(self.config.registry_variables))
+        env.write_file(
+            "/root/.swe-agent-env", json.dumps(self.config.registry_variables)
+        )
         env.write_file("/root/state.json", "{}")
-        env.communicate(" && ".join(self._reset_commands), check="raise", timeout=self.config.install_timeout)
+        env.communicate(
+            " && ".join(self._reset_commands),
+            check="raise",
+            timeout=self.config.install_timeout,
+        )
 
     async def _upload_bundles(self, env: SWEEnv) -> None:
         await asyncio.gather(
             *(
                 env.deployment.runtime.upload(
-                    UploadRequest(source_path=bundle.path.as_posix(), target_path=f"/root/tools/{bundle.path.name}")
+                    UploadRequest(
+                        source_path=bundle.path.as_posix(),
+                        target_path=f"/root/tools/{bundle.path.name}",
+                    )
                 )
                 for bundle in self.config.bundles
             )
         )
 
-    async def _is_command_available(self, env, command: str, env_vars: dict[str, str]) -> None:
+    async def _is_command_available(
+        self, env, command: str, env_vars: dict[str, str]
+    ) -> None:
         if command == "bash":
             return
         try:
             await env.deployment.runtime.execute(
-                RexCommand(command=f"which {command}", shell=True, check=True, env=env_vars)
+                RexCommand(
+                    command=f"which {command}", shell=True, check=True, env=env_vars
+                )
             )
         except Exception:
             msg = f"Tool {command} is not available in the container."
             raise RuntimeError(msg) from None
 
-    async def _check_available_commands(self, env: SWEEnv, env_vars: dict[str, str]) -> None:
+    async def _check_available_commands(
+        self, env: SWEEnv, env_vars: dict[str, str]
+    ) -> None:
         await asyncio.gather(
-            *(self._is_command_available(env, command.name, env_vars) for command in self.config.commands)
+            *(
+                self._is_command_available(env, command.name, env_vars)
+                for command in self.config.commands
+            )
         )
 
     def _install_commands(self, env: SWEEnv) -> None:
@@ -343,7 +366,8 @@ class ToolHandler:
         patterns = {
             k: v
             for k, v in self._command_patterns.items()
-            if k in self.config.multi_line_command_endings or k == self.config.submit_command
+            if k in self.config.multi_line_command_endings
+            or k == self.config.submit_command
         }
         matches = list()
         for _, pat in patterns.items():

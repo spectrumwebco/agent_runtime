@@ -17,7 +17,9 @@ from agent.utils.log import get_logger
 class SaveApplyPatchHook(RunHook):
     """This hook saves patches to a separate directory and optionally applies them to a local repository."""
 
-    def __init__(self, apply_patch_locally: bool = False, show_success_message: bool = True):
+    def __init__(
+        self, apply_patch_locally: bool = False, show_success_message: bool = True
+    ):
         self.logger = get_logger("swea-save_apply_patch", emoji="⚡️")
         self._apply_patch_locally = apply_patch_locally
         self._show_success_message = show_success_message
@@ -25,7 +27,9 @@ class SaveApplyPatchHook(RunHook):
     def on_init(self, *, run):
         self._output_dir = Path(run.output_dir)
 
-    def on_instance_start(self, *, index: int, env: SWEEnv, problem_statement: ProblemStatementConfig):
+    def on_instance_start(
+        self, *, index: int, env: SWEEnv, problem_statement: ProblemStatementConfig
+    ):
         self._env = env
         self._problem_statement = problem_statement
 

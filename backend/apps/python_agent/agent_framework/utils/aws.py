@@ -5,12 +5,16 @@ from urllib.parse import quote
 import boto3
 
 
-def get_name_hash(prefix: str, obj: dict, max_length: int = 128, hash_length: int = 12) -> str:
+def get_name_hash(
+    prefix: str, obj: dict, max_length: int = 128, hash_length: int = 12
+) -> str:
     prefix_length = min(max_length, len(prefix))
     if hash_length + prefix_length > max_length:
         msg = f"Prefix and hash length are too long: {prefix} has length {prefix_length}, hash length is {hash_length}, max length is {max_length}"
         raise ValueError(msg)
-    return f"{prefix}-{hashlib.sha256(json.dumps(obj).encode()).hexdigest()[:hash_length]}"
+    return (
+        f"{prefix}-{hashlib.sha256(json.dumps(obj).encode()).hexdigest()[:hash_length]}"
+    )
 
 
 def get_container_name(image_name: str) -> str:
@@ -26,7 +30,11 @@ def get_execution_role_arn(execution_role_prefix: str) -> str:
     trust_relationship = {
         "Version": "2012-10-17",
         "Statement": [
-            {"Effect": "Allow", "Principal": {"Service": "ecs-tasks.amazonaws.com"}, "Action": "sts:AssumeRole"}
+            {
+                "Effect": "Allow",
+                "Principal": {"Service": "ecs-tasks.amazonaws.com"},
+                "Action": "sts:AssumeRole",
+            }
         ],
     }
 
@@ -68,22 +76,34 @@ def get_execution_role_arn(execution_role_prefix: str) -> str:
         )
     # check if policies already attached
     attached_policies = iam_client.list_attached_role_policies(RoleName=role_name)
-    attached_policy_arns = [policy["PolicyArn"] for policy in attached_policies["AttachedPolicies"]]
+    attached_policy_arns = [
+        policy["PolicyArn"] for policy in attached_policies["AttachedPolicies"]
+    ]
 
-    if "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy" not in attached_policy_arns:
+    if (
+        "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+        not in attached_policy_arns
+    ):
         iam_client.attach_role_policy(
-            RoleName=role_name, PolicyArn="arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+            RoleName=role_name,
+            PolicyArn="arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy",
         )
-    if "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly" not in attached_policy_arns:
+    if (
+        "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+        not in attached_policy_arns
+    ):
         iam_client.attach_role_policy(
-            RoleName=role_name, PolicyArn="arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+            RoleName=role_name,
+            PolicyArn="arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
         )
 
     policy_names = iam_client.list_role_policies(RoleName=role_name)["PolicyNames"]
     if "LogsAndSecretsPolicy" not in policy_names:
         # Add inline policy
         iam_client.put_role_policy(
-            RoleName=role_name, PolicyName="LogsAndSecretsPolicy", PolicyDocument=json.dumps(inline_policy)
+            RoleName=role_name,
+            PolicyName="LogsAndSecretsPolicy",
+            PolicyDocument=json.dumps(inline_policy),
         )
     waiter = iam_client.get_waiter("role_exists")
     waiter.wait(RoleName=role_name)
@@ -107,12 +127,12 @@ def get_task_definition(
             {
                 "name": get_container_name(image_name),
                 "image": image_name,
-                "portMappings": [{"containerPort": port, "hostPort": port, "protocol": "tcp"}],
+                "portMappings": [
+                    {"containerPort": port, "hostPort": port, "protocol": "tcp"}
+                ],
                 "essential": True,
                 "entryPoint": ["/bin/sh", "-c"],
-                "command": [
-                    "echo 'hello world'"  # override command with run_task
-                ],
+                "command": ["echo 'hello world'"],  # override command with run_task
             },
         ],
         "requiresCompatibilities": ["FARGATE", "EC2"],
@@ -159,7 +179,9 @@ def get_default_vpc_and_subnet() -> tuple[str, str]:
         msg = "No default VPC found"
         raise Exception(msg)
     vpc_id = vpcs["Vpcs"][0]["VpcId"]
-    subnets = ec2_client.describe_subnets(Filters=[{"Name": "vpc-id", "Values": [vpc_id]}])
+    subnets = ec2_client.describe_subnets(
+        Filters=[{"Name": "vpc-id", "Values": [vpc_id]}]
+    )
     if not subnets["Subnets"]:
         msg = "No subnets found in the default VPC"
         raise Exception(msg)
@@ -169,11 +191,20 @@ def get_default_vpc_and_subnet() -> tuple[str, str]:
 
 def get_security_group(vpc_id: str, port: int, security_group_prefix: str) -> str:
     ec2_client = boto3.client("ec2")
-    inbound_rule = {"IpProtocol": "tcp", "FromPort": port, "ToPort": port, "IpRanges": [{"CidrIp": "0.0.0.0/0"}]}
+    inbound_rule = {
+        "IpProtocol": "tcp",
+        "FromPort": port,
+        "ToPort": port,
+        "IpRanges": [{"CidrIp": "0.0.0.0/0"}],
+    }
     # if it exists, just return the id
-    security_group_name = get_name_hash(security_group_prefix, inbound_rule, max_length=255)
+    security_group_name = get_name_hash(
+        security_group_prefix, inbound_rule, max_length=255
+    )
     try:
-        security_group = ec2_client.describe_security_groups(GroupNames=[security_group_name])
+        security_group = ec2_client.describe_security_groups(
+            GroupNames=[security_group_name]
+        )
         return security_group["SecurityGroups"][0]["GroupId"]
     except ec2_client.exceptions.ClientError:
         pass
@@ -192,7 +223,9 @@ def get_security_group(vpc_id: str, port: int, security_group_prefix: str) -> st
     security_group_id = security_group["GroupId"]
 
     # Add an inbound rule to allow traffic on the port
-    ec2_client.authorize_security_group_ingress(GroupId=security_group_id, IpPermissions=[inbound_rule])
+    ec2_client.authorize_security_group_ingress(
+        GroupId=security_group_id, IpPermissions=[inbound_rule]
+    )
     return security_group_id
 
 
@@ -257,7 +290,9 @@ def get_public_ip(task_arn: str, cluster_arn: str) -> str:
     return eni_details["NetworkInterfaces"][0]["Association"]["PublicIp"]
 
 
-def get_cloudwatch_log_url(task_arn: str, task_definition: dict, container_name: str, region: str = "us-east-2") -> str:
+def get_cloudwatch_log_url(
+    task_arn: str, task_definition: dict, container_name: str, region: str = "us-east-2"
+) -> str:
     """
     Get the CloudWatch log URL for a running task.
 

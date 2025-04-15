@@ -297,7 +297,9 @@ def get_default_scout_config() -> Llama4ScoutConfig:
     return Llama4ScoutConfig()
 
 
-def get_config_for_model(model_type: str) -> Union[Llama4MaverickConfig, Llama4ScoutConfig]:
+def get_config_for_model(
+    model_type: str,
+) -> Union[Llama4MaverickConfig, Llama4ScoutConfig]:
     """
     Get configuration for model.
 

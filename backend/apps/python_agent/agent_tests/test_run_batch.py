@@ -43,7 +43,9 @@ def test_simple_instances(test_data_sources_path: Path, tmp_path: Path):
         "True",
     ]
     main(cmd)
-    assert (tmp_path / "simple_test_problem" / "simple_test_problem.traj").exists(), list(tmp_path.iterdir())
+    assert (
+        tmp_path / "simple_test_problem" / "simple_test_problem.traj"
+    ).exists(), list(tmp_path.iterdir())
 
 
 def test_empty_instances_simple(test_data_sources_path: Path, tmp_path: Path):

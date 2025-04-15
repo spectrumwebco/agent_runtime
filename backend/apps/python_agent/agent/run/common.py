@@ -41,7 +41,10 @@ def _shorten_strings(data, *, max_length=30):
         return [_shorten_strings(item, max_length=max_length) for item in data]
     elif isinstance(data, dict):
         # Recursively process each value in the dictionary
-        return {key: _shorten_strings(value, max_length=max_length) for key, value in data.items()}
+        return {
+            key: _shorten_strings(value, max_length=max_length)
+            for key, value in data.items()
+        }
     else:
         # Return the data as is if it's neither a string, list, nor dict
         return data
@@ -72,7 +75,12 @@ Run `sweagent <subcommand> --help` for usage examples.
 
 class AutoCorrectSuggestion:
     def __init__(
-        self, original: str, alternative: str = "", *, condition: Callable | None = None, help: str | None = None
+        self,
+        original: str,
+        alternative: str = "",
+        *,
+        condition: Callable | None = None,
+        help: str | None = None,
     ):
         self.original = original
         self.alternative = alternative
@@ -136,7 +144,9 @@ class ConfigHelper:
         lines = []
         for name, field_info in config_type.model_fields.items():
             line = f"[green][bold]{name}[/bold][/green]: "
-            line += self._get_value_help_string(field_info.annotation, field_info.description)
+            line += self._get_value_help_string(
+                field_info.annotation, field_info.description
+            )
             lines.append(line)
         return "\n\n".join(lines)
 
@@ -185,7 +195,13 @@ def _parse_args_to_nested_dict(args):
 
 # todo: Parameterize type hints
 class BasicCLI:
-    def __init__(self, config_type: type[BaseSettings], *, default_settings: bool = True, help_text: str | None = None):
+    def __init__(
+        self,
+        config_type: type[BaseSettings],
+        *,
+        default_settings: bool = True,
+        help_text: str | None = None,
+    ):
         """This class implements a basic CLI for SWE-agent. It is based on pydantic-settings, i.e., takes
         a `BaseSettings` object. In principle you could just initialize these via `pydantic-settings`'s `CliApp.run`,
         however, we also want to add a `--config` option to load additional config files and some other things.
@@ -332,19 +348,33 @@ class BasicCLI:
                 Panel.fit(
                     "[red][bold]Merged configuration\n[/bold]"
                     "This is the merged configuration that was used to instantiate the config object[/red]\n\n"
-                    + yaml.dump(_shorten_strings(merge_nested_dicts(config_merged, cl_options_dict)))
+                    + yaml.dump(
+                        _shorten_strings(
+                            merge_nested_dicts(config_merged, cl_options_dict)
+                        )
+                    )
                 )
             )
             rich_print(
                 Panel.fit(
-                    "[red][bold]Validation error[/bold]\n" + _VALIDATION_ERROR_HELP_TEXT + "[/red]\n" + str(e),
+                    "[red][bold]Validation error[/bold]\n"
+                    + _VALIDATION_ERROR_HELP_TEXT
+                    + "[/red]\n"
+                    + str(e),
                 )
             )
             self.maybe_show_auto_correct(remaining_args)
             msg = "Invalid configuration. Please check the above output."
             raise RuntimeError(msg) from None
         except SettingsError as e:
-            rich_print(Panel.fit("[red][bold]SettingsError[/bold][/red]\n\n" + str(e) + "\n\n" + _SETTING_ERROR_HINTS))
+            rich_print(
+                Panel.fit(
+                    "[red][bold]SettingsError[/bold][/red]\n\n"
+                    + str(e)
+                    + "\n\n"
+                    + _SETTING_ERROR_HINTS
+                )
+            )
             self.maybe_show_auto_correct(remaining_args)
             msg = "Invalid command line arguments. Please check the above output in the box."
             raise RuntimeError(msg) from None

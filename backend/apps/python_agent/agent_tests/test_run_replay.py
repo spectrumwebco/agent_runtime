@@ -18,7 +18,9 @@ def rr_config(swe_agent_test_repo_traj, tmp_path, swe_agent_test_repo_clone):
 
 
 def test_replay(rr_config):
-    rr = RunReplay.from_config(rr_config, _catch_errors=False, _require_zero_exit_code=True)
+    rr = RunReplay.from_config(
+        rr_config, _catch_errors=False, _require_zero_exit_code=True
+    )
     rr.main()
 
 

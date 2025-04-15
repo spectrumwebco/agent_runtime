@@ -109,7 +109,9 @@ def _check_bash_command(command: str) -> None:
         f"Error (exit code {result.returncode}) while checking bash command \n{command!r}\n"
         f"---- Stderr ----\n{stderr}\n---- Stdout ----\n{stdout}"
     )
-    exc = BashIncorrectSyntaxError(msg, extra_info={"bash_stdout": stdout, "bash_stderr": stderr})
+    exc = BashIncorrectSyntaxError(
+        msg, extra_info={"bash_stdout": stdout, "bash_stderr": stderr}
+    )
     raise exc
 
 
@@ -127,7 +129,9 @@ class Session(ABC):
 class BashSession(Session):
     _UNIQUE_STRING = "UNIQUESTRING29234"
 
-    def __init__(self, request: CreateBashSessionRequest, *, logger: logging.Logger | None = None):
+    def __init__(
+        self, request: CreateBashSessionRequest, *, logger: logging.Logger | None = None
+    ):
         """This basically represents one REPL that we control.
 
         It's pretty similar to a `pexpect.REPLWrapper`.
@@ -164,7 +168,9 @@ class BashSession(Session):
         time.sleep(0.3)
         cmds = []
         if self.request.startup_source:
-            cmds += [f"source {path}" for path in self.request.startup_source] + ["sleep 0.3"]
+            cmds += [f"source {path}" for path in self.request.startup_source] + [
+                "sleep 0.3"
+            ]
         cmds += self._get_reset_commands()
         cmd = " ; ".join(cmds)
         self.shell.sendline(cmd)
@@ -196,7 +202,9 @@ class BashSession(Session):
             output += _strip_control_chars(self.shell.before)  # type: ignore
             output += self._eat_following_output()
             output = output.strip()
-            return BashObservation(output=output, exit_code=0, expect_string=matched_expect_string)
+            return BashObservation(
+                output=output, exit_code=0, expect_string=matched_expect_string
+            )
         # Fall back to putting job to background and killing it there:
         try:
             self.shell.sendcontrol("z")
@@ -208,7 +216,9 @@ class BashSession(Session):
             output += self.shell.before
             output += self._eat_following_output()
             output = output.strip()
-            return BashObservation(output=output, exit_code=0, expect_string=matched_expect_string)
+            return BashObservation(
+                output=output, exit_code=0, expect_string=matched_expect_string
+            )
         except pexpect.TIMEOUT:
             msg = "Failed to interrupt session"
             raise pexpect.TIMEOUT(msg)
@@ -267,7 +277,9 @@ class BashSession(Session):
             # For some reason, this often times enables echo mode within the shell.
             output = output.lstrip().removeprefix(action.command).strip()
 
-        return BashObservation(output=output, exit_code=0, expect_string=matched_expect_string)
+        return BashObservation(
+            output=output, exit_code=0, expect_string=matched_expect_string
+        )
 
     async def _run_normal(self, action: BashAction) -> BashObservation:
         """Run a normal action. This is the default mode.
@@ -316,7 +328,9 @@ class BashSession(Session):
 
         # Part 3: Get the exit code
         if action.check == "ignore":
-            return BashObservation(output=output, exit_code=None, expect_string=matched_expect_string)
+            return BashObservation(
+                output=output, exit_code=None, expect_string=matched_expect_string
+            )
 
         try:
             _exit_code_prefix = "EXITCODESTART"
@@ -346,7 +360,9 @@ class BashSession(Session):
             if action.check == "raise":
                 raise
             exit_code = None
-        return BashObservation(output=output, exit_code=exit_code, expect_string=matched_expect_string)
+        return BashObservation(
+            output=output, exit_code=exit_code, expect_string=matched_expect_string
+        )
 
     async def close(self) -> CloseSessionResponse:
         if self._shell is None:
@@ -385,7 +401,9 @@ class LocalRuntime(AbstractRuntime):
         """Checks if the runtime is alive."""
         return IsAliveResponse(is_alive=True)
 
-    async def create_session(self, request: CreateSessionRequest) -> CreateSessionResponse:
+    async def create_session(
+        self, request: CreateSessionRequest
+    ) -> CreateSessionResponse:
         """Creates a new session."""
         if request.session in self.sessions:
             msg = f"session {request.session} already exists"
@@ -450,7 +468,9 @@ class LocalRuntime(AbstractRuntime):
 
     async def read_file(self, request: ReadFileRequest) -> ReadFileResponse:
         """Reads a file"""
-        content = Path(request.path).read_text(encoding=request.encoding, errors=request.errors)
+        content = Path(request.path).read_text(
+            encoding=request.encoding, errors=request.errors
+        )
         return ReadFileResponse(content=content)
 
     async def write_file(self, request: WriteFileRequest) -> WriteFileResponse:

@@ -74,7 +74,9 @@ def delete_iam_roles() -> None:
         print("No IAM roles found to delete.")
         return
 
-    confirmation_msg = "The following IAM roles will be deleted:\n" + "\n".join(f"- {role}" for role in roles_to_delete)
+    confirmation_msg = "The following IAM roles will be deleted:\n" + "\n".join(
+        f"- {role}" for role in roles_to_delete
+    )
     if not get_confirmation(confirmation_msg):
         print("Skipping IAM role deletion.")
         return
@@ -107,8 +109,9 @@ def delete_task_definitions() -> None:
         print("No task definitions found to delete.")
         return
 
-    confirmation_msg = "The following task definitions will be deregistered:\n" + "\n".join(
-        f"- {task}" for task in tasks_to_delete
+    confirmation_msg = (
+        "The following task definitions will be deregistered:\n"
+        + "\n".join(f"- {task}" for task in tasks_to_delete)
     )
     if not get_confirmation(confirmation_msg):
         print("Skipping task definition deletion.")
@@ -164,7 +167,9 @@ def delete_ecs_clusters() -> None:
             try:
                 waiter.wait(cluster=cluster_arn)
             except WaiterError:
-                print(f"Warning: Timeout waiting for tasks to stop in cluster {cluster_arn}")
+                print(
+                    f"Warning: Timeout waiting for tasks to stop in cluster {cluster_arn}"
+                )
 
             # Delete the cluster
             ecs.delete_cluster(cluster=cluster_arn)
@@ -191,7 +196,9 @@ def delete_security_groups() -> None:
         print("No security groups found to delete.")
         return
 
-    confirmation_msg = "The following security groups will be deleted:\n" + "\n".join(f"- {sg}" for sg in sgs_to_delete)
+    confirmation_msg = "The following security groups will be deleted:\n" + "\n".join(
+        f"- {sg}" for sg in sgs_to_delete
+    )
     if not get_confirmation(confirmation_msg):
         print("Skipping security group deletion.")
         return
@@ -202,10 +209,14 @@ def delete_security_groups() -> None:
                 print(f"Deleting security group: {sg['GroupId']}")
                 # Remove all inbound rules first
                 if sg.get("IpPermissions"):
-                    ec2.revoke_security_group_ingress(GroupId=sg["GroupId"], IpPermissions=sg["IpPermissions"])
+                    ec2.revoke_security_group_ingress(
+                        GroupId=sg["GroupId"], IpPermissions=sg["IpPermissions"]
+                    )
                 # Remove all outbound rules
                 if sg.get("IpPermissionsEgress"):
-                    ec2.revoke_security_group_egress(GroupId=sg["GroupId"], IpPermissions=sg["IpPermissionsEgress"])
+                    ec2.revoke_security_group_egress(
+                        GroupId=sg["GroupId"], IpPermissions=sg["IpPermissionsEgress"]
+                    )
                 # Delete the security group
                 ec2.delete_security_group(GroupId=sg["GroupId"])
         except ClientError as e:
@@ -226,7 +237,9 @@ def main():
        - Security groups
        - IAM roles
     """
-    print("Starting cleanup of AWS resources tagged with origin=swe-rex-deployment-auto; this may take a while...")
+    print(
+        "Starting cleanup of AWS resources tagged with origin=swe-rex-deployment-auto; this may take a while..."
+    )
 
     try:
         # Fix the Config instantiation
@@ -250,10 +263,14 @@ def main():
                 if has_target_tag(tags):
                     task_count = 0
                     paginator = ecs.get_paginator("list_tasks")
-                    for page in paginator.paginate(cluster=cluster_arn, PaginationConfig={"MaxItems": 100}):
+                    for page in paginator.paginate(
+                        cluster=cluster_arn, PaginationConfig={"MaxItems": 100}
+                    ):
                         task_count += len(page["taskArns"])
                     cluster_name = cluster_arn.split("/")[-1]
-                    cluster_info.append(f"  - Cluster: {cluster_name} ({task_count} running tasks)")
+                    cluster_info.append(
+                        f"  - Cluster: {cluster_name} ({task_count} running tasks)"
+                    )
             except ClientError as e:
                 print(f"Warning: Failed to process cluster {cluster_arn}: {e}")
                 continue
@@ -282,22 +299,38 @@ def main():
         for sg in ec2.describe_security_groups()["SecurityGroups"]:
             tags = sg.get("Tags", [])
             if has_target_tag(tags):
-                security_groups.append(f"  - {sg['GroupId']} ({sg.get('GroupName', 'No Name')})")
+                security_groups.append(
+                    f"  - {sg['GroupId']} ({sg.get('GroupName', 'No Name')})"
+                )
 
         # Build detailed confirmation message
         confirmation_msg = "The following AWS resources will be deleted:\n\n"
 
         if cluster_info:
-            confirmation_msg += f"ECS Clusters ({len(cluster_info)}):\n" + "\n".join(cluster_info) + "\n\n"
+            confirmation_msg += (
+                f"ECS Clusters ({len(cluster_info)}):\n"
+                + "\n".join(cluster_info)
+                + "\n\n"
+            )
 
         if task_defs:
-            confirmation_msg += f"Task Definitions ({len(task_defs)}):\n" + "\n".join(task_defs) + "\n\n"
+            confirmation_msg += (
+                f"Task Definitions ({len(task_defs)}):\n"
+                + "\n".join(task_defs)
+                + "\n\n"
+            )
 
         if security_groups:
-            confirmation_msg += f"Security Groups ({len(security_groups)}):\n" + "\n".join(security_groups) + "\n\n"
+            confirmation_msg += (
+                f"Security Groups ({len(security_groups)}):\n"
+                + "\n".join(security_groups)
+                + "\n\n"
+            )
 
         if roles:
-            confirmation_msg += f"IAM Roles ({len(roles)}):\n" + "\n".join(roles) + "\n\n"
+            confirmation_msg += (
+                f"IAM Roles ({len(roles)}):\n" + "\n".join(roles) + "\n\n"
+            )
 
         confirmation_msg += "This action cannot be undone."
 

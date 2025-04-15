@@ -47,7 +47,9 @@ class AskColleaguesConfig(BaseModel):
 
 
 class AskColleagues(AbstractActionSampler):
-    def __init__(self, config: AskColleaguesConfig, model: AbstractModel, tools: ToolHandler):
+    def __init__(
+        self, config: AskColleaguesConfig, model: AbstractModel, tools: ToolHandler
+    ):
         super().__init__(model, tools)
         self.config = config
 
@@ -59,7 +61,9 @@ class AskColleagues(AbstractActionSampler):
             try:
                 thought, action = self._tools.parse_actions(completion)
             except FormatError:
-                self._logger.warning("Could not parse completion %s, skipping.", completion)
+                self._logger.warning(
+                    "Could not parse completion %s, skipping.", completion
+                )
                 continue
             n_parsed_ok += 1
             out += f"Thought (colleague {i}): {thought}\nProposed Action (colleague {i}): {action}\n\n"
@@ -102,8 +106,11 @@ class BinaryTrajectoryComparisonConfig(BaseModel):
     comparison_temperature: float | None = None
     """Override the model's temperature. If None, take the temperature configured for the model."""
 
-    system_template: str = """<setting>You are an expert software engineer overseeing junior developers. They suggest actions to take to solve a problem. You must choose the best action to take. </setting>"""
-    instance_template: str = dedent("""
+    system_template: str = (
+        """<setting>You are an expert software engineer overseeing junior developers. They suggest actions to take to solve a problem. You must choose the best action to take. </setting>"""
+    )
+    instance_template: str = dedent(
+        """
     We're solving the following problem
 
     <problem_statement>
@@ -115,9 +122,11 @@ class BinaryTrajectoryComparisonConfig(BaseModel):
     <trajectory>
     {{traj}}
     </trajectory>
-    """)
+    """
+    )
 
-    comparison_template: str = dedent("""
+    comparison_template: str = dedent(
+        """
     Two junior developers suggested the following actions:
 
     <thought1>
@@ -144,21 +153,31 @@ class BinaryTrajectoryComparisonConfig(BaseModel):
     If you think the second action is better, respond with "second".
 
     The last line of your response MUST be "first" or "second".
-    """)
+    """
+    )
 
-    def get(self, model: AbstractModel, tools: ToolHandler) -> "BinaryTrajectoryComparison":
+    def get(
+        self, model: AbstractModel, tools: ToolHandler
+    ) -> "BinaryTrajectoryComparison":
         return BinaryTrajectoryComparison(self, model, tools)
 
 
 class BinaryTrajectoryComparison(AbstractActionSampler):
-    def __init__(self, config: BinaryTrajectoryComparisonConfig, model: AbstractModel, tools: ToolHandler):
+    def __init__(
+        self,
+        config: BinaryTrajectoryComparisonConfig,
+        model: AbstractModel,
+        tools: ToolHandler,
+    ):
         super().__init__(model, tools)
         self.config = config
 
     def _format_trajectory(self, trajectory: Trajectory) -> str:
         steps = []
         for i, step in enumerate(trajectory):
-            steps.append(f"Action {i}: {step['action']}\n Observation {i}: {step['observation']}")
+            steps.append(
+                f"Action {i}: {step['action']}\n Observation {i}: {step['observation']}"
+            )
         return "\n".join(steps)
 
     def format_messages(
@@ -190,12 +209,16 @@ class BinaryTrajectoryComparison(AbstractActionSampler):
             action2=action2,
         )
         self._logger.debug(f"MODEL INPUT (comparison)\n{comparison_message}")
-        cache_control_kwargs = {"cache_control": {"type": "ephemeral"}} if use_cache_control else {}
+        cache_control_kwargs = (
+            {"cache_control": {"type": "ephemeral"}} if use_cache_control else {}
+        )
         return [
             {"role": "system", "content": system_message},
             {
                 "role": "user",
-                "content": [{"type": "text", "text": user_message, **cache_control_kwargs}],
+                "content": [
+                    {"type": "text", "text": user_message, **cache_control_kwargs}
+                ],
             },
             {
                 "role": "user",
@@ -208,7 +231,9 @@ class BinaryTrajectoryComparison(AbstractActionSampler):
             },
         ]
 
-    def filter_duplicates(self, completions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def filter_duplicates(
+        self, completions: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         """Filter out duplicate actions"""
         thoughts: list[str] = []
         actions: list[str] = []
@@ -221,17 +246,25 @@ class BinaryTrajectoryComparison(AbstractActionSampler):
                 filtered_completions.append(pc)
 
         if len(filtered_completions) < len(completions):
-            self._logger.debug("Filtering duplicates: %d -> %d", len(completions), len(filtered_completions))
+            self._logger.debug(
+                "Filtering duplicates: %d -> %d",
+                len(completions),
+                len(filtered_completions),
+            )
 
         return filtered_completions
 
-    def filter_parseable_completions(self, completions: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def filter_parseable_completions(
+        self, completions: list[dict[str, Any]]
+    ) -> list[dict[str, Any]]:
         filtered_completions = []
         for completion in completions:
             try:
                 self._tools.parse_actions(completion)
             except FormatError:
-                self._logger.warning("Could not parse completion %s, skipping.", completion)
+                self._logger.warning(
+                    "Could not parse completion %s, skipping.", completion
+                )
                 continue
             filtered_completions.append(completion)
         if len(filtered_completions) == 0:
@@ -240,7 +273,11 @@ class BinaryTrajectoryComparison(AbstractActionSampler):
         return filtered_completions
 
     def contains_edits(self, completions: list[dict[str, Any]]) -> bool:
-        keywords = ["edit", "str_replace_editor insert", "str_replace_editor str_replace"]
+        keywords = [
+            "edit",
+            "str_replace_editor insert",
+            "str_replace_editor str_replace",
+        ]
         for completion in completions:
             _, action = self._tools.parse_actions(completion)
             if any(action.startswith(keyword) for keyword in keywords):
@@ -254,13 +291,20 @@ class BinaryTrajectoryComparison(AbstractActionSampler):
         if not completions:
             msg = "No completions could be parsed."
             raise FormatError(msg)
-        if self.contains_edits(completions) and self.config.min_n_samples < self.config.max_n_samples:
+        if (
+            self.contains_edits(completions)
+            and self.config.min_n_samples < self.config.max_n_samples
+        ):
             self._logger.debug("Edits were proposed, will sample more")
             new_completions = self._model.query(history, n=self.config.max_n_samples - self.config.min_n_samples)  # type: ignore
-            completions = self.filter_duplicates(self.filter_parseable_completions(completions + new_completions))
+            completions = self.filter_duplicates(
+                self.filter_parseable_completions(completions + new_completions)
+            )
         if len(completions) == 1:
             _, action = self._tools.parse_actions(completions[0])
-            self._logger.warning("Only identical actions were proposed (action=%s)", action)
+            self._logger.warning(
+                "Only identical actions were proposed (action=%s)", action
+            )
         return completions
 
     def get_action(
@@ -310,7 +354,9 @@ class BinaryTrajectoryComparison(AbstractActionSampler):
             return 0
         elif "second" in last_line.lower():
             return 1
-        self._logger.warning("Could not interpret response: %s, will choose first submission.", response)
+        self._logger.warning(
+            "Could not interpret response: %s, will choose first submission.", response
+        )
         return 0
 
 

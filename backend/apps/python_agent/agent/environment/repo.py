@@ -103,9 +103,17 @@ class LocalRepoConfig(BaseModel):
     def copy(self, deployment: AbstractDeployment):
         self.check_valid_repo()
         asyncio.run(
-            deployment.runtime.upload(UploadRequest(source_path=str(self.path), target_path=f"/{self.repo_name}"))
+            deployment.runtime.upload(
+                UploadRequest(
+                    source_path=str(self.path), target_path=f"/{self.repo_name}"
+                )
+            )
         )
-        r = asyncio.run(deployment.runtime.execute(Command(command=f"chown -R root:root {self.repo_name}", shell=True)))
+        r = asyncio.run(
+            deployment.runtime.execute(
+                Command(command=f"chown -R root:root {self.repo_name}", shell=True)
+            )
+        )
         if r.exit_code != 0:
             msg = f"Failed to change permissions on copied repository (exit code: {r.exit_code}, stdout: {r.stdout}, stderr: {r.stderr})"
             raise RuntimeError(msg)
@@ -183,7 +191,6 @@ class GithubRepoConfig(BaseModel):
         return _get_git_reset_commands(self.base_commit)
 
 
-
 class GiteeRepoConfig(BaseModel):
     gitee_url: str
 
@@ -205,13 +212,13 @@ class GiteeRepoConfig(BaseModel):
     @property
     def repo_name(self) -> str:
         from agent.utils.gitee import GiteeClient
+
         try:
             parsed = GiteeClient.parse_gitee_url(self.gitee_url)
             return f"{parsed['owner']}__{parsed['repo']}"
         except InvalidGiteeURL as e:
             logger.error(f"Failed to parse Gitee URL {self.gitee_url}: {e}")
             return "gitee_repo"
-
 
     def _get_url_with_token(self, token: str) -> str:
         """Prepend Gitee token to URL"""
@@ -226,7 +233,7 @@ class GiteeRepoConfig(BaseModel):
     def copy(self, deployment: AbstractDeployment):
         """Clones the repository to the sandbox."""
         base_commit = self.base_commit
-        gitee_token = os.getenv("GITEE_ACCESS_TOKEN", "") # Use GITEE_ACCESS_TOKEN
+        gitee_token = os.getenv("GITEE_ACCESS_TOKEN", "")  # Use GITEE_ACCESS_TOKEN
         url = self._get_url_with_token(gitee_token)
         asyncio.run(
             deployment.runtime.execute(
@@ -254,11 +261,16 @@ class GiteeRepoConfig(BaseModel):
         return _get_git_reset_commands(self.base_commit)
 
 
-RepoConfig = LocalRepoConfig | GithubRepoConfig | GiteeRepoConfig | PreExistingRepoConfig
+RepoConfig = (
+    LocalRepoConfig | GithubRepoConfig | GiteeRepoConfig | PreExistingRepoConfig
+)
 
 
 def repo_from_simplified_input(
-    *, input: str, base_commit: str = "HEAD", type: Literal["local", "github", "gitee", "preexisting", "auto"] = "auto"
+    *,
+    input: str,
+    base_commit: str = "HEAD",
+    type: Literal["local", "github", "gitee", "preexisting", "auto"] = "auto",
 ) -> RepoConfig:
     """Get repo config from a simplified input.
 
@@ -276,7 +288,11 @@ def repo_from_simplified_input(
     if type == "preexisting":
         return PreExistingRepoConfig(repo_name=input, base_commit=base_commit)
     if type == "auto":
-        from agent.environment.repo_provider import detect_provider_from_url, RepoProviderType
+        from agent.environment.repo_provider import (
+            detect_provider_from_url,
+            RepoProviderType,
+        )
+
         detected_type = detect_provider_from_url(input)
         if detected_type == RepoProviderType.GITHUB:
             return GithubRepoConfig(github_url=input, base_commit=base_commit)
@@ -284,16 +300,21 @@ def repo_from_simplified_input(
             return GiteeRepoConfig(gitee_url=input, base_commit=base_commit)
         elif detected_type == RepoProviderType.LOCAL:
             if Path(input).exists():
-                 return LocalRepoConfig(path=Path(input), base_commit=base_commit)
+                return LocalRepoConfig(path=Path(input), base_commit=base_commit)
             else:
-                 if '/' in input and not input.startswith(('http', '.', '/')):
-                     logger.info(f"Assuming '{input}' is a GitHub repository shorthand.")
-                     return GithubRepoConfig(github_url=f"https://github.com/{input}", base_commit=base_commit)
-                 else:
-                     msg = f"Could not automatically determine repository type for input: {input}"
-                     raise ValueError(msg)
-        else: # UNKNOWN
-            msg = f"Could not automatically determine repository type for input: {input}"
+                if "/" in input and not input.startswith(("http", ".", "/")):
+                    logger.info(f"Assuming '{input}' is a GitHub repository shorthand.")
+                    return GithubRepoConfig(
+                        github_url=f"https://github.com/{input}",
+                        base_commit=base_commit,
+                    )
+                else:
+                    msg = f"Could not automatically determine repository type for input: {input}"
+                    raise ValueError(msg)
+        else:  # UNKNOWN
+            msg = (
+                f"Could not automatically determine repository type for input: {input}"
+            )
             raise ValueError(msg)
 
     msg = f"Unknown repo type: {type}"

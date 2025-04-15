@@ -14,7 +14,10 @@ from typing_extensions import Self
 from apps.python_agent.agent_framework import PACKAGE_NAME, REMOTE_EXECUTABLE_NAME
 from apps.python_agent.agent_framework.deployment.abstract import AbstractDeployment
 from apps.python_agent.agent_framework.deployment.config import ModalDeploymentConfig
-from apps.python_agent.agent_framework.deployment.hooks.abstract import CombinedDeploymentHook, DeploymentHook
+from apps.python_agent.agent_framework.deployment.hooks.abstract import (
+    CombinedDeploymentHook,
+    DeploymentHook,
+)
 from apps.python_agent.agent_framework.exceptions import DeploymentNotStartedError
 from apps.python_agent.agent_framework.runtime.abstract import IsAliveResponse
 from apps.python_agent.agent_framework.runtime.remote import RemoteRuntime
@@ -32,11 +35,15 @@ def _get_modal_user() -> str:
 class _ImageBuilder:
     """_ImageBuilder.auto() is used by ModalDeployment"""
 
-    def __init__(self, *, install_pipx: bool = True, logger: logging.Logger | None = None):
+    def __init__(
+        self, *, install_pipx: bool = True, logger: logging.Logger | None = None
+    ):
         self.logger = logger or get_logger("rex_image_builder")
         self._install_pipx = install_pipx
 
-    def from_file(self, image: PurePath, *, build_context: PurePath | None = None) -> modal.Image:
+    def from_file(
+        self, image: PurePath, *, build_context: PurePath | None = None
+    ) -> modal.Image:
         self.logger.info(f"Building image from file {image}")
         if build_context is None:
             build_context = Path(image).resolve().parent
@@ -60,7 +67,9 @@ class _ImageBuilder:
             secrets = [secret]
             self.logger.debug("Docker login credentials were provided")
         else:
-            self.logger.warning("DOCKER_USERNAME and DOCKER_PASSWORD not set. Using public images.")
+            self.logger.warning(
+                "DOCKER_USERNAME and DOCKER_PASSWORD not set. Using public images."
+            )
             secrets = None
         return modal.Image.from_registry(image, secrets=secrets)
 
@@ -137,7 +146,9 @@ class ModalDeployment(AbstractDeployment):
             deployment_timeout: The deployment timeout.
             modal_sandbox_kwargs: Additional arguments to pass to `modal.Sandbox.create`
         """
-        self._image = _ImageBuilder(install_pipx=install_pipx, logger=logger).auto(image)
+        self._image = _ImageBuilder(install_pipx=install_pipx, logger=logger).auto(
+            image
+        )
         self._runtime: RemoteRuntime | None = None
         self._startup_timeout = startup_timeout
         self._sandbox: modal.Sandbox | None = None
@@ -188,14 +199,20 @@ class ModalDeployment(AbstractDeployment):
 
     async def _wait_until_alive(self, timeout: float = 10.0):
         assert self._runtime is not None
-        return await _wait_until_alive(self.is_alive, timeout=timeout, function_timeout=self._runtime._config.timeout)
+        return await _wait_until_alive(
+            self.is_alive,
+            timeout=timeout,
+            function_timeout=self._runtime._config.timeout,
+        )
 
     def _start_agent_framework_cmd(self, token: str) -> str:
         """Start agent_framework-server on the remote. If agent_framework is not installed arelady,
         install pipx and then run agent_framework-server with pipx run
         """
         rex_args = f"--port {self._port} --auth-token {token}"
-        return f"{REMOTE_EXECUTABLE_NAME} {rex_args} || pipx run {PACKAGE_NAME} {rex_args}"
+        return (
+            f"{REMOTE_EXECUTABLE_NAME} {rex_args} || pipx run {PACKAGE_NAME} {rex_args}"
+        )
 
     def get_modal_log_url(self) -> str:
         """Returns URL to modal logs
@@ -226,16 +243,23 @@ class ModalDeployment(AbstractDeployment):
         )
         tunnel = self._sandbox.tunnels()[self._port]
         elapsed_sandbox_creation = time.time() - t0
-        self.logger.info(f"Sandbox ({self._sandbox.object_id}) created in {elapsed_sandbox_creation:.2f}s")
+        self.logger.info(
+            f"Sandbox ({self._sandbox.object_id}) created in {elapsed_sandbox_creation:.2f}s"
+        )
         self.logger.info(f"Check sandbox logs at {self.get_modal_log_url()}")
         self.logger.info(f"Sandbox created with id {self._sandbox.object_id}")
         await asyncio.sleep(1)
         self.logger.info(f"Starting runtime at {tunnel.url}")
         self._hooks.on_custom_step("Starting runtime")
         self._runtime = RemoteRuntime(
-            host=tunnel.url, timeout=self._runtime_timeout, auth_token=token, logger=self.logger
+            host=tunnel.url,
+            timeout=self._runtime_timeout,
+            auth_token=token,
+            logger=self.logger,
         )
-        remaining_startup_timeout = max(0, self._startup_timeout - elapsed_sandbox_creation)
+        remaining_startup_timeout = max(
+            0, self._startup_timeout - elapsed_sandbox_creation
+        )
         t1 = time.time()
         await self._wait_until_alive(timeout=remaining_startup_timeout)
         self.logger.info(f"Runtime started in {time.time() - t1:.2f}s")

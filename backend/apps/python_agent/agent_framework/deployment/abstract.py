@@ -3,7 +3,10 @@ import logging
 from abc import ABC, abstractmethod
 
 from apps.python_agent.agent_framework.deployment.hooks.abstract import DeploymentHook
-from apps.python_agent.agent_framework.runtime.abstract import AbstractRuntime, IsAliveResponse
+from apps.python_agent.agent_framework.runtime.abstract import (
+    AbstractRuntime,
+    IsAliveResponse,
+)
 
 __all__ = ["AbstractDeployment"]
 

@@ -6,7 +6,11 @@ from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field
 from swerex.deployment.abstract import AbstractDeployment
-from swerex.deployment.config import DeploymentConfig, DockerDeploymentConfig, get_deployment
+from swerex.deployment.config import (
+    DeploymentConfig,
+    DockerDeploymentConfig,
+    get_deployment,
+)
 from swerex.runtime.abstract import (
     BashAction,
     BashInterruptAction,
@@ -25,7 +29,9 @@ class EnvironmentConfig(BaseModel):
     """Configure data sources and setup instructions for the environment in which we solve the tasks."""
 
     deployment: DeploymentConfig = Field(
-        default_factory=lambda: DockerDeploymentConfig(image="python:3.11", python_standalone_dir="/root"),
+        default_factory=lambda: DockerDeploymentConfig(
+            image="python:3.11", python_standalone_dir="/root"
+        ),
         description="Deployment options.",
     )
     repo: RepoConfig | None = Field(
@@ -111,7 +117,9 @@ class SWEEnv:
         self._init_deployment()
         self.reset()
         for command in self._post_startup_commands:
-            self.communicate(command, check="raise", timeout=self.post_startup_command_timeout)
+            self.communicate(
+                command, check="raise", timeout=self.post_startup_command_timeout
+            )
 
     def _copy_repo(self) -> None:
         """Clone/copy repository/codebase in container"""
@@ -153,7 +161,11 @@ class SWEEnv:
                 f"cd /{self.repo.repo_name}",
                 "export ROOT=$(pwd -P)",
             ]
-            self.logger.debug("Resetting repository %s to commit %s", self.repo.repo_name, self.repo.base_commit)
+            self.logger.debug(
+                "Resetting repository %s to commit %s",
+                self.repo.repo_name,
+                self.repo.base_commit,
+            )
             startup_commands.extend(self.repo.get_reset_commands())
             self.communicate(
                 input=" && ".join(startup_commands),
@@ -179,7 +191,11 @@ class SWEEnv:
         """
         self._chook.on_start_deployment()
         asyncio.run(self.deployment.start())
-        asyncio.run(self.deployment.runtime.create_session(CreateBashSessionRequest(startup_source=["/root/.bashrc"])))
+        asyncio.run(
+            self.deployment.runtime.create_session(
+                CreateBashSessionRequest(startup_source=["/root/.bashrc"])
+            )
+        )
         self.set_env_variables({"LANG": "C.UTF-8", "LC_ALL": "C.UTF-8"})
         self.logger.info("Environment Initialized")
 
@@ -212,7 +228,9 @@ class SWEEnv:
         self.logger.log(logging.TRACE, "Input:\n%s", input)  # type: ignore
         rex_check = "silent" if check else "ignore"
         r = asyncio.run(
-            self.deployment.runtime.run_in_session(BashAction(command=input, timeout=timeout, check=rex_check))
+            self.deployment.runtime.run_in_session(
+                BashAction(command=input, timeout=timeout, check=rex_check)
+            )
         )
         output = r.output
         self.logger.log(logging.TRACE, "Output:\n%s", output)  # type: ignore
@@ -225,7 +243,12 @@ class SWEEnv:
                 raise RuntimeError(msg)
         return output
 
-    def read_file(self, path: str | PurePath, encoding: str | None = None, errors: str | None = None) -> str:
+    def read_file(
+        self,
+        path: str | PurePath,
+        encoding: str | None = None,
+        errors: str | None = None,
+    ) -> str:
         """Read file contents from container
 
         Args:
@@ -239,20 +262,28 @@ class SWEEnv:
             file_contents: Contents of file as string
         """
         r = asyncio.run(
-            self.deployment.runtime.read_file(ReadFileRequest(path=str(path), encoding=encoding, errors=errors))
+            self.deployment.runtime.read_file(
+                ReadFileRequest(path=str(path), encoding=encoding, errors=errors)
+            )
         )
         return r.content
 
     def write_file(self, path: str | PurePath, content: str) -> None:
         """Write content to file in container"""
-        asyncio.run(self.deployment.runtime.write_file(WriteFileRequest(path=str(path), content=content)))
+        asyncio.run(
+            self.deployment.runtime.write_file(
+                WriteFileRequest(path=str(path), content=content)
+            )
+        )
 
     def set_env_variables(self, env_variables: dict[str, str]) -> None:
         """Set environment variables in the environment."""
         if not env_variables:
             self.logger.debug("No environment variables to set")
             return
-        _env_setters = [f"export {k}={shlex.quote(str(v))}" for k, v in env_variables.items()]
+        _env_setters = [
+            f"export {k}={shlex.quote(str(v))}" for k, v in env_variables.items()
+        ]
         command = " && ".join(_env_setters)
         self.communicate(command, check="raise")
 
@@ -266,5 +297,7 @@ class SWEEnv:
     ) -> None:
         """Execute a command in the environment independent of the session (i.e., as a subprocess)"""
         asyncio.run(
-            self.deployment.runtime.execute(RexCommand(command=command, shell=shell, check=check, env=env, cwd=cwd))
+            self.deployment.runtime.execute(
+                RexCommand(command=command, shell=shell, check=check, env=env, cwd=cwd)
+            )
         )

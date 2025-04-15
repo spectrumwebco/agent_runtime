@@ -12,7 +12,9 @@ def get_history(traj_path: Path):
 
 
 def count_elided_observations(history: History):
-    return len([entry for entry in history if "Old environment output" in entry["content"]])
+    return len(
+        [entry for entry in history if "Old environment output" in entry["content"]]
+    )
 
 
 @pytest.fixture
@@ -26,7 +28,9 @@ def test_history(test_trajectories_path: Path):
 def test_last_n_observations(test_history: History):
     processor = LastNObservations(n=3)
     new_history = processor(test_history)
-    total_observations = len([entry for entry in test_history if entry["message_type"] == "observation"])
+    total_observations = len(
+        [entry for entry in test_history if entry["message_type"] == "observation"]
+    )
     # extra -1 because instance template is kept
     expected_elided_observations = total_observations - 3 - 1
     assert count_elided_observations(new_history) == expected_elided_observations

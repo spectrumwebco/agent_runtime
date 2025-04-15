@@ -25,7 +25,12 @@ def append_exit(content):
                     "action": "Model Submission",
                     "response": "Submitting solution",
                     "observation": content["info"]["submission"],
-                    "messages": [{"role": "system", "content": f"Submission generated - {exit_status}"}],
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": f"Submission generated - {exit_status}",
+                        }
+                    ],
                 }
             )
         else:
@@ -78,14 +83,22 @@ def append_results(traj_path: Path, instance_id: str, content, results, results_
     status = []
     if results is None:
         status.append("Evaluation results not found")
-    elif "completed_ids" in results and "submitted_ids" in results and "resolved_ids" in results:
+    elif (
+        "completed_ids" in results
+        and "submitted_ids" in results
+        and "resolved_ids" in results
+    ):
         is_completed = instance_id in results["completed_ids"]
         is_submitted = instance_id in results["submitted_ids"]
         is_resolved = instance_id in results["resolved_ids"]
 
         status.append("**** Statuses ****")
-        status.append(f"  {'✅' if is_completed else '❌'} Completed (The agent successfully ran)")
-        status.append(f"  {'✅' if is_submitted else '❌'} Submitted (The agent successfully submitted a pull request)")
+        status.append(
+            f"  {'✅' if is_completed else '❌'} Completed (The agent successfully ran)"
+        )
+        status.append(
+            f"  {'✅' if is_submitted else '❌'} Submitted (The agent successfully submitted a pull request)"
+        )
         status.append(
             f"  {'✅' if is_resolved else '❌'} Resolved (The pull request {'' if is_resolved else 'has not '}"
             "successfully resolved the issue during eval)"
@@ -110,7 +123,9 @@ def append_results(traj_path: Path, instance_id: str, content, results, results_
         "action": "Showing evaluation results",
         "response": "Showing evaluation results",
         "observation": "\n".join([*stats, *status]),
-        "messages": [{"role": "system", "content": "Showing evaluation results and statistics"}],
+        "messages": [
+            {"role": "system", "content": "Showing evaluation results and statistics"}
+        ],
     }
 
     if not content.get("trajectory"):
@@ -150,7 +165,9 @@ def load_content(file_name, gold_patches, test_patches) -> dict[str, Any]:
     content = append_exit(content)
     content = append_patch(Path(file_name).stem, content, gold_patches, "Gold")
     content = append_patch(Path(file_name).stem, content, test_patches, "Test")
-    content["history"].insert(0, {"role": "Action Summary", "content": get_action_summary(content)})
+    content["history"].insert(
+        0, {"role": "Action Summary", "content": get_action_summary(content)}
+    )
     return append_results(
         Path(file_name),
         Path(file_name).stem,
@@ -254,7 +271,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(json.dumps(files).encode())
 
     def check_for_updates(self):
-        current_mod_times = {str(file): file.stat().st_mtime for file in Path(self.traj_dir).glob("**/*.traj")}
+        current_mod_times = {
+            str(file): file.stat().st_mtime
+            for file in Path(self.traj_dir).glob("**/*.traj")
+        }
         if current_mod_times != Handler.file_mod_times:
             Handler.file_mod_times = current_mod_times
             self.send_response(200)  # Send response that there's an update
@@ -271,7 +291,10 @@ def main(data_path, directory, port):
     data = []
     if data_path is not None:
         if data_path.endswith(".jsonl"):
-            data = [json.loads(x) for x in Path(data_path).read_text().splitlines(keepends=True)]
+            data = [
+                json.loads(x)
+                for x in Path(data_path).read_text().splitlines(keepends=True)
+            ]
         elif data_path.endswith(".json"):
             with open(data_path) as f:
                 data = json.load(f)
@@ -284,8 +307,12 @@ def main(data_path, directory, port):
                 with open(data_path) as f:
                     data = json.load(f)
 
-    gold_patches = {d["instance_id"]: d["patch"] if "patch" in d else None for d in data}
-    test_patches = {d["instance_id"]: d["test_patch"] if "test_patch" in d else None for d in data}
+    gold_patches = {
+        d["instance_id"]: d["patch"] if "patch" in d else None for d in data
+    }
+    test_patches = {
+        d["instance_id"]: d["test_patch"] if "test_patch" in d else None for d in data
+    }
 
     handler_with_directory = partial(
         Handler,
@@ -299,7 +326,9 @@ def main(data_path, directory, port):
             httpd.serve_forever()
     except OSError as e:
         if e.errno == 48:
-            print(f"ERROR: Port ({port}) is already in use. Try another port with the --port flag.")
+            print(
+                f"ERROR: Port ({port}) is already in use. Try another port with the --port flag."
+            )
         else:
             raise e
 
@@ -311,7 +340,13 @@ def get_parser():
         type=str,
         help="Path to dataset that was used for the trajectories. Necessary to display gold patches.",
     )
-    parser.add_argument("--directory", type=str, help="Directory to serve", default=os.getcwd(), nargs="?")
+    parser.add_argument(
+        "--directory",
+        type=str,
+        help="Directory to serve",
+        default=os.getcwd(),
+        nargs="?",
+    )
     parser.add_argument("--port", type=int, help="Port to serve", default=8000)
     return parser
 

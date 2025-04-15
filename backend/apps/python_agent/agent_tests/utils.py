@@ -4,7 +4,9 @@ import sys
 from pathlib import Path
 
 
-def make_python_tool_importable(file_path: str | Path, module_name: str | None = None) -> None:
+def make_python_tool_importable(
+    file_path: str | Path, module_name: str | None = None
+) -> None:
     """Import a Python executable script and add it to sys.modules.
 
     Args:

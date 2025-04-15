@@ -101,7 +101,9 @@ class MainUpdateHook(RunHook):
         self._wu = wu
 
     def on_start(self):
-        self._wu.up_env(message="Environment container initialized", format="text", type_="info")
+        self._wu.up_env(
+            message="Environment container initialized", format="text", type_="info"
+        )
 
     def on_end(self):
         self._wu.up_agent(message="The run has ended", format="text")

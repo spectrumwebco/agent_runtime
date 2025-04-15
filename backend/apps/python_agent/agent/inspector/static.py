@@ -42,7 +42,9 @@ try:
         STYLE_SHEET = infile.read()
 except Exception as e:
     style_file = Path(__file__).parent / "style.css"
-    logger.error(f"Failed to load style sheet from {style_file}: {traceback.format_exc()}")
+    logger.error(
+        f"Failed to load style sheet from {style_file}: {traceback.format_exc()}"
+    )
     raise e
 
 
@@ -60,7 +62,9 @@ def _load_file(file_name, gold_patches, test_patches):
         if "history" in content and isinstance(content["history"], list):
             history_content = ""
             for index, item in enumerate(content["history"]):
-                item_content = item.get("content", "").replace("<", "&lt;").replace(">", "&gt;")
+                item_content = (
+                    item.get("content", "").replace("<", "&lt;").replace(">", "&gt;")
+                )
                 if item.get("agent") and item["agent"] != "primary":
                     role_class = "subroutine"
                 else:
@@ -104,7 +108,12 @@ def save_static_viewer(file_path):
             if data_path.exists():
                 with open(data_path) as f:
                     data = json.load(f)
-            if not isinstance(data, list) or not data or "patch" not in data[0] or "test_patch" not in data[0]:
+            if (
+                not isinstance(data, list)
+                or not data
+                or "patch" not in data[0]
+                or "test_patch" not in data[0]
+            ):
                 data = []
     gold_patches = {x["instance_id"]: x["patch"] for x in data}
     test_patches = {x["instance_id"]: x["test_patch"] for x in data}
@@ -112,11 +121,15 @@ def save_static_viewer(file_path):
     file_path_tree = _make_file_path_tree(file_path.absolute().as_posix())
     icons_path = Path(__file__).parent / "icons"
     relative_icons_path = find_relative_path(file_path, icons_path)
-    style_sheet = STYLE_SHEET.replace("url('icons/", f"url('{relative_icons_path.as_posix()}/").replace(
+    style_sheet = STYLE_SHEET.replace(
+        "url('icons/", f"url('{relative_icons_path.as_posix()}/"
+    ).replace(
         'url("icons/',
         f'url("{relative_icons_path.as_posix()}/',
     )
-    data = TEMPLATE.format(file_content=content, style_sheet=style_sheet, file_path_tree=file_path_tree)
+    data = TEMPLATE.format(
+        file_content=content, style_sheet=style_sheet, file_path_tree=file_path_tree
+    )
     output_file = file_path.with_suffix(".html")
     with open(output_file, "w+") as outfile:
         print(data, file=outfile)
@@ -164,6 +177,8 @@ def save_all_trajectories(directory):
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("directory", type=str, help="Directory containing trajectory files")
+    parser.add_argument(
+        "directory", type=str, help="Directory containing trajectory files"
+    )
     args = parser.parse_args()
     save_all_trajectories(args.directory)

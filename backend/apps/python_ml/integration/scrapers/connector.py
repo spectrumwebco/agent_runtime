@@ -37,9 +37,9 @@ class ScraperMLConnector:
         self.output_dir = output_dir
         self.mlflow_tracking_uri = mlflow_tracking_uri
         self.feast_feature_server_url = feast_feature_server_url
-        
+
         os.makedirs(output_dir, exist_ok=True)
-        
+
         logging.basicConfig(
             level=logging.INFO,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -72,13 +72,13 @@ class ScraperMLConnector:
             Collection results
         """
         self.logger.info("Collecting training data from GitHub and Gitee")
-        
+
         collector = IssueCollector(
             github_api_key=github_api_key,
             gitee_api_key=gitee_api_key,
             output_dir=os.path.join(self.output_dir, "raw_data"),
         )
-        
+
         results = await collector.collect_and_save(
             topics=topics,
             languages=languages,
@@ -86,9 +86,11 @@ class ScraperMLConnector:
             max_repos_per_platform=max_repos_per_platform,
             max_issues_per_repo=max_issues_per_repo,
         )
-        
-        self.logger.info(f"Collected {len(results['combined_training_data'])} training examples")
-        
+
+        self.logger.info(
+            f"Collected {len(results['combined_training_data'])} training examples"
+        )
+
         return results
 
     def preprocess_training_data(
@@ -115,38 +117,40 @@ class ScraperMLConnector:
             Paths to preprocessed data files
         """
         self.logger.info(f"Preprocessing training data from {training_data_path}")
-        
+
         if output_path is None:
             output_path = os.path.join(self.output_dir, "preprocessed_data")
-        
+
         os.makedirs(output_path, exist_ok=True)
-        
+
         with open(training_data_path, "r") as f:
             training_data = json.load(f)
-        
+
         self.logger.info(f"Loaded {len(training_data)} training examples")
-        
+
         df = pd.DataFrame(training_data)
-        
+
         df = df.sample(frac=1, random_state=seed).reset_index(drop=True)
-        
+
         train_end = int(len(df) * train_ratio)
         val_end = train_end + int(len(df) * validation_ratio)
-        
+
         train_df = df[:train_end]
         val_df = df[train_end:val_end]
         test_df = df[val_end:]
-        
-        self.logger.info(f"Split data into {len(train_df)} training, {len(val_df)} validation, and {len(test_df)} test examples")
-        
+
+        self.logger.info(
+            f"Split data into {len(train_df)} training, {len(val_df)} validation, and {len(test_df)} test examples"
+        )
+
         train_path = os.path.join(output_path, "train.json")
         val_path = os.path.join(output_path, "validation.json")
         test_path = os.path.join(output_path, "test.json")
-        
+
         train_df.to_json(train_path, orient="records", indent=2)
         val_df.to_json(val_path, orient="records", indent=2)
         test_df.to_json(test_path, orient="records", indent=2)
-        
+
         metadata = {
             "dataset_name": "llama4-fine-tuning",
             "dataset_description": "Training data for fine-tuning Llama 4 models on software engineering tasks",
@@ -155,18 +159,41 @@ class ScraperMLConnector:
             "train_size": len(train_df),
             "validation_size": len(val_df),
             "test_size": len(test_df),
-            "topics": list(set([topic for example in training_data for topic in example.get("metadata", {}).get("topics", [])])),
-            "languages": list(set([example.get("metadata", {}).get("language") for example in training_data if example.get("metadata", {}).get("language")])),
-            "repositories": list(set([example.get("metadata", {}).get("repository") for example in training_data])),
+            "topics": list(
+                set(
+                    [
+                        topic
+                        for example in training_data
+                        for topic in example.get("metadata", {}).get("topics", [])
+                    ]
+                )
+            ),
+            "languages": list(
+                set(
+                    [
+                        example.get("metadata", {}).get("language")
+                        for example in training_data
+                        if example.get("metadata", {}).get("language")
+                    ]
+                )
+            ),
+            "repositories": list(
+                set(
+                    [
+                        example.get("metadata", {}).get("repository")
+                        for example in training_data
+                    ]
+                )
+            ),
             "created_at": datetime.now().isoformat(),
         }
-        
+
         metadata_path = os.path.join(output_path, "metadata.json")
         with open(metadata_path, "w") as f:
             json.dump(metadata, f, indent=2)
-        
+
         self.logger.info(f"Saved preprocessed data to {output_path}")
-        
+
         return {
             "train_path": train_path,
             "validation_path": val_path,
@@ -190,75 +217,80 @@ class ScraperMLConnector:
             Paths to feature store data files
         """
         self.logger.info(f"Creating feature store data from {training_data_path}")
-        
+
         if output_path is None:
             output_path = os.path.join(self.output_dir, "feature_store_data")
-        
+
         os.makedirs(output_path, exist_ok=True)
-        
+
         with open(training_data_path, "r") as f:
             training_data = json.load(f)
-        
+
         self.logger.info(f"Loaded {len(training_data)} training examples")
-        
+
         issue_features = []
         for example in training_data:
             metadata = example.get("metadata", {})
-            
+
             title_embedding = [0.0] * 384
             description_embedding = [0.0] * 384
             topic_vector = [0.0] * 50
-            
-            issue_features.append({
-                "issue_id": metadata.get("issue_id", 0),
-                "repository": metadata.get("repository", ""),
-                "title_embedding": title_embedding,
-                "description_embedding": description_embedding,
-                "topic_vector": topic_vector,
-                "language": metadata.get("language", ""),
-                "stars": metadata.get("stars", 0),
-                "issue_age_days": 0,  # Placeholder
-                "solution_length": len(example.get("output", "")),
-                "has_code": 1 if "```" in example.get("output", "") else 0,
-                "timestamp": datetime.now().isoformat(),
-                "created_timestamp": datetime.now().isoformat(),
-            })
-        
+
+            issue_features.append(
+                {
+                    "issue_id": metadata.get("issue_id", 0),
+                    "repository": metadata.get("repository", ""),
+                    "title_embedding": title_embedding,
+                    "description_embedding": description_embedding,
+                    "topic_vector": topic_vector,
+                    "language": metadata.get("language", ""),
+                    "stars": metadata.get("stars", 0),
+                    "issue_age_days": 0,  # Placeholder
+                    "solution_length": len(example.get("output", "")),
+                    "has_code": 1 if "```" in example.get("output", "") else 0,
+                    "timestamp": datetime.now().isoformat(),
+                    "created_timestamp": datetime.now().isoformat(),
+                }
+            )
+
         repository_features = []
         repositories = {}
-        
+
         for example in training_data:
             metadata = example.get("metadata", {})
             repo = metadata.get("repository", "")
-            
+
             if repo and repo not in repositories:
                 repositories[repo] = True
-                
+
                 repository_embedding = [0.0] * 384
-                
-                repository_features.append({
-                    "issue_id": metadata.get("issue_id", 0),
-                    "repository": repo,
-                    "repository_embedding": repository_embedding,
-                    "repository_stars": metadata.get("stars", 0),
-                    "repository_forks": 0,  # Placeholder
-                    "repository_age_days": 0,  # Placeholder
-                    "repository_topics": metadata.get("topics", [""] * 10)[:10] + [""] * (10 - len(metadata.get("topics", []))),
-                    "timestamp": datetime.now().isoformat(),
-                    "created_timestamp": datetime.now().isoformat(),
-                })
-        
+
+                repository_features.append(
+                    {
+                        "issue_id": metadata.get("issue_id", 0),
+                        "repository": repo,
+                        "repository_embedding": repository_embedding,
+                        "repository_stars": metadata.get("stars", 0),
+                        "repository_forks": 0,  # Placeholder
+                        "repository_age_days": 0,  # Placeholder
+                        "repository_topics": metadata.get("topics", [""] * 10)[:10]
+                        + [""] * (10 - len(metadata.get("topics", []))),
+                        "timestamp": datetime.now().isoformat(),
+                        "created_timestamp": datetime.now().isoformat(),
+                    }
+                )
+
         issue_df = pd.DataFrame(issue_features)
         repository_df = pd.DataFrame(repository_features)
-        
+
         issue_path = os.path.join(output_path, "issue_features.parquet")
         repository_path = os.path.join(output_path, "repository_features.parquet")
-        
+
         issue_df.to_parquet(issue_path, index=False)
         repository_df.to_parquet(repository_path, index=False)
-        
+
         self.logger.info(f"Saved feature store data to {output_path}")
-        
+
         return {
             "issue_features_path": issue_path,
             "repository_features_path": repository_path,
@@ -280,33 +312,39 @@ class ScraperMLConnector:
             Experiment ID
         """
         self.logger.info(f"Creating MLFlow experiment: {experiment_name}")
-        
+
         if self.mlflow_tracking_uri is None:
-            self.logger.warning("MLFlow tracking URI not set, skipping experiment creation")
+            self.logger.warning(
+                "MLFlow tracking URI not set, skipping experiment creation"
+            )
             return ""
-        
+
         try:
             import mlflow
-            
+
             mlflow.set_tracking_uri(self.mlflow_tracking_uri)
-            
+
             experiment = mlflow.get_experiment_by_name(experiment_name)
             if experiment is None:
                 experiment_id = mlflow.create_experiment(
                     name=experiment_name,
                     tags=metadata,
                 )
-                self.logger.info(f"Created MLFlow experiment: {experiment_name} (ID: {experiment_id})")
+                self.logger.info(
+                    f"Created MLFlow experiment: {experiment_name} (ID: {experiment_id})"
+                )
             else:
                 experiment_id = experiment.experiment_id
-                self.logger.info(f"Using existing MLFlow experiment: {experiment_name} (ID: {experiment_id})")
-            
+                self.logger.info(
+                    f"Using existing MLFlow experiment: {experiment_name} (ID: {experiment_id})"
+                )
+
             return experiment_id
-        
+
         except ImportError:
             self.logger.warning("MLFlow not installed, skipping experiment creation")
             return ""
-        
+
         except Exception as e:
             self.logger.error(f"Error creating MLFlow experiment: {str(e)}")
             return ""
@@ -331,12 +369,12 @@ class ScraperMLConnector:
             Training configuration
         """
         self.logger.info(f"Preparing training configuration for {model_type}")
-        
+
         if output_path is None:
             output_path = os.path.join(self.output_dir, "training_config")
-        
+
         os.makedirs(output_path, exist_ok=True)
-        
+
         config = {
             "model_type": model_type,
             "model_id": f"meta-llama/{model_type}",
@@ -366,13 +404,13 @@ class ScraperMLConnector:
                 "model_max_length": 4096,
             },
         }
-        
+
         config_path = os.path.join(output_path, f"{model_type}_config.json")
         with open(config_path, "w") as f:
             json.dump(config, f, indent=2)
-        
+
         self.logger.info(f"Saved training configuration to {config_path}")
-        
+
         return {
             "config": config,
             "config_path": config_path,
@@ -406,7 +444,7 @@ class ScraperMLConnector:
             Pipeline results
         """
         self.logger.info("Running full data pipeline")
-        
+
         collection_results = await self.collect_training_data(
             github_api_key=github_api_key,
             gitee_api_key=gitee_api_key,
@@ -416,15 +454,15 @@ class ScraperMLConnector:
             max_repos_per_platform=max_repos_per_platform,
             max_issues_per_repo=max_issues_per_repo,
         )
-        
+
         preprocessing_results = self.preprocess_training_data(
             training_data_path=collection_results["combined_training_data_path"],
         )
-        
+
         feature_store_results = self.create_feature_store_data(
             training_data_path=collection_results["combined_training_data_path"],
         )
-        
+
         experiment_id = self.create_mlflow_experiment(
             experiment_name="llama4-fine-tuning",
             metadata={
@@ -434,7 +472,7 @@ class ScraperMLConnector:
                 "model_types": ",".join(model_types),
             },
         )
-        
+
         training_configs = {}
         for model_type in model_types:
             training_configs[model_type] = self.prepare_training_config(
@@ -442,7 +480,7 @@ class ScraperMLConnector:
                 train_path=preprocessing_results["train_path"],
                 validation_path=preprocessing_results["validation_path"],
             )
-        
+
         pipeline_results = {
             "collection_results": collection_results,
             "preprocessing_results": preprocessing_results,
@@ -450,15 +488,23 @@ class ScraperMLConnector:
             "experiment_id": experiment_id,
             "training_configs": training_configs,
         }
-        
+
         pipeline_results_path = os.path.join(self.output_dir, "pipeline_results.json")
         with open(pipeline_results_path, "w") as f:
             serializable_results = {
                 "collection_results": {
-                    "github_issues_count": len(collection_results.get("github", {}).get("issues", [])),
-                    "gitee_issues_count": len(collection_results.get("gitee", {}).get("issues", [])),
-                    "combined_training_data_count": len(collection_results["combined_training_data"]),
-                    "combined_training_data_path": collection_results["combined_training_data_path"],
+                    "github_issues_count": len(
+                        collection_results.get("github", {}).get("issues", [])
+                    ),
+                    "gitee_issues_count": len(
+                        collection_results.get("gitee", {}).get("issues", [])
+                    ),
+                    "combined_training_data_count": len(
+                        collection_results["combined_training_data"]
+                    ),
+                    "combined_training_data_path": collection_results[
+                        "combined_training_data_path"
+                    ],
                 },
                 "preprocessing_results": preprocessing_results,
                 "feature_store_results": feature_store_results,
@@ -471,7 +517,7 @@ class ScraperMLConnector:
                 },
             }
             json.dump(serializable_results, f, indent=2)
-        
+
         self.logger.info(f"Saved pipeline results to {pipeline_results_path}")
-        
+
         return pipeline_results

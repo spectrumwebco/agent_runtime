@@ -53,7 +53,9 @@ class RemoteRuntime(AbstractRuntime):
         self._config = RemoteRuntimeConfig(**kwargs)
         self.logger = logger or get_logger("rex-runtime")
         if not self._config.host.startswith("http"):
-            self.logger.warning("Host %s does not start with http, adding http://", self._config.host)
+            self.logger.warning(
+                "Host %s does not start with http, adding http://", self._config.host
+            )
             self._config.host = f"http://{self._config.host}"
 
     @classmethod
@@ -88,7 +90,9 @@ class RemoteRuntime(AbstractRuntime):
             module_obj = __builtins__
         else:
             if module not in sys.modules:
-                self.logger.debug("Module %s not in sys.modules, trying to import it", module)
+                self.logger.debug(
+                    "Module %s not in sys.modules, trying to import it", module
+                )
                 try:
                     __import__(module)
                 except ImportError:
@@ -114,7 +118,9 @@ class RemoteRuntime(AbstractRuntime):
     def _handle_response_errors(self, response: requests.Response) -> None:
         """Raise exceptions found in the request response."""
         if response.status_code == 511:
-            exc_transfer = _ExceptionTransfer(**response.json()["agent_frameworkception"])
+            exc_transfer = _ExceptionTransfer(
+                **response.json()["agent_frameworkception"]
+            )
             self._handle_transfer_exception(exc_transfer)
         try:
             response.raise_for_status()
@@ -130,12 +136,16 @@ class RemoteRuntime(AbstractRuntime):
         """
         try:
             response = requests.get(
-                f"{self._api_url}/is_alive", headers=self._headers, timeout=self._get_timeout(timeout)
+                f"{self._api_url}/is_alive",
+                headers=self._headers,
+                timeout=self._get_timeout(timeout),
             )
             if response.status_code == 200:
                 return IsAliveResponse(**response.json())
             elif response.status_code == 511:
-                exc_transfer = _ExceptionTransfer(**response.json()["agent_frameworkception"])
+                exc_transfer = _ExceptionTransfer(
+                    **response.json()["agent_frameworkception"]
+                )
                 self._handle_transfer_exception(exc_transfer)
             msg = (
                 f"Status code {response.status_code} from {self._api_url}/is_alive. "
@@ -157,12 +167,16 @@ class RemoteRuntime(AbstractRuntime):
     def _request(self, endpoint: str, request: BaseModel | None, output_class: Any):
         """Small helper to make requests to the server and handle errors and output."""
         response = requests.post(
-            f"{self._api_url}/{endpoint}", json=request.model_dump() if request else None, headers=self._headers
+            f"{self._api_url}/{endpoint}",
+            json=request.model_dump() if request else None,
+            headers=self._headers,
         )
         self._handle_response_errors(response)
         return output_class(**response.json())
 
-    async def create_session(self, request: CreateSessionRequest) -> CreateSessionResponse:
+    async def create_session(
+        self, request: CreateSessionRequest
+    ) -> CreateSessionResponse:
         """Creates a new session."""
         return self._request("create_session", request, CreateSessionResponse)
 
@@ -189,7 +203,9 @@ class RemoteRuntime(AbstractRuntime):
     async def upload(self, request: UploadRequest) -> UploadResponse:
         """Uploads a file"""
         source = Path(request.source_path).resolve()
-        self.logger.debug("Uploading file from %s to %s", request.source_path, request.target_path)
+        self.logger.debug(
+            "Uploading file from %s to %s", request.source_path, request.target_path
+        )
         if source.is_dir():
             # Ignore cleanup errors: See https://github.com/SWE-agent/SWE-agent/issues/1005
             with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as temp_dir:
@@ -198,14 +214,23 @@ class RemoteRuntime(AbstractRuntime):
                 self.logger.debug("Created zip file at %s", zip_path)
                 files = {"file": zip_path.open("rb")}
                 data = {"target_path": request.target_path, "unzip": "true"}
-                response = requests.post(f"{self._api_url}/upload", files=files, data=data, headers=self._headers)
+                response = requests.post(
+                    f"{self._api_url}/upload",
+                    files=files,
+                    data=data,
+                    headers=self._headers,
+                )
                 self._handle_response_errors(response)
                 return UploadResponse(**response.json())
         elif source.is_file():
-            self.logger.debug("Uploading file from %s to %s", source, request.target_path)
+            self.logger.debug(
+                "Uploading file from %s to %s", source, request.target_path
+            )
             files = {"file": source.open("rb")}
             data = {"target_path": request.target_path, "unzip": "false"}
-            response = requests.post(f"{self._api_url}/upload", files=files, data=data, headers=self._headers)
+            response = requests.post(
+                f"{self._api_url}/upload", files=files, data=data, headers=self._headers
+            )
             self._handle_response_errors(response)
             return UploadResponse(**response.json())
         else:

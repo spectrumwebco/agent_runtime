@@ -12,7 +12,9 @@ from agent.utils.log import get_logger
 logger = get_logger("swea-config", emoji="🔧")
 
 
-def _convert_path_relative_to_repo_root(path: Path | str, root: Path | None = None) -> Path | str:
+def _convert_path_relative_to_repo_root(
+    path: Path | str, root: Path | None = None
+) -> Path | str:
     original_type = type(path)
     path = Path(path).resolve()
     root = Path(root or os.getenv("SWE_AGENT_CONFIG_ROOT", REPO_ROOT))
@@ -27,7 +29,9 @@ def _could_be_a_path(v: Any) -> bool:
         return False
 
 
-def _strip_abspath_from_dict(value: dict | list | str, root: Path | None = None) -> dict | list | str:
+def _strip_abspath_from_dict(
+    value: dict | list | str, root: Path | None = None
+) -> dict | list | str:
     root = Path(root or os.getenv("SWE_AGENT_CONFIG_ROOT", REPO_ROOT))
     if isinstance(value, dict):
         return {k: _strip_abspath_from_dict(v, root) for k, v in value.items()}

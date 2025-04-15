@@ -35,10 +35,22 @@ def test_is_github_repo_url():
 
 
 def test_parse_gh_repo_url():
-    assert _parse_gh_repo_url("https://github.com/SWE-agent/SWE-agent") == ("SWE-agent", "SWE-agent")
-    assert _parse_gh_repo_url("github.com/SWE-agent/SWE-agent") == ("SWE-agent", "SWE-agent")
-    assert _parse_gh_repo_url("github.com/SWE-agent/SWE-agent/asdfjsdfg") == ("SWE-agent", "SWE-agent")
-    assert _parse_gh_repo_url("git@github.com/SWE-agent/SWE-agent/asdfjsdfg") == ("SWE-agent", "SWE-agent")
+    assert _parse_gh_repo_url("https://github.com/SWE-agent/SWE-agent") == (
+        "SWE-agent",
+        "SWE-agent",
+    )
+    assert _parse_gh_repo_url("github.com/SWE-agent/SWE-agent") == (
+        "SWE-agent",
+        "SWE-agent",
+    )
+    assert _parse_gh_repo_url("github.com/SWE-agent/SWE-agent/asdfjsdfg") == (
+        "SWE-agent",
+        "SWE-agent",
+    )
+    assert _parse_gh_repo_url("git@github.com/SWE-agent/SWE-agent/asdfjsdfg") == (
+        "SWE-agent",
+        "SWE-agent",
+    )
 
 
 def test_parse_gh_repo_url_fails():

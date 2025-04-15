@@ -9,7 +9,10 @@ from typing_extensions import Self
 from apps.python_agent.agent_framework import PACKAGE_NAME, REMOTE_EXECUTABLE_NAME
 from apps.python_agent.agent_framework.deployment.abstract import AbstractDeployment
 from apps.python_agent.agent_framework.deployment.config import FargateDeploymentConfig
-from apps.python_agent.agent_framework.deployment.hooks.abstract import CombinedDeploymentHook, DeploymentHook
+from apps.python_agent.agent_framework.deployment.hooks.abstract import (
+    CombinedDeploymentHook,
+    DeploymentHook,
+)
 from apps.python_agent.agent_framework.exceptions import DeploymentNotStartedError
 from apps.python_agent.agent_framework.runtime.abstract import IsAliveResponse
 from apps.python_agent.agent_framework.runtime.remote import RemoteRuntime
@@ -58,7 +61,9 @@ class FargateDeployment(AbstractDeployment):
 
     def _init_aws(self):
         self._cluster_arn = get_cluster_arn(self._config.cluster_name)
-        self._execution_role_arn = get_execution_role_arn(execution_role_prefix=self._config.execution_role_prefix)
+        self._execution_role_arn = get_execution_role_arn(
+            execution_role_prefix=self._config.execution_role_prefix
+        )
         self._task_definition = get_task_definition(
             image_name=self._config.image,
             port=self._config.port,
@@ -93,14 +98,20 @@ class FargateDeployment(AbstractDeployment):
         else:
             # check if the task is running
             ecs_client = boto3.client("ecs")
-            task_details = ecs_client.describe_tasks(cluster=self._cluster_arn, tasks=[self._task_arn])
+            task_details = ecs_client.describe_tasks(
+                cluster=self._cluster_arn, tasks=[self._task_arn]
+            )
             if task_details["tasks"][0]["lastStatus"] != "RUNNING":
                 msg = f"Container process not running: {task_details['tasks'][0]['lastStatus']}"
                 raise RuntimeError(msg)
         return await self._runtime.is_alive(timeout=timeout)
 
     async def _wait_until_alive(self, timeout: float):
-        return await _wait_until_alive(self.is_alive, timeout=timeout, function_timeout=self._config.container_timeout)
+        return await _wait_until_alive(
+            self.is_alive,
+            timeout=timeout,
+            function_timeout=self._config.container_timeout,
+        )
 
     def _get_command(self, *, token: str) -> list[str]:
         main_command = f"{REMOTE_EXECUTABLE_NAME} --port {self._config.port}"
@@ -113,7 +124,9 @@ class FargateDeployment(AbstractDeployment):
         fallback_script = " && ".join(fallback_commands)
         # Wrap the entire command in bash -c to ensure timeout applies to everything
         inner_command = f"{main_command} || ( {fallback_script} )"
-        full_command = f"timeout {self._config.container_timeout}s bash -c '{inner_command}'"
+        full_command = (
+            f"timeout {self._config.container_timeout}s bash -c '{inner_command}'"
+        )
         assert full_command.startswith("timeout "), "command must start with timeout!"
         return [full_command]
 
@@ -137,7 +150,9 @@ class FargateDeployment(AbstractDeployment):
             cluster_arn=self._cluster_arn,
             **self._config.fargate_args,
         )
-        self.logger.info(f"Container task submitted: {self._task_arn} - waiting for it to start...")
+        self.logger.info(
+            f"Container task submitted: {self._task_arn} - waiting for it to start..."
+        )
         # wait until the container is running
         t0 = time.time()
         ecs_client = boto3.client("ecs")
@@ -156,7 +171,9 @@ class FargateDeployment(AbstractDeployment):
                 self.logger.warning(f"Failed to get CloudWatch Logs URL: {str(e)}")
         public_ip = get_public_ip(self._task_arn, self._cluster_arn)
         self.logger.info(f"Container public IP: {public_ip}")
-        self._runtime = RemoteRuntime(host=public_ip, port=self._config.port, auth_token=token, logger=self.logger)
+        self._runtime = RemoteRuntime(
+            host=public_ip, port=self._config.port, auth_token=token, logger=self.logger
+        )
         t0 = time.time()
         await self._wait_until_alive(timeout=self._config.runtime_timeout)
         self.logger.info(f"Runtime started in {time.time() - t0:.2f}s")

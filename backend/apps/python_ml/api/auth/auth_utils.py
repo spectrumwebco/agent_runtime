@@ -10,8 +10,11 @@ import logging
 import requests
 from typing import Dict, Optional, Tuple
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
+
 
 class AuthManager:
     """Authentication manager for ML Infrastructure API."""
@@ -66,7 +69,7 @@ class AuthManager:
         }
 
     @classmethod
-    def from_env(cls) -> 'AuthManager':
+    def from_env(cls) -> "AuthManager":
         """Create an AuthManager from environment variables."""
         return cls(
             base_url=os.environ.get("ML_API_BASE_URL"),

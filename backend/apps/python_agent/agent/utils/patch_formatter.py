@@ -25,7 +25,9 @@ class PatchFormatter:
         self._read_files(original=False)
 
     @staticmethod
-    def _merge_intervals(starts: list[int], stops: list[int]) -> tuple[list[int], list[int]]:
+    def _merge_intervals(
+        starts: list[int], stops: list[int]
+    ) -> tuple[list[int], list[int]]:
         """Given two lists of integers, starts and stops, merges all overlapping intervals.
 
         For example `starts=[1, 5, 18]`, `stops=[10, 13, 20]`
@@ -48,7 +50,9 @@ class PatchFormatter:
         merged_starts, merged_stops = zip(*merged)
         return list(merged_starts), list(merged_stops)
 
-    def format_file(self, text: str, starts: list[int], stops: list[int], *, linenos: bool = True) -> str:
+    def format_file(
+        self, text: str, starts: list[int], stops: list[int], *, linenos: bool = True
+    ) -> str:
         """Reads file and returns string representation of the relevant lines.
 
         Args:
@@ -66,7 +70,10 @@ class PatchFormatter:
         assert all(start >= 1 for start in starts)
         assert all(start < stop for start, stop in zip(starts, stops))
         starts, stops = self._merge_intervals(starts, stops)
-        assert all(hunk1_start < hunk2_start for hunk1_start, hunk2_start in zip(starts, starts[1:]))
+        assert all(
+            hunk1_start < hunk2_start
+            for hunk1_start, hunk2_start in zip(starts, starts[1:])
+        )
         out: list[str] = []
         if starts[0] > 1:
             # Count from 1
@@ -84,7 +91,11 @@ class PatchFormatter:
             # Count from 1
             these_lines = lines[start - 1 : stop - 1]
             if linenos:
-                out.append("\n".join([f"{i:6d}: {l}" for i, l in enumerate(these_lines, start=start)]))
+                out.append(
+                    "\n".join(
+                        [f"{i:6d}: {l}" for i, l in enumerate(these_lines, start=start)]
+                    )
+                )
             else:
                 out.append("\n".join(these_lines))
             last_stop = stop
@@ -95,7 +106,9 @@ class PatchFormatter:
             out.append(f"[{omitted} lines below omitted]")
         return "\n".join(out)
 
-    def _get_hunk_lines(self, original: bool, *, context_length: int) -> dict[str, tuple[list[int], list[int]]]:
+    def _get_hunk_lines(
+        self, original: bool, *, context_length: int
+    ) -> dict[str, tuple[list[int], list[int]]]:
         """Get the starts and stops for all files in the patch.
 
         Args:
@@ -144,9 +157,16 @@ class PatchFormatter:
             out.append(f"[File: {path}]\n{content}")
         return "\n\n".join(out)
 
-    def get_files_str(self, *, original: bool, context_length: int | None = 50, linenos: bool = True) -> str:
-        hunk_lines = self._get_hunk_lines(original=original, context_length=context_length)
+    def get_files_str(
+        self, *, original: bool, context_length: int | None = 50, linenos: bool = True
+    ) -> str:
+        hunk_lines = self._get_hunk_lines(
+            original=original, context_length=context_length
+        )
         sources = self._original_files if original else self._patched_files
         return self.concat_files_strings(
-            {path: self.format_file(text, *hunk_lines[path], linenos=linenos) for path, text in sources.items()}
+            {
+                path: self.format_file(text, *hunk_lines[path], linenos=linenos)
+                for path, text in sources.items()
+            }
         )

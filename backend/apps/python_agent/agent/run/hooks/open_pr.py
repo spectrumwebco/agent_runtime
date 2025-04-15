@@ -21,7 +21,9 @@ from agent.utils.log import get_logger
 
 
 # fixme: Bring back the ability to open the PR to a fork
-def open_pr(*, logger, token, env: SWEEnv, github_url, trajectory, _dry_run: bool = False) -> None:
+def open_pr(
+    *, logger, token, env: SWEEnv, github_url, trajectory, _dry_run: bool = False
+) -> None:
     """Create PR to repository
 
     Args:
@@ -43,11 +45,21 @@ def open_pr(*, logger, token, env: SWEEnv, github_url, trajectory, _dry_run: boo
         timeout=10,
         check="raise",
     )
-    env.communicate(input="rm -f model.patch", error_msg="Failed to remove model patch", timeout=10, check="raise")
     env.communicate(
-        input=f"git checkout -b {branch_name}", error_msg="Failed to switch to new branch", timeout=10, check="raise"
+        input="rm -f model.patch",
+        error_msg="Failed to remove model patch",
+        timeout=10,
+        check="raise",
     )
-    env.communicate(input="git add .", error_msg="Failed to add commits", timeout=10, check="raise")
+    env.communicate(
+        input=f"git checkout -b {branch_name}",
+        error_msg="Failed to switch to new branch",
+        timeout=10,
+        check="raise",
+    )
+    env.communicate(
+        input="git add .", error_msg="Failed to add commits", timeout=10, check="raise"
+    )
     dry_run_flag = "--allow-empty" if _dry_run else ""
     commit_msg = [
         shlex.quote("Fix: {issue.title}"),
@@ -152,29 +164,44 @@ class OpenPRHook(RunHook):
             return False
         if result.info.get("exit_status") != "submitted":
             self.logger.info(
-                "Not opening PR because exit status was %s and not submitted.", result.info.get("exit_status")
+                "Not opening PR because exit status was %s and not submitted.",
+                result.info.get("exit_status"),
             )
             return False
         try:
-            issue = _get_gh_issue_data(self._problem_statement.github_url, token=self._token)
+            issue = _get_gh_issue_data(
+                self._problem_statement.github_url, token=self._token
+            )
         except InvalidGithubURL:
-            self.logger.info("Currently only GitHub is supported to open PRs to. Skipping PR creation.")
+            self.logger.info(
+                "Currently only GitHub is supported to open PRs to. Skipping PR creation."
+            )
             return False
         if issue.state != "open":
-            self.logger.info(f"Issue is not open (state={issue.state}. Skipping PR creation.")
+            self.logger.info(
+                f"Issue is not open (state={issue.state}. Skipping PR creation."
+            )
             return False
         if issue.assignee:
-            self.logger.info("Issue is already assigned. Skipping PR creation. Be nice :)")
+            self.logger.info(
+                "Issue is already assigned. Skipping PR creation. Be nice :)"
+            )
             return False
         if issue.locked:
             self.logger.info("Issue is locked. Skipping PR creation.")
             return False
-        org, repo, issue_number = _parse_gh_issue_url(self._problem_statement.github_url)
-        associated_commits = _get_associated_commit_urls(org, repo, issue_number, token=self._token)
+        org, repo, issue_number = _parse_gh_issue_url(
+            self._problem_statement.github_url
+        )
+        associated_commits = _get_associated_commit_urls(
+            org, repo, issue_number, token=self._token
+        )
         if associated_commits:
             commit_url_strs = ", ".join(associated_commits)
             if self._config.skip_if_commits_reference_issue:
-                self.logger.info(f"Issue already has associated commits (see {commit_url_strs}). Skipping PR creation.")
+                self.logger.info(
+                    f"Issue already has associated commits (see {commit_url_strs}). Skipping PR creation."
+                )
                 return False
             else:
                 self.logger.warning(

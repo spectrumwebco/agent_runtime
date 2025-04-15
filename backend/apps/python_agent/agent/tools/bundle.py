@@ -51,7 +51,14 @@ class Bundle(BaseModel):
     @property
     def commands(self) -> list[Command]:
         return [
-            Command(name=tool, **tool_config.model_dump() if isinstance(tool_config, Command) else tool_config)
+            Command(
+                name=tool,
+                **(
+                    tool_config.model_dump()
+                    if isinstance(tool_config, Command)
+                    else tool_config
+                ),
+            )
             for tool, tool_config in self.config.tools.items()
             if tool not in self.hidden_tools
         ]

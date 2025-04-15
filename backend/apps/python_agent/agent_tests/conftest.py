@@ -79,7 +79,12 @@ def test_env_args(
 ) -> Generator[EnvironmentConfig]:
     """This will use a persistent container"""
     local_repo_path = tmpdir_factory.getbasetemp() / "test-repo"
-    clone_cmd = ["git", "clone", "https://github.com/swe-agent/test-repo", str(local_repo_path)]
+    clone_cmd = [
+        "git",
+        "clone",
+        "https://github.com/swe-agent/test-repo",
+        str(local_repo_path),
+    ]
     subprocess.run(clone_cmd, check=True)
     test_env_args = EnvironmentConfig(
         deployment=DockerDeploymentConfig(image="python:3.11"),
@@ -122,7 +127,12 @@ def swe_env_context(env_args):
 @pytest.fixture
 def swe_agent_test_repo_clone(tmp_path):
     local_repo_path = tmp_path / "test-repo"
-    clone_cmd = ["git", "clone", "https://github.com/swe-agent/test-repo", local_repo_path]
+    clone_cmd = [
+        "git",
+        "clone",
+        "https://github.com/swe-agent/test-repo",
+        local_repo_path,
+    ]
     subprocess.run(clone_cmd, check=True)
     return local_repo_path
 

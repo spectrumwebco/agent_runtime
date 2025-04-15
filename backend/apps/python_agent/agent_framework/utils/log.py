@@ -39,7 +39,9 @@ class _RichHandlerWithEmoji(RichHandler):
 
     def get_level_text(self, record: logging.LogRecord) -> Text:
         level_name = record.levelname
-        return Text.styled((self.emoji + level_name).ljust(10), f"logging.level.{level_name.lower()}")
+        return Text.styled(
+            (self.emoji + level_name).ljust(10), f"logging.level.{level_name.lower()}"
+        )
 
 
 def get_logger(name: str, *, emoji: str = "🦖") -> logging.Logger:

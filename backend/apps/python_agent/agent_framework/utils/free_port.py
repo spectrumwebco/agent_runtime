@@ -19,7 +19,9 @@ def find_free_port(max_attempts: int = 10, sleep_between_attempts: float = 0.1) 
                     _REGISTERED_PORTS.add(port)
                     logger.debug(f"Found free port {port}")
                     return port
-            logger.debug(f"Port {port} already registered, trying again after {sleep_between_attempts}s")
+            logger.debug(
+                f"Port {port} already registered, trying again after {sleep_between_attempts}s"
+            )
         time.sleep(sleep_between_attempts)
     msg = f"Failed to find a unique free port after {max_attempts} attempts"
     raise RuntimeError(msg)

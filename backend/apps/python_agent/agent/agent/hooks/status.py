@@ -25,7 +25,9 @@ class SetStatusAgentHook(AbstractAgentHook):
     def on_step_start(self):
         self._i_step += 1
         attempt_str = f"Attempt {self._i_attempt} " if self._i_attempt > 1 else ""
-        self._update(f"{attempt_str}Step {self._i_step:>3} (${self._previous_cost + self._cost:.2f})")
+        self._update(
+            f"{attempt_str}Step {self._i_step:>3} (${self._previous_cost + self._cost:.2f})"
+        )
 
     def on_step_done(self, *, step: StepOutput, info: AgentInfo):
         self._cost = info["model_stats"]["instance_cost"]  # type: ignore

@@ -255,15 +255,23 @@ def load_datasets(data_config):
     )
 
     if data_config.max_train_samples is not None:
-        max_train_samples = min(len(raw_datasets["train"]), data_config.max_train_samples)
+        max_train_samples = min(
+            len(raw_datasets["train"]), data_config.max_train_samples
+        )
         raw_datasets["train"] = raw_datasets["train"].select(range(max_train_samples))
 
     if data_config.max_eval_samples is not None:
-        max_eval_samples = min(len(raw_datasets["validation"]), data_config.max_eval_samples)
-        raw_datasets["validation"] = raw_datasets["validation"].select(range(max_eval_samples))
+        max_eval_samples = min(
+            len(raw_datasets["validation"]), data_config.max_eval_samples
+        )
+        raw_datasets["validation"] = raw_datasets["validation"].select(
+            range(max_eval_samples)
+        )
 
     if "test" in raw_datasets and data_config.max_predict_samples is not None:
-        max_predict_samples = min(len(raw_datasets["test"]), data_config.max_predict_samples)
+        max_predict_samples = min(
+            len(raw_datasets["test"]), data_config.max_predict_samples
+        )
         raw_datasets["test"] = raw_datasets["test"].select(range(max_predict_samples))
 
     return raw_datasets
@@ -283,14 +291,14 @@ def preprocess_function(examples, tokenizer, data_config):
     """
     inputs = examples[data_config.input_column]
     targets = examples[data_config.output_column]
-    
+
     model_inputs = tokenizer(
         inputs,
         max_length=data_config.max_seq_length,
         padding="max_length" if data_config.pad_to_max_length else False,
         truncation=True,
     )
-    
+
     with tokenizer.as_target_tokenizer():
         labels = tokenizer(
             targets,
@@ -298,9 +306,9 @@ def preprocess_function(examples, tokenizer, data_config):
             padding="max_length" if data_config.pad_to_max_length else False,
             truncation=True,
         )
-    
+
     model_inputs["labels"] = labels["input_ids"]
-    
+
     return model_inputs
 
 
@@ -344,9 +352,9 @@ def main():
     )
 
     logger.info(f"Loading model {model_config.model_id}")
-    
+
     quantization_config = model_config.get_quantization_config()
-    
+
     model = AutoModelForCausalLM.from_pretrained(
         model_config.model_id,
         use_auth_token=data_config.use_auth_token,
@@ -355,14 +363,14 @@ def main():
 
     if model_config.use_lora:
         logger.info("Applying LoRA")
-        
+
         if model_config.use_8bit_quantization or model_config.use_4bit_quantization:
             model = prepare_model_for_kbit_training(model)
-        
+
         lora_config = LoraConfig(**model_config.get_lora_config())
-        
+
         model = get_peft_model(model, lora_config)
-        
+
         logger.info(f"LoRA configuration: {lora_config}")
 
     logger.info("Creating training arguments")
@@ -374,7 +382,9 @@ def main():
     data_collator = DataCollatorForSeq2Seq(
         tokenizer,
         model=model,
-        label_pad_token_id=-100 if data_config.ignore_pad_token_for_loss else tokenizer.pad_token_id,
+        label_pad_token_id=(
+            -100 if data_config.ignore_pad_token_for_loss else tokenizer.pad_token_id
+        ),
         pad_to_multiple_of=8 if training_args.fp16 else None,
     )
 
@@ -390,29 +400,33 @@ def main():
 
     logger.info("Training model")
     train_result = trainer.train()
-    
+
     logger.info(f"Saving model to {model_config.output_dir}")
     trainer.save_model()
-    
+
     tokenizer.save_pretrained(model_config.output_dir)
-    
+
     trainer.save_args()
-    
-    trainer.state.save_to_json(os.path.join(model_config.output_dir, "trainer_state.json"))
-    
+
+    trainer.state.save_to_json(
+        os.path.join(model_config.output_dir, "trainer_state.json")
+    )
+
     metrics = train_result.metrics
     trainer.log_metrics("train", metrics)
     trainer.save_metrics("train", metrics)
-    
+
     logger.info("Evaluating model")
     eval_metrics = trainer.evaluate()
     trainer.log_metrics("eval", eval_metrics)
     trainer.save_metrics("eval", eval_metrics)
-    
-    model_config.save_to_json(os.path.join(model_config.output_dir, "model_config.json"))
-    
+
+    model_config.save_to_json(
+        os.path.join(model_config.output_dir, "model_config.json")
+    )
+
     data_config.save_to_json(os.path.join(model_config.output_dir, "data_config.json"))
-    
+
     logger.info("Fine-tuning completed successfully")
 
 

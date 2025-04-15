@@ -17,7 +17,9 @@ def _async_raise(tid, exctype):
     if not inspect.isclass(exctype):
         msg = "Only types can be raised (not instances)"
         raise TypeError(msg)
-    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(ctypes.c_long(tid), ctypes.py_object(exctype))
+    res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
+        ctypes.c_long(tid), ctypes.py_object(exctype)
+    )
     if res == 0:
         msg = "invalid thread id"
         raise ValueError(msg)

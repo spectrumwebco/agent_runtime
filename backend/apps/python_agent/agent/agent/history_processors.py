@@ -114,9 +114,12 @@ class LastNObservations(BaseModel):
         observation_indices = [
             idx
             for idx, entry in enumerate(history)
-            if entry["message_type"] == "observation" and not entry.get("is_demo", False)
+            if entry["message_type"] == "observation"
+            and not entry.get("is_demo", False)
         ]
-        last_removed_idx = max(0, (len(observation_indices) // self.polling) * self.polling - self.n)
+        last_removed_idx = max(
+            0, (len(observation_indices) // self.polling) * self.polling - self.n
+        )
         # Note: We never remove the first observation, as it is the instance template
         return observation_indices[1:last_removed_idx]
 
@@ -125,17 +128,21 @@ class LastNObservations(BaseModel):
         omit_content_idxs = self._get_omit_indices(history)
         for idx, entry in enumerate(history):
             tags = set(entry.get("tags", []))
-            if ((idx not in omit_content_idxs) or (tags & self.always_keep_output_for_tags)) and not (
-                tags & self.always_remove_output_for_tags
-            ):
+            if (
+                (idx not in omit_content_idxs)
+                or (tags & self.always_keep_output_for_tags)
+            ) and not (tags & self.always_remove_output_for_tags):
                 new_history.append(entry)
             else:
                 data = entry.copy()
-                assert data["message_type"] == "observation", (
-                    f"Expected observation for dropped entry, got: {data['message_type']}"
-                )
+                assert (
+                    data["message_type"] == "observation"
+                ), f"Expected observation for dropped entry, got: {data['message_type']}"
                 text = _get_content_text(data)
-                _set_content_text(data, f"Old environment output: ({len(text.splitlines())} lines omitted)")
+                _set_content_text(
+                    data,
+                    f"Old environment output: ({len(text.splitlines())} lines omitted)",
+                )
                 new_history.append(data)
         return new_history
 

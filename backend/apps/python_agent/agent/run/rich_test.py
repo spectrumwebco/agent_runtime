@@ -38,14 +38,18 @@ class RunBatch:
 
         # Create a spinner for this task
         with progress_lock:
-            spinner_task_id = self._task_progress_bar.add_task(f"Task {task_id}", total=None)
+            spinner_task_id = self._task_progress_bar.add_task(
+                f"Task {task_id}", total=None
+            )
 
         logger.info("Starting task %d", task_id)
         # Startup
         time.sleep(random() * 4.5)
         # Work
         with progress_lock:
-            self._task_progress_bar.update(spinner_task_id, description=f"Task {task_id} (working)")
+            self._task_progress_bar.update(
+                spinner_task_id, description=f"Task {task_id} (working)"
+            )
         time.sleep(random() * 4.5 + 2)
         logger.info("Finished task %d", task_id)
 
@@ -74,12 +78,16 @@ class RunBatch:
 
         with Live(group):
             # Add main progress bar
-            self._main_task_id = self._main_progress_bar.add_task("[cyan]Overall Progress", total=len(self.tasks))
+            self._main_task_id = self._main_progress_bar.add_task(
+                "[cyan]Overall Progress", total=len(self.tasks)
+            )
 
             # Create thread pool and run tasks
             with ThreadPoolExecutor(max_workers=5) as executor:
                 # Submit all tasks
-                futures = [executor.submit(self.do_task, task_id) for task_id in self.tasks]
+                futures = [
+                    executor.submit(self.do_task, task_id) for task_id in self.tasks
+                ]
 
                 # Wait for all tasks to complete
                 for future in futures:

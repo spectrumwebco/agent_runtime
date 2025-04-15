@@ -6,7 +6,10 @@ from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from agent.utils.github import _get_problem_statement_from_github_issue, _parse_gh_issue_url
+from agent.utils.github import (
+    _get_problem_statement_from_github_issue,
+    _parse_gh_issue_url,
+)
 from agent.utils.log import get_logger
 
 logger = get_logger("swea-config", emoji="🔧")
@@ -86,8 +89,13 @@ class FileProblemStatement(BaseModel):
 
     def model_post_init(self, __context: Any) -> None:
         if self.id is None:
-            logger.info("Setting problem statement id to hash of file contents (path: %s)", self.path)
-            self.id = hashlib.sha256(self.get_problem_statement().encode()).hexdigest()[:6]
+            logger.info(
+                "Setting problem statement id to hash of file contents (path: %s)",
+                self.path,
+            )
+            self.id = hashlib.sha256(self.get_problem_statement().encode()).hexdigest()[
+                :6
+            ]
 
     def get_problem_statement(self) -> str:
         return self.path.read_text()
@@ -119,13 +127,17 @@ class GithubIssue(BaseModel):
 
     def get_problem_statement(self) -> str:
         owner, repo, issue_number = _parse_gh_issue_url(self.github_url)
-        return _get_problem_statement_from_github_issue(owner, repo, issue_number, token=os.getenv("GITHUB_TOKEN"))
+        return _get_problem_statement_from_github_issue(
+            owner, repo, issue_number, token=os.getenv("GITHUB_TOKEN")
+        )
 
     def get_extra_fields(self) -> dict[str, Any]:
         return self.extra_fields
 
 
-ProblemStatementConfig = TextProblemStatement | GithubIssue | EmptyProblemStatement | FileProblemStatement
+ProblemStatementConfig = (
+    TextProblemStatement | GithubIssue | EmptyProblemStatement | FileProblemStatement
+)
 
 
 def problem_statement_from_simplified_input(

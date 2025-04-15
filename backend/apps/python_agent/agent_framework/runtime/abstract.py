@@ -32,7 +32,9 @@ class CreateBashSessionRequest(BaseModel):
     """The timeout for the startup commands."""
 
 
-CreateSessionRequest = Annotated[CreateBashSessionRequest, Field(discriminator="session_type")]
+CreateSessionRequest = Annotated[
+    CreateBashSessionRequest, Field(discriminator="session_type")
+]
 """Union type for all create session requests. Do not use this directly."""
 
 
@@ -43,7 +45,9 @@ class CreateBashSessionResponse(BaseModel):
     session_type: Literal["bash"] = "bash"
 
 
-CreateSessionResponse = Annotated[CreateBashSessionResponse, Field(discriminator="session_type")]
+CreateSessionResponse = Annotated[
+    CreateBashSessionResponse, Field(discriminator="session_type")
+]
 """Union type for all create session responses. Do not use this directly."""
 
 
@@ -128,7 +132,9 @@ class CloseBashSessionRequest(BaseModel):
     session_type: Literal["bash"] = "bash"
 
 
-CloseSessionRequest = Annotated[CloseBashSessionRequest, Field(discriminator="session_type")]
+CloseSessionRequest = Annotated[
+    CloseBashSessionRequest, Field(discriminator="session_type")
+]
 """Union type for all close session requests. Do not use this directly."""
 
 
@@ -136,7 +142,9 @@ class CloseBashSessionResponse(BaseModel):
     session_type: Literal["bash"] = "bash"
 
 
-CloseSessionResponse = Annotated[CloseBashSessionResponse, Field(discriminator="session_type")]
+CloseSessionResponse = Annotated[
+    CloseBashSessionResponse, Field(discriminator="session_type")
+]
 """Union type for all close session responses. Do not use this directly."""
 
 
@@ -242,7 +250,9 @@ class AbstractRuntime(ABC):
         pass
 
     @abstractmethod
-    async def create_session(self, request: CreateSessionRequest) -> CreateSessionResponse:
+    async def create_session(
+        self, request: CreateSessionRequest
+    ) -> CreateSessionResponse:
         """Creates a new session (e.g., a bash shell)."""
         pass
 

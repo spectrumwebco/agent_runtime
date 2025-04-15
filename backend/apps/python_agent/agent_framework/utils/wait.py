@@ -3,7 +3,10 @@ from collections.abc import Callable
 
 
 async def _wait_until_alive(
-    function: Callable, timeout: float = 10.0, function_timeout: float | None = 0.1, sleep: float = 0.25
+    function: Callable,
+    timeout: float = 10.0,
+    function_timeout: float | None = 0.1,
+    sleep: float = 0.25,
 ):
     """Wait until the function returns a truthy value.
 

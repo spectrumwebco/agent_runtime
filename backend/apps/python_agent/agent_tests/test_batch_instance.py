@@ -5,18 +5,28 @@ from swerex.deployment.config import DockerDeploymentConfig
 
 from agent.agent.problem_statement import TextProblemStatement
 from agent.environment.repo import PreExistingRepoConfig
-from agent.run.batch_instances import BatchInstance, SimpleBatchInstance, SWEBenchInstances, _slice_spec_to_slice
+from agent.run.batch_instances import (
+    BatchInstance,
+    SimpleBatchInstance,
+    SWEBenchInstances,
+    _slice_spec_to_slice,
+)
 
 
 def test_simple_batch_from_swe_bench_to_full_batch_instance(test_data_sources_path):
-    sb_instance = json.loads((test_data_sources_path / "swe-bench-dev-easy.json").read_text())[0]
+    sb_instance = json.loads(
+        (test_data_sources_path / "swe-bench-dev-easy.json").read_text()
+    )[0]
     instance = SimpleBatchInstance.from_swe_bench(sb_instance).to_full_batch_instance(
         DockerDeploymentConfig(image="python:3.11")
     )
     assert isinstance(instance.env.repo, PreExistingRepoConfig)
     assert instance.env.repo.repo_name == "testbed"
     assert isinstance(instance.env.deployment, DockerDeploymentConfig)
-    assert instance.env.deployment.image == "swebench/sweb.eval.x86_64.pydicom_1776_pydicom-1458:latest"
+    assert (
+        instance.env.deployment.image
+        == "swebench/sweb.eval.x86_64.pydicom_1776_pydicom-1458:latest"
+    )
     assert isinstance(instance.problem_statement, TextProblemStatement)
     assert instance.problem_statement.text == sb_instance["problem_statement"]
     assert instance.problem_statement.id == "pydicom__pydicom-1458"

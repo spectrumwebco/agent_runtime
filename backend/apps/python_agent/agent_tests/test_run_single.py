@@ -22,7 +22,9 @@ class RaisesExceptionHook(RunHook):
 
 @pytest.mark.slow
 def test_run_single_raises_exception():
-    rsc = RunSingleConfig(agent=DefaultAgentConfig(model=InstantEmptySubmitModelConfig()))
+    rsc = RunSingleConfig(
+        agent=DefaultAgentConfig(model=InstantEmptySubmitModelConfig())
+    )
     rs = RunSingle.from_config(rsc)
     rs.add_hook(RaisesExceptionHook())
     with pytest.raises(ValueError, match="test exception"):
@@ -91,9 +93,15 @@ def test_run_ies_repo_ps_matrix(
     for fmt in output_formats:
         assert not list(Path(tmpdir).glob(f"*.{fmt}"))
     if problem_statement_source == "github":
-        ps_args = ["--problem_statement.github_url", "https://github.com/swe-agent/test-repo/issues/1"]
+        ps_args = [
+            "--problem_statement.github_url",
+            "https://github.com/swe-agent/test-repo/issues/1",
+        ]
     elif problem_statement_source == "local":
-        ps_args = ["--problem_statement.path", str(swe_agent_test_repo_clone / "problem_statements" / "1.md")]
+        ps_args = [
+            "--problem_statement.path",
+            str(swe_agent_test_repo_clone / "problem_statements" / "1.md"),
+        ]
     elif problem_statement_source == "text":
         ps_args = ["--problem_statement.text='this is a test'"]
     else:

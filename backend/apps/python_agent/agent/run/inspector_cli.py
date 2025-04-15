@@ -47,7 +47,14 @@ class TrajectoryViewer(Static):
         Binding("k,up", "scroll_up", "Scroll up"),
     ]
 
-    def __init__(self, path: Path, title: str, overview_stats: dict, *, gold_patch: str | None = None):
+    def __init__(
+        self,
+        path: Path,
+        title: str,
+        overview_stats: dict,
+        *,
+        gold_patch: str | None = None,
+    ):
         """View a single trajectory."""
         super().__init__()
         self.i_step = -1
@@ -57,7 +64,14 @@ class TrajectoryViewer(Static):
         self.overview_stats = overview_stats
         self.gold_patch = gold_patch
 
-    def load_trajectory(self, path: Path, title: str, overview_stats: dict, *, gold_patch: str | None = None):
+    def load_trajectory(
+        self,
+        path: Path,
+        title: str,
+        overview_stats: dict,
+        *,
+        gold_patch: str | None = None,
+    ):
         """Load a new trajectory and update the viewer."""
         print("Loading", path)
         self.trajectory = json.loads(path.read_text())
@@ -82,12 +96,16 @@ class TrajectoryViewer(Static):
     def _show_step_yaml(self, item: dict) -> None:
         """Show full yaml of trajectory item"""
         content_str = _yaml_serialization_with_linebreaks(
-            _move_items_top(item, ["thought", "action", "observation", "response", "execution_time"])
+            _move_items_top(
+                item, ["thought", "action", "observation", "response", "execution_time"]
+            )
         )
         syntax = Syntax(content_str, "yaml", theme="monokai", word_wrap=True)
         content = self.query_one("#content")
         content.update(syntax)  # type: ignore
-        self.app.sub_title = f"{self.title} - Step {self.i_step + 1}/{self.n_steps} - Full View"
+        self.app.sub_title = (
+            f"{self.title} - Step {self.i_step + 1}/{self.n_steps} - Full View"
+        )
 
     def _show_step_simple(self, item: dict) -> None:
         # Simplified view - show action and observation as plain text
@@ -95,21 +113,36 @@ class TrajectoryViewer(Static):
         action = item.get("action", "")
         observation = item.get("observation", "")
 
-        content_str = f"THOUGHT:\n{thought}\n\nACTION:\n{action}\n\nOBSERVATION:\n{observation}"
+        content_str = (
+            f"THOUGHT:\n{thought}\n\nACTION:\n{action}\n\nOBSERVATION:\n{observation}"
+        )
         content = self.query_one("#content")
         content.update(content_str)  # type: ignore
 
-        self.app.sub_title = f"{self.title} - Step {self.i_step + 1}/{self.n_steps} - Simple View"
+        self.app.sub_title = (
+            f"{self.title} - Step {self.i_step + 1}/{self.n_steps} - Simple View"
+        )
 
     def _show_info(self):
         info = copy.deepcopy(self.trajectory["info"])
         info["result"] = self.overview_stats["result"]
         info["gold_patch"] = self.gold_patch
-        info = _move_items_top(info, ["result", "exit_status", "model_stats", "submission", "gold_patch"])
-        syntax = Syntax(_yaml_serialization_with_linebreaks(info), "yaml", theme="monokai", word_wrap=True)
+        info = _move_items_top(
+            info, ["result", "exit_status", "model_stats", "submission", "gold_patch"]
+        )
+        syntax = Syntax(
+            _yaml_serialization_with_linebreaks(info),
+            "yaml",
+            theme="monokai",
+            word_wrap=True,
+        )
         content = self.query_one("#content")
         content.update(syntax)  # type: ignore
-        next_help = "Press l to see step 1" if self.i_step < 0 else f"Press h to see step {self.n_steps}"
+        next_help = (
+            "Press l to see step 1"
+            if self.i_step < 0
+            else f"Press h to see step {self.n_steps}"
+        )
         self.app.sub_title = f"{self.title} - Info ({next_help})"
 
     def update_content(self) -> None:
@@ -197,9 +230,15 @@ class TrajectorySelectorScreen(ModalScreen[int]):
                 id="title",
                 markup=False,
             )
-            yield Input(placeholder="Type to filter (auto-select if only one item remains)...", id="filter-input")
+            yield Input(
+                placeholder="Type to filter (auto-select if only one item remains)...",
+                id="filter-input",
+            )
             yield ListView(
-                *[ListItem(Static(p, markup=False)) for p in self._get_list_item_texts(self.paths)],
+                *[
+                    ListItem(Static(p, markup=False))
+                    for p in self._get_list_item_texts(self.paths)
+                ],
                 id="trajectory-list",
                 initial_index=self.current_index,
             )
@@ -213,7 +252,9 @@ class TrajectorySelectorScreen(ModalScreen[int]):
         list_view = self.query_one("#trajectory-list", ListView)
 
         # Filter items and keep track of original indices
-        self.filtered_indices = [i for i, item in enumerate(self.all_items) if filter_text in item.lower()]
+        self.filtered_indices = [
+            i for i, item in enumerate(self.all_items) if filter_text in item.lower()
+        ]
         filtered_items = [self.all_items[i] for i in self.filtered_indices]
 
         if len(filtered_items) == 1:
@@ -295,7 +336,9 @@ class FileViewerScreen(ModalScreen):
                 if self.path.suffix == ".traj" and not truncated:
                     # Syntax highlighting breaks if we truncate
                     content_str = _yaml_serialization_with_linebreaks(json.loads(text))
-                    syntax = Syntax(content_str, "yaml", theme="monokai", word_wrap=True)
+                    syntax = Syntax(
+                        content_str, "yaml", theme="monokai", word_wrap=True
+                    )
                     yield Static(syntax, markup=False)
                 else:
                     yield Static(text, markup=False)
@@ -313,7 +356,10 @@ class FileViewerScreen(ModalScreen):
     def action_open_editor(self) -> None:
         editor = os.environ.get("EDITOR")
         if not editor:
-            self.app.notify("No editor found in $EDITOR environment variable, cannot perform action", severity="error")
+            self.app.notify(
+                "No editor found in $EDITOR environment variable, cannot perform action",
+                severity="error",
+            )
             return
         try:
             subprocess.run([editor, str(self.path)], check=True)
@@ -404,9 +450,15 @@ class TrajectoryInspectorApp(App):
 
         for instance_id, info in all_infos:
             self.overview_stats[instance_id]["info"] = info
-            self.overview_stats[instance_id]["exit_status"] = info.get("exit_status", "?")
-            self.overview_stats[instance_id]["api_calls"] = info.get("model_stats", {}).get("api_calls", 0)
-            self.overview_stats[instance_id]["cost"] = info.get("model_stats", {}).get("instance_cost", 0)
+            self.overview_stats[instance_id]["exit_status"] = info.get(
+                "exit_status", "?"
+            )
+            self.overview_stats[instance_id]["api_calls"] = info.get(
+                "model_stats", {}
+            ).get("api_calls", 0)
+            self.overview_stats[instance_id]["cost"] = info.get("model_stats", {}).get(
+                "instance_cost", 0
+            )
 
     def _get_viewer_title(self, index: int) -> str:
         instance_id = self.available_traj_paths[index].stem
@@ -437,27 +489,37 @@ class TrajectoryInspectorApp(App):
             yield TrajectoryViewer(
                 self.available_traj_paths[self.trajectory_index],
                 self._get_viewer_title(self.trajectory_index),
-                self.overview_stats[self.available_traj_paths[self.trajectory_index].stem],
+                self.overview_stats[
+                    self.available_traj_paths[self.trajectory_index].stem
+                ],
             )
         yield Footer()
 
     def action_next_traj(self):
-        self.trajectory_index = (self.trajectory_index + 1) % len(self.available_traj_paths)
+        self.trajectory_index = (self.trajectory_index + 1) % len(
+            self.available_traj_paths
+        )
         self._load_traj()
 
     def action_previous_traj(self):
-        self.trajectory_index = (self.trajectory_index - 1) % len(self.available_traj_paths)
+        self.trajectory_index = (self.trajectory_index - 1) % len(
+            self.available_traj_paths
+        )
         self._load_traj()
 
     async def action_show_traj_selector(self) -> None:
-        selector = TrajectorySelectorScreen(self.available_traj_paths, self.trajectory_index, self.overview_stats)
+        selector = TrajectorySelectorScreen(
+            self.available_traj_paths, self.trajectory_index, self.overview_stats
+        )
 
         def handler(index: int | None):
             if index is not None:
                 self.trajectory_index = index
                 self._load_traj()
 
-        await self.push_screen(selector, handler)  # This returns when the modal is dismissed
+        await self.push_screen(
+            selector, handler
+        )  # This returns when the modal is dismissed
 
     async def action_show_log(self) -> None:
         current_traj = self.available_traj_paths[self.trajectory_index]
@@ -480,7 +542,12 @@ def main(args: list[str] | None = None):
         default=os.getcwd(),
         nargs="?",
     )
-    parser.add_argument("-d", "--data_path", type=Path, help="Path to the data file to load gold patches from")
+    parser.add_argument(
+        "-d",
+        "--data_path",
+        type=Path,
+        help="Path to the data file to load gold patches from",
+    )
     parsed_args = parser.parse_args(args)
 
     app = TrajectoryInspectorApp(parsed_args.trajectory_path)

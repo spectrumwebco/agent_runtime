@@ -200,7 +200,9 @@ def get_github_issue_data_config() -> GitHubIssueDataConfig:
     return GitHubIssueDataConfig()
 
 
-def get_data_config_for_dataset(dataset_type: str) -> Union[DataConfig, GitHubIssueDataConfig]:
+def get_data_config_for_dataset(
+    dataset_type: str,
+) -> Union[DataConfig, GitHubIssueDataConfig]:
     """
     Get data configuration for dataset.
 

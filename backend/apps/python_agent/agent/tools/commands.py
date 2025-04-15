@@ -120,7 +120,9 @@ class Command(BaseModel):
                 raise ValueError(msg)
 
             # Then do the replacement
-            return re.sub(rf"\[?<({ARGUMENT_NAME_PATTERN})>\]?", r"{\1}", self.signature)
+            return re.sub(
+                rf"\[?<({ARGUMENT_NAME_PATTERN})>\]?", r"{\1}", self.signature
+            )
         else:
             # cmd arg_format_1 arg_format_2 ...
             _invoke_format = f"{self.name} "
@@ -145,7 +147,10 @@ class Command(BaseModel):
         required = []
         if self.arguments:
             for arg in self.arguments:
-                properties[arg.name] = {"type": arg.type, "description": arg.description}
+                properties[arg.name] = {
+                    "type": arg.type,
+                    "description": arg.description,
+                }
 
                 if arg.items:
                     properties[arg.name]["items"] = arg.items
@@ -156,7 +161,11 @@ class Command(BaseModel):
                 # Handle enum if present
                 if arg.enum:
                     properties[arg.name]["enum"] = arg.enum
-        tool["function"]["parameters"] = {"type": "object", "properties": properties, "required": required}
+        tool["function"]["parameters"] = {
+            "type": "object",
+            "properties": properties,
+            "required": required,
+        }
         return tool
 
     @model_validator(mode="after")
@@ -184,7 +193,9 @@ class Command(BaseModel):
                 raise ValueError(msg)
             if not arg.required:
                 found_optional = True
-        duplicates = {arg.name for arg in self.arguments if self.arguments.count(arg) > 1}
+        duplicates = {
+            arg.name for arg in self.arguments if self.arguments.count(arg) > 1
+        }
         if duplicates:
             msg = f"Command '{self.name}': Duplicate argument names: {duplicates}"
             raise ValueError(msg)
@@ -192,7 +203,9 @@ class Command(BaseModel):
             if not re.match(ARGUMENT_NAME_PATTERN, arg.name):
                 msg = f"Command '{self.name}': Invalid argument name: '{arg.name}'"
                 raise ValueError(msg)
-        if (invoke_keys := _extract_keys(self.invoke_format)) != {arg.name for arg in self.arguments}:
+        if (invoke_keys := _extract_keys(self.invoke_format)) != {
+            arg.name for arg in self.arguments
+        }:
             msg = f"Command '{self.name}': Argument names ({invoke_keys}) in signature / invoke_format {self.invoke_format!r} do not match argument names"
             raise ValueError(msg)
         return self

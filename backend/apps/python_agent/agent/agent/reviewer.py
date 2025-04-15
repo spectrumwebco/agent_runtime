@@ -84,7 +84,9 @@ class AbstractReviewer(ABC):
     """
 
     @abstractmethod
-    def review(self, instance: ProblemStatement, submission: ReviewSubmission) -> ReviewerResult:
+    def review(
+        self, instance: ProblemStatement, submission: ReviewSubmission
+    ) -> ReviewerResult:
         """Returns True if the submission is believed to be correct"""
 
 
@@ -257,7 +259,9 @@ class Preselector:
             self.logger.error(f"Error interpreting response: {e}")
             return []
 
-    def format_submission(self, problem_statement: str, submission: ReviewSubmission) -> str:
+    def format_submission(
+        self, problem_statement: str, submission: ReviewSubmission
+    ) -> str:
         if (
             submission.info.get("submission") is None
             or len(submission.info.get("submission", "")) > self.config.max_len_submission > 0  # type: ignore
@@ -268,7 +272,9 @@ class Preselector:
             # summary=self.summarizer.summarize(problem_statement, submission.trajectory) if self.summarizer else "",
         )
 
-    def build_messages(self, problem_statement: str, input: list[ReviewSubmission]) -> list[dict[str, Any]]:
+    def build_messages(
+        self, problem_statement: str, input: list[ReviewSubmission]
+    ) -> list[dict[str, Any]]:
         instance_message = Template(self.config.instance_template).render(
             problem_statement=problem_statement,
             submissions=[self.format_submission(problem_statement, s) for s in input],
@@ -279,14 +285,18 @@ class Preselector:
             {"role": "user", "content": instance_message},
         ]
 
-    def choose(self, problem_statement: str, input: list[ReviewSubmission]) -> PreselectorOutput:
+    def choose(
+        self, problem_statement: str, input: list[ReviewSubmission]
+    ) -> PreselectorOutput:
         messages = self.build_messages(problem_statement, input)
         response = self.model.query(messages)["message"]  # type: ignore
         indices = self.interpret(response)
         if not indices:
             self.logger.warning("No indices found in response, using all indices")
             indices = list(range(len(input)))
-        return PreselectorOutput(chosen_idx=indices, response=response, messages=messages)
+        return PreselectorOutput(
+            chosen_idx=indices, response=response, messages=messages
+        )
 
 
 class Chooser:
@@ -304,7 +314,9 @@ class Chooser:
             self.logger.error(f"Error interpreting response: {e}")
             return 0
 
-    def format_submission(self, problem_statement: str, submission: ReviewSubmission) -> str:
+    def format_submission(
+        self, problem_statement: str, submission: ReviewSubmission
+    ) -> str:
         if (
             submission.info.get("submission") is None
             or len(submission.info.get("submission", "")) > self.config.max_len_submission > 0  # type: ignore
@@ -315,7 +327,9 @@ class Chooser:
             # summary=self.summarizer.summarize(problem_statement, submission.trajectory) if self.summarizer else "",
         )
 
-    def build_messages(self, problem_statement: str, input: list[ReviewSubmission]) -> list[dict[str, Any]]:
+    def build_messages(
+        self, problem_statement: str, input: list[ReviewSubmission]
+    ) -> list[dict[str, Any]]:
         instance_message = Template(self.config.instance_template).render(
             problem_statement=problem_statement,
             submissions=[self.format_submission(problem_statement, s) for s in input],
@@ -326,25 +340,39 @@ class Chooser:
             {"role": "user", "content": instance_message},
         ]
 
-    def choose(self, problem_statement: str, input: list[ReviewSubmission]) -> ChooserOutput:
+    def choose(
+        self, problem_statement: str, input: list[ReviewSubmission]
+    ) -> ChooserOutput:
         preselector_output = None
         selected_indices = list(range(len(input)))
         n_submitted = sum(s.info.get("exit_status", "") == "submitted" for s in input)
         if n_submitted >= 2:
-            self.logger.debug(f"Got {n_submitted} submitted submissions, only using them")
-            selected_indices = [i for i, s in enumerate(input) if s.info.get("exit_status", "") == "submitted"]
+            self.logger.debug(
+                f"Got {n_submitted} submitted submissions, only using them"
+            )
+            selected_indices = [
+                i
+                for i, s in enumerate(input)
+                if s.info.get("exit_status", "") == "submitted"
+            ]
         else:
-            self.logger.debug(f"Got only {n_submitted} submitted submissions, disabling exit status filtering")
+            self.logger.debug(
+                f"Got only {n_submitted} submitted submissions, disabling exit status filtering"
+            )
         if self.config.preselector and len(selected_indices) > 2:
             preselector = Preselector(self.config.preselector)
             try:
-                preselector_output = preselector.choose(problem_statement, [input[i] for i in selected_indices])
+                preselector_output = preselector.choose(
+                    problem_statement, [input[i] for i in selected_indices]
+                )
             except Exception as e:
                 self.logger.critical(f"Preselector failed: {e}", exc_info=True)
                 preselector_output = None
             if preselector_output and preselector_output.chosen_idx:
                 try:
-                    _preselected_indices = [selected_indices[i] for i in preselector_output.chosen_idx]
+                    _preselected_indices = [
+                        selected_indices[i] for i in preselector_output.chosen_idx
+                    ]
                 except IndexError:
                     _preselected_indices = []
                     self.logger.error("Preselector gave invalid indices, ignoring it.")
@@ -354,7 +382,9 @@ class Chooser:
                     selected_indices = _preselected_indices
             else:
                 self.logger.error("Preselector must have failed, ignoring it.")
-        messages = self.build_messages(problem_statement, [input[i] for i in selected_indices])
+        messages = self.build_messages(
+            problem_statement, [input[i] for i in selected_indices]
+        )
         chosen_idx = None
         try:
             response = self.model.query(messages)["message"]  # type: ignore
@@ -368,7 +398,10 @@ class Chooser:
         else:
             chosen_idx = selected_indices[chosen_idx]
         return ChooserOutput(
-            chosen_idx=chosen_idx, response=response, preselector_output=preselector_output, messages=messages
+            chosen_idx=chosen_idx,
+            response=response,
+            preselector_output=preselector_output,
+            messages=messages,
         )
 
 
@@ -405,15 +438,23 @@ class Reviewer(AbstractReviewer):
             msg = f"Could not interpret response: {last_line!r}"
             raise ValueError(msg)
         number = float(numbers[-1])
-        if self._config.score_range[0] is not None and number < self._config.score_range[0]:
+        if (
+            self._config.score_range[0] is not None
+            and number < self._config.score_range[0]
+        ):
             msg = f"Score {number} is below the minimum score {self._config.score_range[0]}"
             raise ValueError(msg)
-        if self._config.score_range[1] is not None and number > self._config.score_range[1]:
+        if (
+            self._config.score_range[1] is not None
+            and number > self._config.score_range[1]
+        ):
             msg = f"Score {number} is above the maximum score {self._config.score_range[1]}"
             raise ValueError(msg)
         return number
 
-    def review(self, instance: ProblemStatement, submission: ReviewSubmission) -> ReviewerResult:
+    def review(
+        self, instance: ProblemStatement, submission: ReviewSubmission
+    ) -> ReviewerResult:
         exit_status = submission.info.get("exit_status")
         messages = []
         penalty = 0.0
@@ -433,7 +474,9 @@ class Reviewer(AbstractReviewer):
             try:
                 score = self.interpret(answer)
             except ValueError as e:
-                self.logger.warning(f"Could not interpret response: {answer!r}, got {e}")
+                self.logger.warning(
+                    f"Could not interpret response: {answer!r}, got {e}"
+                )
                 continue
             answers.append(answer)
             accepts.append(score)
@@ -445,7 +488,9 @@ class Reviewer(AbstractReviewer):
         if self._config.reduce_by_std > 0:
             accept -= std * self._config.reduce_by_std
         self.logger.info(f"First answer: {answers[0]}")
-        self.logger.info(f"Final score: {accept} (penalty: {penalty}, std: {std}), individual: {accepts}")
+        self.logger.info(
+            f"Final score: {accept} (penalty: {penalty}, std: {std}), individual: {accepts}"
+        )
         return ReviewerResult(accept=accept, outputs=answers, messages=messages)
 
 
@@ -467,8 +512,13 @@ class TrajectoryFormatter:
                 return False
         return True
 
-    def _include_step_output(self, item: TrajectoryStep, i_step: int, n_steps: int) -> bool:
-        if self._config.only_show_last_n_output > 0 and i_step < n_steps - self._config.only_show_last_n_output:
+    def _include_step_output(
+        self, item: TrajectoryStep, i_step: int, n_steps: int
+    ) -> bool:
+        if (
+            self._config.only_show_last_n_output > 0
+            and i_step < n_steps - self._config.only_show_last_n_output
+        ):
             return False
         action = item["action"].strip()
         for f in self._config.output_filter:
@@ -476,7 +526,9 @@ class TrajectoryFormatter:
                 return False
         return True
 
-    def _format_trajectory_step(self, step: TrajectoryStep, i_step: int, *, n_steps: int, i_traj: int = 1) -> str:
+    def _format_trajectory_step(
+        self, step: TrajectoryStep, i_step: int, *, n_steps: int, i_traj: int = 1
+    ) -> str:
         step = copy.deepcopy(step)
         if not self._include_step_output(step, i_step, n_steps=n_steps):
             step["observation"] = "[Output omitted]"
@@ -490,14 +542,18 @@ class TrajectoryFormatter:
         traj_messages = [step for step in trajectory if self._include_step(step)]
         return "\n\n".join(
             [
-                self._format_trajectory_step(step, i_step, i_traj=i_traj, n_steps=len(traj_messages))
+                self._format_trajectory_step(
+                    step, i_step, i_traj=i_traj, n_steps=len(traj_messages)
+                )
                 for i_step, step in enumerate(traj_messages)
             ]
         )
 
 
 class ChooserRetryLoop(AbstractRetryLoop):
-    def __init__(self, config: ChooserRetryLoopConfig, problem_statement: ProblemStatement):
+    def __init__(
+        self, config: ChooserRetryLoopConfig, problem_statement: ProblemStatement
+    ):
         self._config = config
         self._problem_statement = problem_statement
         self._chooser = Chooser(config.chooser)
@@ -531,11 +587,16 @@ class ChooserRetryLoop(AbstractRetryLoop):
             return False
 
         if self._n_attempts >= self._config.max_attempts > 0:
-            self.logger.info(f"Exiting retry loop ({stat_str}): max_attempts={self._config.max_attempts} reached")
+            self.logger.info(
+                f"Exiting retry loop ({stat_str}): max_attempts={self._config.max_attempts} reached"
+            )
             return False
 
         remaining_budget = self._config.cost_limit - self._total_stats.instance_cost
-        if self._config.min_budget_for_new_attempt > 0 and remaining_budget < self._config.min_budget_for_new_attempt:
+        if (
+            self._config.min_budget_for_new_attempt > 0
+            and remaining_budget < self._config.min_budget_for_new_attempt
+        ):
             msg = (
                 f"Exiting retry loop ({stat_str}): Not enough budget left for a new attempt "
                 f"({remaining_budget} remaining, {self._config.min_budget_for_new_attempt} required)"
@@ -551,7 +612,9 @@ class ChooserRetryLoop(AbstractRetryLoop):
             return self._chooser_output.chosen_idx
         if len(self._submissions) == 0:
             return None
-        self._chooser_output = self._chooser.choose(self._problem_statement.get_problem_statement(), self._submissions)
+        self._chooser_output = self._chooser.choose(
+            self._problem_statement.get_problem_statement(), self._submissions
+        )
         return self._chooser_output.chosen_idx
 
 
@@ -565,7 +628,9 @@ class ScoreRetryLoop(AbstractRetryLoop):
         # This model will not share instance cost with the parent agent
         self._model = get_model(config.model, tools=ToolConfig())
         self._problem_statement = problem_statement
-        self._reviewer: AbstractReviewer = config.reviewer_config.get_reviewer(self._model)
+        self._reviewer: AbstractReviewer = config.reviewer_config.get_reviewer(
+            self._model
+        )
         self._config = config
         # Note: These are "cumulative" submissions, i.e., they include all retries
         # up to that point.
@@ -596,7 +661,10 @@ class ScoreRetryLoop(AbstractRetryLoop):
 
     @property
     def _total_stats(self) -> InstanceStats:
-        return sum((s.model_stats for s in self._submissions), start=InstanceStats()) + self._model.stats
+        return (
+            sum((s.model_stats for s in self._submissions), start=InstanceStats())
+            + self._model.stats
+        )
 
     # -------
 
@@ -626,15 +694,22 @@ class ScoreRetryLoop(AbstractRetryLoop):
             return False
 
         if self._n_attempts >= self._config.max_attempts > 0:
-            self.logger.info(f"Exiting retry loop ({stat_str}): max_attempts={self._config.max_attempts} reached")
+            self.logger.info(
+                f"Exiting retry loop ({stat_str}): max_attempts={self._config.max_attempts} reached"
+            )
             return False
 
         if self._n_accepted >= self._config.max_accepts > 0:
-            self.logger.info(f"Exiting retry loop ({stat_str}): max_accepts={self._config.max_accepts} reached")
+            self.logger.info(
+                f"Exiting retry loop ({stat_str}): max_accepts={self._config.max_accepts} reached"
+            )
             return False
 
         remaining_budget = self._config.cost_limit - self._total_stats.instance_cost
-        if self._config.min_budget_for_new_attempt > 0 and remaining_budget < self._config.min_budget_for_new_attempt:
+        if (
+            self._config.min_budget_for_new_attempt > 0
+            and remaining_budget < self._config.min_budget_for_new_attempt
+        ):
             msg = (
                 f"Exiting retry loop ({stat_str}): Not enough budget left for a new attempt "
                 f"({remaining_budget} remaining, {self._config.min_budget_for_new_attempt} required)"
@@ -652,7 +727,10 @@ class ScoreRetryLoop(AbstractRetryLoop):
         max_score = np.max(scores)
         max_indices = [i for i, s in enumerate(scores) if np.isclose(s, max_score)]
         # If there are multiple submissions with the same score, choose the shortest one
-        max_indices = sorted(max_indices, key=lambda i: self._submissions[i].model_stats.api_calls or float("inf"))
+        max_indices = sorted(
+            max_indices,
+            key=lambda i: self._submissions[i].model_stats.api_calls or float("inf"),
+        )
         chosen_idx = max_indices[0]
         self.logger.info(f"Best submission: {chosen_idx}")
         return chosen_idx

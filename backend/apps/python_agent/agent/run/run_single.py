@@ -66,7 +66,9 @@ class RunSingleActionConfig(BaseModel):
 
 
 class RunSingleConfig(BaseSettings, cli_implicit_flags=False):
-    env: EnvironmentConfig = Field(default_factory=EnvironmentConfig, description="Environment options.")
+    env: EnvironmentConfig = Field(
+        default_factory=EnvironmentConfig, description="Environment options."
+    )
     agent: AgentConfig = Field(description="Agent options.")
     problem_statement: ProblemStatementConfig = Field(
         default_factory=EmptyProblemStatement, description="Problem statement options."
@@ -94,7 +96,12 @@ class RunSingleConfig(BaseSettings, cli_implicit_flags=False):
             config_file = getattr(self, "_config_files", ["no_config"])[0]
             if isinstance(config_file, Path):
                 config_file = config_file.stem
-            self.output_dir = Path.cwd() / "trajectories" / user_id / f"{config_file}__{model_id}___{problem_id}"
+            self.output_dir = (
+                Path.cwd()
+                / "trajectories"
+                / user_id
+                / f"{config_file}__{model_id}___{problem_id}"
+            )
 
     @classmethod
     def _get_auto_correct(cls) -> list[ACS]:
@@ -170,7 +177,9 @@ class RunSingle:
             output_dir=config.output_dir,
             actions=config.actions,
         )
-        self.add_hook(SaveApplyPatchHook(apply_patch_locally=config.actions.apply_patch_locally))
+        self.add_hook(
+            SaveApplyPatchHook(apply_patch_locally=config.actions.apply_patch_locally)
+        )
         if config.actions.open_pr:
             self.logger.debug("Adding OpenPRHook")
             self.add_hook(OpenPRHook(config.actions.pr_config))
@@ -185,7 +194,9 @@ class RunSingle:
         self.logger.info("Starting environment")
         self.env.start()
         self.logger.info("Running agent")
-        self._chooks.on_instance_start(index=0, env=self.env, problem_statement=self.problem_statement)
+        self._chooks.on_instance_start(
+            index=0, env=self.env, problem_statement=self.problem_statement
+        )
         output_dir = self.output_dir / self.problem_statement.id
         output_dir.mkdir(parents=True, exist_ok=True)
         if self.agent.replay_config is not None:  # type: ignore[attr-defined]
@@ -211,7 +222,9 @@ def run_from_cli(args: list[str] | None = None):
         args = sys.argv[1:]
     assert __doc__ is not None
     help_text = (  # type: ignore
-        __doc__ + "\n[cyan][bold]=== ALL THE OPTIONS ===[/bold][/cyan]\n\n" + ConfigHelper().get_help(RunSingleConfig)
+        __doc__
+        + "\n[cyan][bold]=== ALL THE OPTIONS ===[/bold][/cyan]\n\n"
+        + ConfigHelper().get_help(RunSingleConfig)
     )
     run_from_config(BasicCLI(RunSingleConfig, help_text=help_text).get_config(args))  # type: ignore
 

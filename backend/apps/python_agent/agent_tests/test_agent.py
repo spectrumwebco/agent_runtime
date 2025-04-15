@@ -68,12 +68,16 @@ def test_agent(identity_agent_config: DefaultAgentConfig) -> DefaultAgent:
 
 
 @pytest.fixture
-def thought_action_agent(thought_action_agent_config: DefaultAgentConfig) -> DefaultAgent:
+def thought_action_agent(
+    thought_action_agent_config: DefaultAgentConfig,
+) -> DefaultAgent:
     return DefaultAgent.from_config(thought_action_agent_config)
 
 
 @pytest.fixture
-def function_calling_agent(function_calling_agent_config: DefaultAgentConfig) -> DefaultAgent:
+def function_calling_agent(
+    function_calling_agent_config: DefaultAgentConfig,
+) -> DefaultAgent:
     return DefaultAgent.from_config(function_calling_agent_config)
 
 
@@ -146,7 +150,9 @@ def test_early_exit(dummy_env: SWEEnv, test_agent: DefaultAgent, tmp_path):
     assert r.info["exit_status"] == "exit_environment_error"  # type: ignore
 
 
-def test_run_step_by_step_checking_history(dummy_env: SWEEnv, default_agent: DefaultAgent, tmp_path):
+def test_run_step_by_step_checking_history(
+    dummy_env: SWEEnv, default_agent: DefaultAgent, tmp_path
+):
     a = default_agent
     a.model = PredeterminedTestModel(["asdf", "```\nls\n```", "```\necho 'asdf'\n```", "raise_cost"])  # type: ignore
     a.setup(dummy_env, TextProblemStatement(text="asdf123"))
@@ -195,7 +201,9 @@ def test_run_autosubmit(dummy_env: SWEEnv, default_agent: DefaultAgent, tmp_path
     dummy_env.write_file("/root/model.patch", "mysubmission")
     dummy_env.deployment.runtime.run_in_session_outputs = [  # type: ignore
         BashObservation(output=""),
-        BashObservation(output=r"<<SWE_AGENT_SUBMISSION>>\nmysubmission\n<<SWE_AGENT_SUBMISSION>>"),
+        BashObservation(
+            output=r"<<SWE_AGENT_SUBMISSION>>\nmysubmission\n<<SWE_AGENT_SUBMISSION>>"
+        ),
     ]
     r = a.step()
     assert a.info is not None
@@ -208,7 +216,9 @@ def test_run_autosubmit(dummy_env: SWEEnv, default_agent: DefaultAgent, tmp_path
     assert "cost limit" in r.thought
 
 
-def test_show_no_output_template(dummy_env: SWEEnv, default_agent: DefaultAgent, tmp_path):
+def test_show_no_output_template(
+    dummy_env: SWEEnv, default_agent: DefaultAgent, tmp_path
+):
     a = default_agent
     a.templates.next_step_no_output_template = "no output template"
     a.setup(dummy_env, EmptyProblemStatement())
@@ -221,7 +231,9 @@ def test_show_no_output_template(dummy_env: SWEEnv, default_agent: DefaultAgent,
 
 # todo: fixme; Needs real environment or mocking of read_file
 @pytest.mark.xfail
-def test_successful_submission(dummy_env: SWEEnv, default_agent: DefaultAgent, tmp_path):
+def test_successful_submission(
+    dummy_env: SWEEnv, default_agent: DefaultAgent, tmp_path
+):
     a = default_agent
     a.model = PredeterminedTestModel(["```\nsubmit\n```"])  # type: ignore
     a.setup(dummy_env, EmptyProblemStatement())
@@ -243,20 +255,31 @@ def test_human_exit(dummy_env: SWEEnv, default_agent: DefaultAgent, tmp_path):
     assert r.action.strip() == "exit"
 
 
-def test_function_calling(dummy_env: SWEEnv, function_calling_agent: DefaultAgent, tmp_path):
+def test_function_calling(
+    dummy_env: SWEEnv, function_calling_agent: DefaultAgent, tmp_path
+):
     a = function_calling_agent
     # Simulate a valid function call response from the model
     valid_response = {
         "message": "I'll list the contents of the directory",
-        "tool_calls": [{"function": {"name": "bash", "arguments": '{"command": "ls"}'}, "id": "abc123"}],
+        "tool_calls": [
+            {
+                "function": {"name": "bash", "arguments": '{"command": "ls"}'},
+                "id": "abc123",
+            }
+        ],
     }
     a.model = PredeterminedTestModel([valid_response])  # type: ignore
     a.setup(dummy_env, EmptyProblemStatement())
     dummy_env.deployment.runtime.run_in_session_outputs = [  # type: ignore
         BashObservation(output="file1 file2"),
-        BashObservation(output="file1 file2"),  # TODO, there's actually a bug in swe-rex, requiring two observations
+        BashObservation(
+            output="file1 file2"
+        ),  # TODO, there's actually a bug in swe-rex, requiring two observations
     ]  # type: ignore
     r = a.step()
     assert not r.done, "Expected not done, because we haven't submitted yet"
     assert r.action.strip() == "ls", "Expected the tool call to be executed"
-    assert "file1 file2" in r.observation, "Expected the tool call to return the output of the command"
+    assert (
+        "file1 file2" in r.observation
+    ), "Expected the tool call to return the output of the command"

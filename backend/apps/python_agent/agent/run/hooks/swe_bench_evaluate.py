@@ -19,7 +19,13 @@ from agent.utils.log import get_logger
 class SweBenchEvaluate(RunHook):
     _SUBSET_MAP = {"lite": "swe-bench_lite", "verified": "swe-bench_verified"}
 
-    def __init__(self, output_dir: Path, subset: str, split: str, continuous_submission_every: int = 0) -> None:
+    def __init__(
+        self,
+        output_dir: Path,
+        subset: str,
+        split: str,
+        continuous_submission_every: int = 0,
+    ) -> None:
         super().__init__()
         self.output_dir = output_dir
         self.subset = subset
@@ -51,7 +57,16 @@ class SweBenchEvaluate(RunHook):
             str(self.output_dir / "sb-cli-reports"),
         ]
         if submit_only:
-            args.extend(["--wait_for_evaluation", "0", "--gen_report", "0", "--verify_submission", "0"])
+            args.extend(
+                [
+                    "--wait_for_evaluation",
+                    "0",
+                    "--gen_report",
+                    "0",
+                    "--verify_submission",
+                    "0",
+                ]
+            )
         return args
 
     def check_running_calls(self) -> None:
@@ -59,7 +74,10 @@ class SweBenchEvaluate(RunHook):
         for call in self._running_calls:
             if call.poll() is not None:
                 if call.returncode != 0:
-                    self.logger.error("Failed to submit results to SweBench eval: %s", call.stderr.read())
+                    self.logger.error(
+                        "Failed to submit results to SweBench eval: %s",
+                        call.stderr.read(),
+                    )
                 self._running_calls.remove(call)
 
     def on_instance_completed(self, *, result: AgentRunResult):
@@ -76,7 +94,9 @@ class SweBenchEvaluate(RunHook):
 
         self._running_calls.append(
             subprocess.Popen(
-                self._get_sb_call(preds_path=self.output_dir / "tmppreds.json", submit_only=True),
+                self._get_sb_call(
+                    preds_path=self.output_dir / "tmppreds.json", submit_only=True
+                ),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
             )
@@ -91,7 +111,11 @@ class SweBenchEvaluate(RunHook):
         (self.output_dir / "results.json").unlink(missing_ok=True)
         reports = list(output_dir.glob("*.json"))
         if len(reports) != 1:
-            self.logger.warning("Expected 1 SweBench report at %s, found %d. Cannot rename.", output_dir, len(reports))
+            self.logger.warning(
+                "Expected 1 SweBench report at %s, found %d. Cannot rename.",
+                output_dir,
+                len(reports),
+            )
             return
         reports[0].rename(self.output_dir / "results.json")
 

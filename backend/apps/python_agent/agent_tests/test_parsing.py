@@ -28,7 +28,9 @@ def test_action_parser():
 
 def test_thought_action_parser():
     parser = ThoughtActionParser()
-    model_response = "Let's look at the files in the current directory.\n```\nls -l\n```"
+    model_response = (
+        "Let's look at the files in the current directory.\n```\nls -l\n```"
+    )
     thought, action = parser({"message": model_response}, [])
     assert thought == "Let's look at the files in the current directory.\n"
     assert action == "ls -l\n"
@@ -128,4 +130,6 @@ def test_function_calling_parser():
 def test_function_calling_parser_error_message():
     template = Template(FunctionCallingParser().error_message)
     exc1 = FunctionCallingFormatError("test", "missing")
-    assert "did not use any tool calls" in template.render(**exc1.extra_info, exception_message=exc1.message)
+    assert "did not use any tool calls" in template.render(
+        **exc1.extra_info, exception_message=exc1.message
+    )

@@ -32,7 +32,9 @@ def save_demo(data: str | dict | list, file: Path, traj_path: Path) -> None:
         f.write(f"{header}\n{content}")
 
 
-def convert_traj_to_action_demo(traj_path: Path, output_file: Path, include_user: bool = False) -> None:
+def convert_traj_to_action_demo(
+    traj_path: Path, output_file: Path, include_user: bool = False
+) -> None:
     with open(traj_path) as file:
         traj = json.load(file)
     replay_config = traj["replay_config"]
@@ -40,7 +42,14 @@ def convert_traj_to_action_demo(traj_path: Path, output_file: Path, include_user
         replay_config = json.loads(traj["replay_config"])
     history = traj["history"]
 
-    copy_fields = {"content", "role", "tool_calls", "agent", "message_type", "tool_call_ids"}
+    copy_fields = {
+        "content",
+        "role",
+        "tool_calls",
+        "agent",
+        "message_type",
+        "tool_call_ids",
+    }
 
     admissible_roles = {"assistant", "user", "tool"} if include_user else {"assistant"}
     filtered_history = [
@@ -56,10 +65,22 @@ def convert_traj_to_action_demo(traj_path: Path, output_file: Path, include_user
     logger.info(f"Saved demo to {output_file}")
 
 
-def main(traj_path: Path, output_dir: Path, suffix: str = "", overwrite: bool = False, include_user: bool = False):
-    output_file = output_dir / (traj_path.parent.name + suffix) / (traj_path.stem.removesuffix(".traj") + ".demo.yaml")
+def main(
+    traj_path: Path,
+    output_dir: Path,
+    suffix: str = "",
+    overwrite: bool = False,
+    include_user: bool = False,
+):
+    output_file = (
+        output_dir
+        / (traj_path.parent.name + suffix)
+        / (traj_path.stem.removesuffix(".traj") + ".demo.yaml")
+    )
     if output_file.exists() and not overwrite:
-        msg = f"Output file already exists: {output_file}. Use --overwrite to overwrite."
+        msg = (
+            f"Output file already exists: {output_file}. Use --overwrite to overwrite."
+        )
         raise FileExistsError(msg)
     output_file.parent.mkdir(parents=True, exist_ok=True)
     convert_traj_to_action_demo(traj_path, output_file, include_user)
@@ -69,9 +90,18 @@ def run_from_cli(args: list[str] | None = None):
     """Convert a trajectory file to a demo file."""
     parser = ArgumentParser(description=__doc__)
     parser.add_argument("traj_path", type=Path, help="Path to trajectory file")
-    parser.add_argument("--output_dir", type=Path, help="Output directory for action demos", default=Path("./demos"))
-    parser.add_argument("--suffix", type=str, help="Suffix for the output file", default="")
-    parser.add_argument("--overwrite", help="Overwrite existing files", action="store_true")
+    parser.add_argument(
+        "--output_dir",
+        type=Path,
+        help="Output directory for action demos",
+        default=Path("./demos"),
+    )
+    parser.add_argument(
+        "--suffix", type=str, help="Suffix for the output file", default=""
+    )
+    parser.add_argument(
+        "--overwrite", help="Overwrite existing files", action="store_true"
+    )
     parser.add_argument(
         "--include_user",
         help="Include user responses (computer)",

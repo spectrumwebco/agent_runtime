@@ -6,13 +6,13 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 @csrf_exempt
 @require_http_methods(["GET"])
 def tools_status_view(request):
     """
     Simple view to check the status of the tools app.
     """
-    return JsonResponse({
-        "status": "success",
-        "message": "Tools app is properly integrated with Django"
-    })
+    return JsonResponse(
+        {"status": "success", "message": "Tools app is properly integrated with Django"}
+    )

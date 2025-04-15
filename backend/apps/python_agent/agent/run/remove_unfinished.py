@@ -28,12 +28,16 @@ def remove_unfinished(base_dir: Path, dry_run: bool = True) -> None:
         try:
             traj = load_file(trajs[0])
         except Exception as e:
-            logger.warning("Error loading trajectory %s: %s. Adding to remove list.", trajs[0], e)
+            logger.warning(
+                "Error loading trajectory %s: %s. Adding to remove list.", trajs[0], e
+            )
             to_remove.append(directory)
             continue
         submission = traj.get("info", {}).get("submission", None)
         if submission is None:
-            logger.warning("No submission found in %s. Adding to remove list.", directory)
+            logger.warning(
+                "No submission found in %s. Adding to remove list.", directory
+            )
             to_remove.append(directory)
             continue
     if dry_run:
@@ -49,7 +53,9 @@ def remove_unfinished(base_dir: Path, dry_run: bool = True) -> None:
 def get_cli_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--base-dir", type=Path, help="Base directory")
-    parser.add_argument("--remove", action="store_true", help="Remove unfinished trajectories")
+    parser.add_argument(
+        "--remove", action="store_true", help="Remove unfinished trajectories"
+    )
     return parser
 
 

@@ -43,7 +43,9 @@ class DummyRuntime(AbstractRuntime):
         Args:
             **kwargs: Keyword arguments (see `DummyRuntimeConfig` for details).
         """
-        self.run_in_session_outputs: list[BashObservation] | BashObservation = BashObservation(exit_code=0)
+        self.run_in_session_outputs: list[BashObservation] | BashObservation = (
+            BashObservation(exit_code=0)
+        )
         """Predefine returns of run_in_session. If set to list, will pop from list, else will 
         return the same value.
         """
@@ -57,7 +59,9 @@ class DummyRuntime(AbstractRuntime):
     async def is_alive(self, *, timeout: float | None = None) -> IsAliveResponse:
         return IsAliveResponse(is_alive=True)
 
-    async def create_session(self, request: CreateSessionRequest) -> CreateSessionResponse:
+    async def create_session(
+        self, request: CreateSessionRequest
+    ) -> CreateSessionResponse:
         if request.session_type == "bash":
             return CreateBashSessionResponse()
         msg = f"Unknown session type: {request.session_type}"

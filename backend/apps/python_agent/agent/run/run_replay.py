@@ -59,7 +59,12 @@ class RunReplayConfig(BaseSettings, cli_implicit_flags=False):
     def model_post_init(self, __context: Any) -> None:
         if self.output_dir == Path("DEFAULT"):
             user_id = getuser()
-            self.output_dir = Path.cwd() / "trajectories" / user_id / f"replay___{self.traj_path.stem}"
+            self.output_dir = (
+                Path.cwd()
+                / "trajectories"
+                / user_id
+                / f"replay___{self.traj_path.stem}"
+            )
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
 
@@ -76,7 +81,9 @@ class RunReplay:
     ):
         self.traj_path = traj_path
         self.output_dir = output_dir
-        self._replay_action_trajs_path = Path(tempfile.NamedTemporaryFile(suffix=".json").name)
+        self._replay_action_trajs_path = Path(
+            tempfile.NamedTemporaryFile(suffix=".json").name
+        )
         self.logger = get_logger("swea-run", emoji="🏃")
         self._catch_errors = _catch_errors
         self._require_zero_exit_code = _require_zero_exit_code
@@ -117,7 +124,9 @@ class RunReplay:
 
             config = RunSingleConfig.model_validate(merged_dict)
 
-        config.agent.model = ReplayModelConfig(replay_path=self._replay_action_trajs_path)
+        config.agent.model = ReplayModelConfig(
+            replay_path=self._replay_action_trajs_path
+        )
         return config
 
     @property
@@ -168,7 +177,9 @@ class RunReplay:
         if len(actions) == 0:
             msg = "No actions found in trajectory"
             raise ValueError(msg)
-        self._replay_action_trajs_path.write_text(json.dumps({self.instance_id: actions}))
+        self._replay_action_trajs_path.write_text(
+            json.dumps({self.instance_id: actions})
+        )
 
     def _get_env(self) -> SWEEnv:
         return SWEEnv(
@@ -210,7 +221,9 @@ def run_from_cli(args: list[str] | None = None):
     if args is None:
         args = sys.argv[1:]
     help_text = (  # type: ignore
-        __doc__ + "\n[cyan][bold]=== ALL THE OPTIONS ===[/bold][/cyan]\n\n" + ConfigHelper().get_help(RunReplayConfig)
+        __doc__
+        + "\n[cyan][bold]=== ALL THE OPTIONS ===[/bold][/cyan]\n\n"
+        + ConfigHelper().get_help(RunReplayConfig)
     )
     run_from_config(BasicCLI(RunReplayConfig, help_text=help_text, default_settings=False).get_config(args))  # type: ignore
 

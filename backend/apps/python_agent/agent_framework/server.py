@@ -62,7 +62,9 @@ async def exception_handler(request: Request, exc: Exception):
         traceback=traceback.format_exc(),
         extra_info=extra_info,
     )
-    return JSONResponse(status_code=511, content={"agent_frameworkception": _exc.model_dump()})
+    return JSONResponse(
+        status_code=511, content={"agent_frameworkception": _exc.model_dump()}
+    )
 
 
 @app.get("/")
@@ -154,8 +156,12 @@ def main():
     # Main parser for other arguments
     parser = argparse.ArgumentParser(description="Run the agent_framework server")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind the server to")
-    parser.add_argument("--port", type=int, default=8000, help="Port to run the server on")
-    parser.add_argument("--auth-token", default="", help="token to authenticate requests", required=True)
+    parser.add_argument(
+        "--port", type=int, default=8000, help="Port to run the server on"
+    )
+    parser.add_argument(
+        "--auth-token", default="", help="token to authenticate requests", required=True
+    )
 
     args = parser.parse_args(remaining_args)
     global AUTH_TOKEN

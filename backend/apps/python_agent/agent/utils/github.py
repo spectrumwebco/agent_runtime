@@ -99,7 +99,9 @@ def _get_problem_statement_from_github_issue(
     return f"{title}\n{body}\n"
 
 
-def _get_associated_commit_urls(org: str, repo: str, issue_number: str, *, token: str = "") -> list[str]:
+def _get_associated_commit_urls(
+    org: str, repo: str, issue_number: str, *, token: str = ""
+) -> list[str]:
     """Return the URLs of commits that would close an issue."""
     api = GhApi(token=token)
     # Strangely the "pull_request" field of api.issues.get is often not set
@@ -113,6 +115,9 @@ def _get_associated_commit_urls(org: str, repo: str, issue_number: str, *, token
             continue
         commit = api.repos.get_commit(org, repo, event.commit_id)  # type: ignore
         message = commit.commit.message
-        if f"fixes #{issue_number}" in message.lower() or f"closes #{issue_number}" in message.lower():
+        if (
+            f"fixes #{issue_number}" in message.lower()
+            or f"closes #{issue_number}" in message.lower()
+        ):
             commit_urls.append(commit.html_url)
     return commit_urls

@@ -5,7 +5,9 @@ from typing import Any
 from agent.tools.commands import Command
 
 
-def _guard_multiline_input(action: str, match_fct: Callable[[str], re.Match | None]) -> str:
+def _guard_multiline_input(
+    action: str, match_fct: Callable[[str], re.Match | None]
+) -> str:
     """Split action by multiline commands, then append the first line in each multiline command with "<< '{end_name}'".
     Multiline commands (which are specified by an end_name) are commands that span multiple lines and are terminated by a specific end_name.
 
@@ -26,7 +28,9 @@ def _guard_multiline_input(action: str, match_fct: Callable[[str], re.Match | No
                 if not match_action.split("\n")[0].strip().endswith(f"<< '{eof}'"):
                     guarded_command = match_action[first_match.start() :]
                     first_line = guarded_command.split("\n")[0]
-                    guarded_command = guarded_command.replace(first_line, first_line + f" << '{eof}'", 1)
+                    guarded_command = guarded_command.replace(
+                        first_line, first_line + f" << '{eof}'", 1
+                    )
                     parsed_action.append(guarded_command)
                 else:
                     parsed_action.append(match_action)

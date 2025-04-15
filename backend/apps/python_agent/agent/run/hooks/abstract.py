@@ -16,7 +16,11 @@ class RunHook:
         """Called at the end of `Main.main`"""
 
     def on_instance_start(
-        self, *, index: int, env: SWEEnv, problem_statement: ProblemStatement | ProblemStatementConfig
+        self,
+        *,
+        index: int,
+        env: SWEEnv,
+        problem_statement: ProblemStatement | ProblemStatementConfig,
     ):
         """Called at the beginning of each instance loop in `Main.run`"""
 
@@ -53,10 +57,16 @@ class CombinedRunHooks(RunHook):
             hook.on_end()
 
     def on_instance_start(
-        self, *, index: int, env: SWEEnv, problem_statement: ProblemStatement | ProblemStatementConfig
+        self,
+        *,
+        index: int,
+        env: SWEEnv,
+        problem_statement: ProblemStatement | ProblemStatementConfig,
     ):
         for hook in self._hooks:
-            hook.on_instance_start(index=index, env=env, problem_statement=problem_statement)
+            hook.on_instance_start(
+                index=index, env=env, problem_statement=problem_statement
+            )
 
     def on_instance_skipped(self):
         for hook in self._hooks:

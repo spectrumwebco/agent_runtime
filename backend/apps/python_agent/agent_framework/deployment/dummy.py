@@ -5,7 +5,10 @@ from typing_extensions import Self
 
 from apps.python_agent.agent_framework.deployment.abstract import AbstractDeployment
 from apps.python_agent.agent_framework.deployment.config import DummyDeploymentConfig
-from apps.python_agent.agent_framework.deployment.hooks.abstract import CombinedDeploymentHook, DeploymentHook
+from apps.python_agent.agent_framework.deployment.hooks.abstract import (
+    CombinedDeploymentHook,
+    DeploymentHook,
+)
 from apps.python_agent.agent_framework.runtime.abstract import IsAliveResponse
 from apps.python_agent.agent_framework.runtime.dummy import DummyRuntime
 from apps.python_agent.agent_framework.utils.log import get_logger

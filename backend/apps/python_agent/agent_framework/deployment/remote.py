@@ -5,7 +5,10 @@ from typing_extensions import Self
 
 from apps.python_agent.agent_framework.deployment.abstract import AbstractDeployment
 from apps.python_agent.agent_framework.deployment.config import RemoteDeploymentConfig
-from apps.python_agent.agent_framework.deployment.hooks.abstract import CombinedDeploymentHook, DeploymentHook
+from apps.python_agent.agent_framework.deployment.hooks.abstract import (
+    CombinedDeploymentHook,
+    DeploymentHook,
+)
 from apps.python_agent.agent_framework.exceptions import DeploymentNotStartedError
 from apps.python_agent.agent_framework.runtime.abstract import IsAliveResponse
 from apps.python_agent.agent_framework.runtime.remote import RemoteRuntime
