@@ -10,7 +10,37 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import os
 from pathlib import Path
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class ApiSettings(BaseSettings):
+    """Pydantic settings for the API."""
+    
+    api_key: str = "dev-api-key"  # Default value for development
+    debug: bool = True
+    allowed_hosts: list[str] = ["*"]
+    
+    # Database settings
+    db_engine: str = "django.db.backends.sqlite3"
+    db_name: str = "db.sqlite3"
+    
+    grpc_host: str = "0.0.0.0"
+    grpc_port: int = 50051
+    
+    ml_api_url: str = "http://localhost:8000"
+    ml_api_key: str = ""
+    
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        env_prefix="AGENT_",
+        extra="ignore",
+    )
+
+
+api_settings = ApiSettings()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +50,14 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-darztxot86at54=)1oisit@34zow4b$@&&kv4ka$(j%mlis6u3'
+SECRET_KEY = os.environ.get('AGENT_SECRET_KEY', 'django-insecure-darztxot86at54=)1oisit@34zow4b$@&&kv4ka$(j%mlis6u3')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = api_settings.debug
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = api_settings.allowed_hosts
+
+API_KEY = api_settings.api_key
 
 
 # Application definition
@@ -82,8 +114,8 @@ WSGI_APPLICATION = 'agent_api.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': api_settings.db_engine,
+        'NAME': BASE_DIR / api_settings.db_name,
     }
 }
 

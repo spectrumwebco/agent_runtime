@@ -17,10 +17,12 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import RedirectView
+from api.ninja_api import api as ninja_api
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
     path('ml-api/', include('ml_api.urls')),
+    path('ninja-api/', ninja_api.urls),
     path('', RedirectView.as_view(url='/api/', permanent=False)),
 ]
