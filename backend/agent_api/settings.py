@@ -11,8 +11,11 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 import os
+import logging
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger(__name__)
 
 
 class ApiSettings(BaseSettings):
@@ -88,7 +91,14 @@ INSTALLED_APPS = [
 
 ASGI_APPLICATION = 'agent_api.routing.application'
 
-from .database_config import DATABASES, REDIS_CONFIG, VECTOR_DB_CONFIG, ROCKETMQ_CONFIG, DATABASE_ROUTERS
+from .vault import database_secrets
+from .database_config import REDIS_CONFIG, VECTOR_DB_CONFIG, ROCKETMQ_CONFIG, DATABASE_ROUTERS
+
+try:
+    DATABASES = database_secrets.configure_django_databases()
+except Exception as e:
+    logger.warning(f"Failed to get database credentials from Vault: {e}")
+    from .database_config import DATABASES
 
 CHANNEL_LAYERS = {
     'default': {
