@@ -21,7 +21,7 @@ from api.ninja_api import api as ninja_api
 from api.grpc_service import router as grpc_router
 from api.swagger import urlpatterns as swagger_urls
 
-ninja_api.add_router("/grpc", grpc_router)
+# ninja_api.add_router("/grpc", grpc_router)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -31,7 +31,7 @@ urlpatterns = [
     path('docs/', include(swagger_urls)),
     path('agent/', include('apps.python_agent.urls')),
     path('ml/', include('apps.python_ml.urls')),
-    path('tools/', include('apps.tools.urls')),
+    path('tools/', include('apps.python_agent.tools.urls')),
     path('app/', include('apps.app.urls')),
     path('', RedirectView.as_view(url='/api/', permanent=False)),
 ]

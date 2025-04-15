@@ -6,11 +6,11 @@ from functools import partial
 from logging import WARNING, getLogger
 from pathlib import Path
 
-import swerex.utils.log as log_swerex
+from .swerex.utils import log as log_swerex
 from git import Repo
 from packaging import version
 
-from agent.utils.log import get_logger
+from .utils.log import get_logger
 
 __version__ = "1.0.1"
 PYTHON_MINIMUM_VERSION = (3, 11)
@@ -38,14 +38,17 @@ assert PACKAGE_DIR.is_dir(), PACKAGE_DIR
 REPO_ROOT = PACKAGE_DIR.parent
 assert REPO_ROOT.is_dir(), REPO_ROOT
 CONFIG_DIR = Path(os.getenv("SWE_AGENT_CONFIG_DIR", PACKAGE_DIR.parent / "config"))
+CONFIG_DIR.mkdir(exist_ok=True)
 assert CONFIG_DIR.is_dir(), CONFIG_DIR
 
 TOOLS_DIR = Path(os.getenv("SWE_AGENT_TOOLS_DIR", PACKAGE_DIR.parent / "tools"))
+TOOLS_DIR.mkdir(exist_ok=True)
 assert TOOLS_DIR.is_dir(), TOOLS_DIR
 
 TRAJECTORY_DIR = Path(
-    os.getenv("SWE_AGENT_TRAJECTORY_DIR", PACKAGE_DIR.parent / "trajectories")
+    os.getenv("SWE_AGENT_TRAJECTORY_DIR", REPO_ROOT.parent.parent / "trajectories")
 )
+TRAJECTORY_DIR.mkdir(exist_ok=True)
 assert TRAJECTORY_DIR.is_dir(), TRAJECTORY_DIR
 
 
@@ -62,11 +65,10 @@ def get_agent_commit_hash() -> str:
 
 
 def get_rex_commit_hash() -> str:
-    import swerex
-
     try:
+        from .swerex import __file__ as swerex_file
         repo = Repo(
-            Path(swerex.__file__).resolve().parent.parent.parent,
+            Path(swerex_file).resolve().parent.parent.parent,
             search_parent_directories=False,
         )
     except Exception:
@@ -75,9 +77,11 @@ def get_rex_commit_hash() -> str:
 
 
 def get_rex_version() -> str:
-    from swerex import __version__ as rex_version
-
-    return rex_version
+    try:
+        from .swerex import __version__ as rex_version
+        return rex_version
+    except ImportError:
+        return "1.2.1"  # Default version for compatibility
 
 
 def get_agent_version_info() -> str:

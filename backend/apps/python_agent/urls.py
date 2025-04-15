@@ -1,11 +1,11 @@
 from django.urls import path, include
-from . import views
 from .views import trajectory_views
+from .agent.django_views import agent_views as agent_views
 
 app_name = "python_agent"
 
 urlpatterns = [
-    path("run/", views.run_agent_view, name="run_agent"),
+    path("run/", agent_views.run_agent_view, name="run_agent"),
     path("agent_framework/", include("apps.python_agent.agent_framework.django_views.urls")),
     path("agent/", include("apps.python_agent.agent.django_views.urls")),
     
