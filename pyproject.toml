@@ -93,6 +93,15 @@ dependencies = [
     "accelerate>=0.20.0",
     "sentencepiece",
     "protobuf",
+    
+    # Additional ML dependencies for historical benchmarking
+    "aiofiles>=23.2.1",  # Async file operations
+    "h2o>=3.44.0.3",     # Automated machine learning
+    "seldon-core>=1.15.0", # Model serving
+    "elyra>=3.15.0",     # Pipeline authoring
+    "megatron-lm>=2.5.0", # NVIDIA's Megatron-LM framework
+    "jupyterhub>=4.0.0", # JupyterHub for multi-notebook capabilities
+    "pytest-mock>=3.10.0", # Mocking for tests
 ]
 
 [project.scripts]
