@@ -1,0 +1,61 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: langsmith
+
+resources:
+- deployment.yaml
+- service.yaml
+- ingress.yaml
+
+configMapGenerator:
+- name: langsmith-config
+  literals:
+  - LANGSMITH_HOST=0.0.0.0
+  - LANGSMITH_PORT=8000
+  - LANGSMITH_ALLOW_ORIGINS=*
+  - LANGSMITH_LOG_LEVEL=info
+
+secretGenerator:
+- name: langsmith-secrets
+  envs:
+  - .env.secret
+
+generatorOptions:
+  disableNameSuffixHash: true
+
+patchesStrategicMerge:
+- |-
+  apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: langsmith-api
+  spec:
+    template:
+      spec:
+        containers:
+        - name: api
+          env:
+          - name: DATABASE_URL
+            valueFrom:
+              secretKeyRef:
+                name: langsmith-secrets
+                key: database-url
+          - name: REDIS_URL
+            valueFrom:
+              secretKeyRef:
+                name: langsmith-secrets
+                key: redis-url
+          - name: SECRET_KEY
+            valueFrom:
+              secretKeyRef:
+                name: langsmith-secrets
+                key: secret-key
+          - name: LANGSMITH_LICENSE_KEY
+            valueFrom:
+              secretKeyRef:
+                name: langsmith-secrets
+                key: license-key
+          envFrom:
+          - configMapRef:
+              name: langsmith-config
