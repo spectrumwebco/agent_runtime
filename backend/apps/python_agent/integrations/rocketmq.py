@@ -10,11 +10,18 @@ import logging
 import time
 from typing import Dict, List, Any, Optional, Union, Callable
 from django.conf import settings
+from enum import Enum
 
 logger = logging.getLogger(__name__)
 
+class ConsumeStatus(Enum):
+    CONSUME_SUCCESS = 0
+    RECONSUME_LATER = 1
+
 try:
-    from rocketmq.client import Producer, PushConsumer, ConsumeStatus
+    from rocketmq.client import Producer, PushConsumer
+    from rocketmq.client import ConsumeStatus as RocketMQConsumeStatus
+    ConsumeStatus = RocketMQConsumeStatus
     ROCKETMQ_AVAILABLE = True
 except ImportError:
     logger.warning("RocketMQ Python client not available. Using mock implementation.")
