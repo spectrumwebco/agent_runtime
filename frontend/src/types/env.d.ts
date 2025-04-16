@@ -10,3 +10,17 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
+declare global {
+  interface Window {
+    APP_MODE: string;
+    APP_SLUG: string;
+    GITHUB_CLIENT_ID: string;
+    FEATURE_FLAGS: Record<string, boolean>;
+  }
+  
+  const APP_MODE: string;
+  const APP_SLUG: string;
+  const GITHUB_CLIENT_ID: string;
+  const FEATURE_FLAGS: Record<string, boolean>;
+}
