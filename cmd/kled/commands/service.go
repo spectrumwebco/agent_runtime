@@ -7,9 +7,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gin-gonic/gin"
 	"github.com/spf13/cobra"
-	"github.com/spectrumwebco/agent_runtime/internal/kledframework"
+	"github.com/spectrumwebco/agent_runtime/internal/microservices/service"
 )
 
 var serviceCmd = &cobra.Command{
@@ -27,36 +26,36 @@ var startServiceCmd = &cobra.Command{
 		name := args[0]
 		version, _ := cmd.Flags().GetString("version")
 		address, _ := cmd.Flags().GetString("address")
+		registryAddrs, _ := cmd.Flags().GetStringSlice("registry")
 
-		// Create the service
-		service := kledframework.NewService(kledframework.ServiceConfig{
-			Name:    name,
-			Version: version,
-			Address: address,
-		})
+		reg := registry.NewRegistry(
+			registry.WithAddrs(registryAddrs...),
+			registry.WithTimeout(time.Second*5),
+		)
 
-		// Add a health check endpoint
-		service.RegisterHandler("GET", "/health", func(c *gin.Context) {
-			c.JSON(200, gin.H{
-				"status":  "ok",
-				"service": name,
-				"version": version,
-			})
-		})
+		srv, err := service.NewService(
+			service.WithName(fmt.Sprintf("kled.service.%s", name)),
+			service.WithVersion(version),
+			service.WithRegistry(reg),
+			service.WithAddress(address),
+			service.WithMetadata(map[string]string{
+				"type": "kled.io",
+			}),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to create service: %w", err)
+		}
 
-		// Handle graceful shutdown
 		go func() {
 			sigChan := make(chan os.Signal, 1)
 			signal.Notify(sigChan, syscall.SIGTERM, syscall.SIGINT)
 			<-sigChan
 			fmt.Println("Shutting down service...")
-			service.Stop()
 			os.Exit(0)
 		}()
 
-		// Start the service
 		fmt.Printf("Starting service %s@%s...\n", name, version)
-		return service.Start()
+		return srv.Run()
 	},
 }
 
@@ -65,8 +64,17 @@ var listServicesCmd = &cobra.Command{
 	Short: "List all Kled.io Framework services",
 	Long:  `List all Kled.io Framework services registered in the registry.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		registry := kledframework.NewRegistry()
-		services := registry.ListServices()
+		registryAddrs, _ := cmd.Flags().GetStringSlice("registry")
+
+		reg := registry.NewRegistry(
+			registry.WithAddrs(registryAddrs...),
+			registry.WithTimeout(time.Second*5),
+		)
+
+		services, err := reg.ListServices()
+		if err != nil {
+			return fmt.Errorf("failed to list services: %w", err)
+		}
 
 		if len(services) == 0 {
 			fmt.Println("No services found")
@@ -76,7 +84,9 @@ var listServicesCmd = &cobra.Command{
 		fmt.Println("Services:")
 		for _, srv := range services {
 			fmt.Printf("  %s@%s\n", srv.Name, srv.Version)
-			fmt.Printf("    - %s\n", srv.Address)
+			for _, node := range srv.Nodes {
+				fmt.Printf("    - %s\n", node.Address)
+			}
 		}
 
 		return nil
@@ -90,5 +100,8 @@ func init() {
 	serviceCmd.AddCommand(listServicesCmd)
 
 	startServiceCmd.Flags().String("version", "latest", "Service version")
-	startServiceCmd.Flags().String("address", ":8080", "Service address")
+	startServiceCmd.Flags().String("address", ":0", "Service address")
+	startServiceCmd.Flags().StringSlice("registry", []string{"127.0.0.1:8500"}, "Registry addresses")
+
+	listServicesCmd.Flags().StringSlice("registry", []string{"127.0.0.1:8500"}, "Registry addresses")
 }
