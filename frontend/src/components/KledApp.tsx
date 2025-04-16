@@ -3,6 +3,7 @@ import { ThemeProvider } from "./ui/theme-provider";
 import { SharedStateProvider } from "./ui/shared-state-provider";
 import { KledMainLayout } from "./ui/kled-main-layout";
 import { AIChat } from "./ui/vercel-ai/ai-chat";
+import { LangGraphIntegration } from "./ui/langgraph-integration";
 
 export const KledApp: React.FC = () => {
   return (
@@ -35,8 +36,13 @@ function KledComponent() {
               </div>
             </div>
             
-            <div className="h-full overflow-hidden border rounded-lg">
-              <AIChat />
+            <div className="h-full overflow-hidden border rounded-lg flex flex-col">
+              <div className="flex-1 overflow-hidden">
+                <AIChat />
+              </div>
+              <div className="h-1/3 min-h-[250px] border-t">
+                <LangGraphIntegration className="h-full p-4" />
+              </div>
             </div>
           </div>
         </KledMainLayout>
