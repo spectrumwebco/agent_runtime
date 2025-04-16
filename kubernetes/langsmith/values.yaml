@@ -1,0 +1,229 @@
+
+nameOverride: ""
+fullnameOverride: ""
+
+global:
+  imageRegistry: ""
+  imagePullSecrets: []
+  storageClass: ""
+
+api:
+  replicaCount: 2
+  
+  image:
+    repository: langchain/langsmith-api
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  resources:
+    requests:
+      cpu: 500m
+      memory: 1Gi
+    limits:
+      cpu: 2
+      memory: 4Gi
+  
+  service:
+    type: ClusterIP
+    port: 80
+  
+  ingress:
+    enabled: true
+    annotations:
+      kubernetes.io/ingress.class: nginx
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+    hosts:
+      - host: langsmith.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls:
+      - secretName: langsmith-tls
+        hosts:
+          - langsmith.example.com
+  
+  env:
+    - name: DATABASE_URL
+      valueFrom:
+        secretKeyRef:
+          name: langsmith-secrets
+          key: database-url
+    - name: REDIS_URL
+      valueFrom:
+        secretKeyRef:
+          name: langsmith-secrets
+          key: redis-url
+    - name: SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: langsmith-secrets
+          key: secret-key
+    - name: LANGSMITH_LICENSE_KEY
+      valueFrom:
+        secretKeyRef:
+          name: langsmith-secrets
+          key: license-key
+
+frontend:
+  replicaCount: 2
+  
+  image:
+    repository: langchain/langsmith-frontend
+    tag: latest
+    pullPolicy: IfNotPresent
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  
+  service:
+    type: ClusterIP
+    port: 80
+  
+  env:
+    - name: API_URL
+      value: "https://langsmith.example.com/api"
+
+database:
+  enabled: true
+  
+  type: postgres
+  
+  postgres:
+    replicaCount: 1
+    
+    image:
+      repository: postgres
+      tag: 15.3
+      pullPolicy: IfNotPresent
+    
+    resources:
+      requests:
+        cpu: 500m
+        memory: 1Gi
+      limits:
+        cpu: 2
+        memory: 4Gi
+    
+    persistence:
+      enabled: true
+      size: 20Gi
+      storageClass: ""
+    
+    config:
+      username: langsmith
+      database: langsmith
+      password: ""
+      port: 5432
+  
+  clickhouse:
+    enabled: false
+    
+    image:
+      repository: clickhouse/clickhouse-server
+      tag: 23.3
+      pullPolicy: IfNotPresent
+    
+    resources:
+      requests:
+        cpu: 1
+        memory: 2Gi
+      limits:
+        cpu: 4
+        memory: 8Gi
+    
+    persistence:
+      enabled: true
+      size: 50Gi
+      storageClass: ""
+
+redis:
+  enabled: true
+  
+  image:
+    repository: redis
+    tag: 7.0
+    pullPolicy: IfNotPresent
+  
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 1Gi
+  
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: ""
+
+blobStorage:
+  type: filesystem
+  
+  s3:
+    bucket: langsmith
+    region: us-west-2
+    endpoint: ""
+    accessKey: ""
+    secretKey: ""
+  
+  azure:
+    containerName: langsmith
+    accountName: ""
+    accountKey: ""
+  
+  gcp:
+    bucket: langsmith
+    projectId: ""
+    credentials: ""
+  
+  filesystem:
+    persistence:
+      enabled: true
+      size: 10Gi
+      storageClass: ""
+
+auth:
+  type: basic
+  
+  oauth:
+    provider: ""
+    clientId: ""
+    clientSecret: ""
+    domain: ""
+  
+  basic:
+    enabled: true
+    adminUsername: admin
+    adminPassword: ""
+
+monitoring:
+  prometheus:
+    enabled: true
+  
+  grafana:
+    enabled: true
+    dashboards:
+      - langsmith-api
+      - langsmith-database
+      - langsmith-redis
+
+backup:
+  enabled: true
+  
+  schedule: "0 0 * * *"
+  
+  retentionPeriod: 7
+  
+  storage:
+    type: s3
+    s3:
+      bucket: langsmith-backups
+      region: us-west-2
+      accessKey: ""
+      secretKey: ""
