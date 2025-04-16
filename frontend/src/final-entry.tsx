@@ -1,0 +1,29 @@
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import './index.css';
+import { SharedStateProvider } from './components/ui/shared-state-provider';
+import KledMainLayout from './components/ui/kled-main-layout';
+import { MagicMCPServer } from './components/ui/magic-mcp-server';
+import { CoPilotIntegration } from './components/ui/copilot-integration';
+
+const App = () => {
+  return (
+    <SharedStateProvider>
+      <KledMainLayout>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <MagicMCPServer />
+          <CoPilotIntegration />
+        </div>
+      </KledMainLayout>
+    </SharedStateProvider>
+  );
+};
+
+const root = document.getElementById('root');
+if (root) {
+  ReactDOM.createRoot(root).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>
+  );
+}

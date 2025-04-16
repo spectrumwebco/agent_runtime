@@ -16,7 +16,7 @@ const FEATURE_FLAGS = process.env.FEATURE_FLAGS ? JSON.parse(process.env.FEATURE
 /** @type {import('webpack').Configuration} */
 const config = {
   mode: 'development',
-  entry: './src/custom-entry.tsx',
+  entry: './src/basic-entry.tsx',
   output: {
     path: path.resolve(__dirname, 'dist'),
     filename: 'static/js/[name].[contenthash:8].js',
