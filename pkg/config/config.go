@@ -77,8 +77,8 @@ type RuntimeConfig struct {
 func DefaultConfig() *Config {
 	return &Config{
 		Agent: AgentConfig{
-			Name:        "Sam Sepiol",
-			Description: "An autonomous software engineering agent",
+			Name:        "Kled",
+			Description: "Senior Software Engineering Lead & Technical Authority for AI/ML",
 			Version:     "0.1.0",
 		},
 		Server: ServerConfig{

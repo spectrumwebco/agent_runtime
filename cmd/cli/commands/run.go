@@ -13,7 +13,7 @@ import (
 	"github.com/spectrumwebco/agent_runtime/pkg/config"
 )
 
-// NewRunCommand creates a new command for running tasks with Sam Sepiol
+// NewRunCommand creates a new command for running tasks with Kled
 func NewRunCommand() *cobra.Command {
 	var configPath string
 	var task string
@@ -21,8 +21,8 @@ func NewRunCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "run",
-		Short: "Run a task with Sam Sepiol",
-		Long:  `Run a task with Sam Sepiol, the autonomous software engineering agent.`,
+		Short: "Run a task with Kled",
+		Long:  `Run a task with Kled, the Senior Software Engineering Lead & Technical Authority for AI/ML.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := loadConfig(configPath)
 			if err != nil {
