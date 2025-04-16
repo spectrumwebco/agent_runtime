@@ -16,7 +16,7 @@ This document tracks the integration of selected repositories from the [Awesome 
 
 ## Repositories Pending Integration
 - [x] **Web Scraping**: [Colly](https://github.com/gocolly/colly) - Fast and elegant scraping framework
-- [ ] **Data Structures**: [GoDS](https://github.com/emirpasic/gods) - Implementation of various data structures and algorithms
+- [x] **Data Structures**: [GoDS](https://github.com/emirpasic/gods) - Implementation of various data structures and algorithms
 - [ ] **Kubernetes Operations**: [Kops](https://github.com/kubernetes/kops) - Kubernetes operations tools
 - [ ] **Identity & Access Management**: [Hydra](https://github.com/ory/hydra) - OAuth 2.0 and OpenID Connect server
 - [ ] **Container Security**: [Clair](https://github.com/quay/clair) - Static analysis of vulnerabilities in containers
