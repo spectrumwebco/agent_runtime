@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import React from "react";
 import posthog from "posthog-js";
 import { useConfig } from "./use-config";
-import OpenHands from "#/api/open-hands";
+import KledIo from "#/api/kled-io";
 import { useAuth } from "#/context/auth-context";
 import { useLogout } from "../mutation/use-logout";
 
@@ -14,7 +14,7 @@ export const useGitUser = () => {
 
   const user = useQuery({
     queryKey: ["user", providerTokensSet],
-    queryFn: OpenHands.getGitUser,
+    queryFn: KledIo.getGitUser,
     enabled: providersAreSet && !!config?.APP_MODE,
     retry: false,
     staleTime: 1000 * 60 * 5, // 5 minutes

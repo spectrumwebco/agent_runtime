@@ -3,7 +3,7 @@ import {
   GetConfigResponse,
   Conversation,
   ResultSet,
-} from "#/api/open-hands.types";
+} from "#/api/kled-io.types";
 import { DEFAULT_SETTINGS } from "#/services/settings";
 import { STRIPE_BILLING_HANDLERS } from "./billing-handlers";
 import { ApiSettings, PostApiSettings } from "#/types/settings";
@@ -74,7 +74,7 @@ const CONVERSATIONS = new Map<string, Conversation>(
   ]),
 );
 
-const openHandsHandlers = [
+const kledIoHandlers = [
   http.get("/api/options/models", async () =>
     HttpResponse.json([
       "gpt-3.5-turbo",
@@ -105,7 +105,7 @@ const openHandsHandlers = [
 export const handlers = [
   ...STRIPE_BILLING_HANDLERS,
   ...FILE_SERVICE_HANDLERS,
-  ...openHandsHandlers,
+  ...kledIoHandlers,
   http.get("/api/user/repositories", () =>
     HttpResponse.json([
       { id: 1, full_name: "octocat/hello-world" },
@@ -131,7 +131,7 @@ export const handlers = [
     HttpResponse.json(null, { status: 200 }),
   ),
   http.get("/api/options/config", () => {
-    const mockSaas = import.meta.env.VITE_MOCK_SAAS === "true";
+    const mockSaas = import.meta.env.RSBUILD_MOCK_SAAS === "true";
 
     const config: GetConfigResponse = {
       APP_MODE: mockSaas ? "saas" : "oss",

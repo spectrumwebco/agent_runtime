@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import OpenHands from "#/api/open-hands";
+import KledIo from "#/api/kled-io";
 import { useIsAuthed } from "./use-is-authed";
 
 export const useUserConversations = () => {
@@ -7,7 +7,7 @@ export const useUserConversations = () => {
 
   return useQuery({
     queryKey: ["user", "conversations"],
-    queryFn: OpenHands.getUserConversations,
+    queryFn: Kled.getUserConversations,
     enabled: !!userIsAuthenticated,
   });
 };

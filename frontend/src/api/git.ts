@@ -3,9 +3,9 @@ import { extractNextPageFromLink } from "#/utils/extract-next-page-from-link";
 import { openHands } from "./open-hands-axios";
 
 /**
- * Retrieves repositories where OpenHands Github App has been installed
+ * Retrieves repositories where Kled.io Github App has been installed
  * @param installationIndex Pagination cursor position for app installation IDs
- * @param installations Collection of all App installation IDs for OpenHands Github App
+ * @param installations Collection of all App installation IDs for Kled.io Github App
  * @returns A list of repositories
  */
 export const retrieveGitHubAppRepositories = async (
@@ -15,7 +15,7 @@ export const retrieveGitHubAppRepositories = async (
   per_page = 30,
 ) => {
   const installationId = installations[installationIndex];
-  const response = await openHands.get<GitRepository[]>(
+  const response = await kledIo.get<GitRepository[]>(
     "/api/user/repositories",
     {
       params: {
@@ -55,7 +55,7 @@ export const retrieveGitHubAppRepositories = async (
  * @returns A list of repositories
  */
 export const retrieveUserGitRepositories = async () => {
-  const response = await openHands.get<GitRepository[]>(
+  const response = await kledIo.get<GitRepository[]>(
     "/api/user/repositories",
     {
       params: {

@@ -8,18 +8,18 @@ import {
   Conversation,
   ResultSet,
   GetTrajectoryResponse,
-} from "./open-hands.types";
-import { openHands } from "./open-hands-axios";
+} from "./kled-io.types";
+import { kledIo } from "./kled-io-axios";
 import { ApiSettings, PostApiSettings } from "#/types/settings";
 import { GitUser, GitRepository } from "#/types/git";
 
-class OpenHands {
+class KledIo {
   /**
    * Retrieve the list of models available
    * @returns List of models available
    */
   static async getModels(): Promise<string[]> {
-    const { data } = await openHands.get<string[]>("/api/options/models");
+    const { data } = await kledIo.get<string[]>("/api/options/models");
     return data;
   }
 
@@ -28,7 +28,7 @@ class OpenHands {
    * @returns List of agents available
    */
   static async getAgents(): Promise<string[]> {
-    const { data } = await openHands.get<string[]>("/api/options/agents");
+    const { data } = await kledIo.get<string[]>("/api/options/agents");
     return data;
   }
 
@@ -37,14 +37,14 @@ class OpenHands {
    * @returns List of security analyzers available
    */
   static async getSecurityAnalyzers(): Promise<string[]> {
-    const { data } = await openHands.get<string[]>(
+    const { data } = await kledIo.get<string[]>(
       "/api/options/security-analyzers",
     );
     return data;
   }
 
   static async getConfig(): Promise<GetConfigResponse> {
-    const { data } = await openHands.get<GetConfigResponse>(
+    const { data } = await kledIo.get<GetConfigResponse>(
       "/api/options/config",
     );
     return data;
@@ -60,7 +60,7 @@ class OpenHands {
     feedback: Feedback,
   ): Promise<FeedbackResponse> {
     const url = `/api/conversations/${conversationId}/submit-feedback`;
-    const { data } = await openHands.post<FeedbackResponse>(url, feedback);
+    const { data } = await kledIo.post<FeedbackResponse>(url, feedback);
     return data;
   }
 
@@ -74,7 +74,7 @@ class OpenHands {
     if (appMode === "oss") return true;
 
     const response =
-      await openHands.post<AuthenticateResponse>("/api/authenticate");
+      await kledIo.post<AuthenticateResponse>("/api/authenticate");
     return response.status === 200;
   }
 
@@ -84,7 +84,7 @@ class OpenHands {
    */
   static async getWorkspaceZip(conversationId: string): Promise<Blob> {
     const url = `/api/conversations/${conversationId}/zip-directory`;
-    const response = await openHands.get(url, {
+    const response = await kledIo.get(url, {
       responseType: "blob",
     });
     return response.data;
@@ -97,7 +97,7 @@ class OpenHands {
   static async getGitHubAccessToken(
     code: string,
   ): Promise<GitHubAccessTokenResponse> {
-    const { data } = await openHands.post<GitHubAccessTokenResponse>(
+    const { data } = await kledIo.post<GitHubAccessTokenResponse>(
       "/api/keycloak/callback",
       {
         code,
@@ -113,7 +113,7 @@ class OpenHands {
   static async getVSCodeUrl(
     conversationId: string,
   ): Promise<GetVSCodeUrlResponse> {
-    const { data } = await openHands.get<GetVSCodeUrlResponse>(
+    const { data } = await kledIo.get<GetVSCodeUrlResponse>(
       `/api/conversations/${conversationId}/vscode-url`,
     );
     return data;
@@ -122,28 +122,28 @@ class OpenHands {
   static async getRuntimeId(
     conversationId: string,
   ): Promise<{ runtime_id: string }> {
-    const { data } = await openHands.get<{ runtime_id: string }>(
+    const { data } = await kledIo.get<{ runtime_id: string }>(
       `/api/conversations/${conversationId}/config`,
     );
     return data;
   }
 
   static async getUserConversations(): Promise<Conversation[]> {
-    const { data } = await openHands.get<ResultSet<Conversation>>(
+    const { data } = await kledIo.get<ResultSet<Conversation>>(
       "/api/conversations?limit=9",
     );
     return data.results;
   }
 
   static async deleteUserConversation(conversationId: string): Promise<void> {
-    await openHands.delete(`/api/conversations/${conversationId}`);
+    await kledIo.delete(`/api/conversations/${conversationId}`);
   }
 
   static async updateUserConversation(
     conversationId: string,
     conversation: Partial<Omit<Conversation, "conversation_id">>,
   ): Promise<void> {
-    await openHands.patch(`/api/conversations/${conversationId}`, conversation);
+    await kledIo.patch(`/api/conversations/${conversationId}`, conversation);
   }
 
   static async createConversation(
@@ -160,7 +160,7 @@ class OpenHands {
       replay_json: replayJson,
     };
 
-    const { data } = await openHands.post<Conversation>(
+    const { data } = await kledIo.post<Conversation>(
       "/api/conversations",
       body,
     );
@@ -171,7 +171,7 @@ class OpenHands {
   static async getConversation(
     conversationId: string,
   ): Promise<Conversation | null> {
-    const { data } = await openHands.get<Conversation | null>(
+    const { data } = await kledIo.get<Conversation | null>(
       `/api/conversations/${conversationId}`,
     );
 
@@ -182,7 +182,7 @@ class OpenHands {
    * Get the settings from the server or use the default settings if not found
    */
   static async getSettings(): Promise<ApiSettings> {
-    const { data } = await openHands.get<ApiSettings>("/api/settings");
+    const { data } = await kledIo.get<ApiSettings>("/api/settings");
     return data;
   }
 
@@ -193,7 +193,7 @@ class OpenHands {
   static async saveSettings(
     settings: Partial<PostApiSettings>,
   ): Promise<boolean> {
-    const data = await openHands.post("/api/settings", settings);
+    const data = await kledIo.post("/api/settings", settings);
     return data.status === 200;
   }
 
@@ -201,12 +201,12 @@ class OpenHands {
    * Reset user settings in server
    */
   static async resetSettings(): Promise<boolean> {
-    const response = await openHands.post("/api/reset-settings");
+    const response = await kledIo.post("/api/reset-settings");
     return response.status === 200;
   }
 
   static async createCheckoutSession(amount: number): Promise<string> {
-    const { data } = await openHands.post(
+    const { data } = await kledIo.post(
       "/api/billing/create-checkout-session",
       {
         amount,
@@ -216,21 +216,21 @@ class OpenHands {
   }
 
   static async createBillingSessionResponse(): Promise<string> {
-    const { data } = await openHands.post(
+    const { data } = await kledIo.post(
       "/api/billing/create-customer-setup-session",
     );
     return data.redirect_url;
   }
 
   static async getBalance(): Promise<string> {
-    const { data } = await openHands.get<{ credits: string }>(
+    const { data } = await kledIo.get<{ credits: string }>(
       "/api/billing/credits",
     );
     return data.credits;
   }
 
   static async getGitUser(): Promise<GitUser> {
-    const response = await openHands.get<GitUser>("/api/user/info");
+    const response = await kledIo.get<GitUser>("/api/user/info");
 
     const { data } = response;
 
@@ -250,7 +250,7 @@ class OpenHands {
     query: string,
     per_page = 5,
   ): Promise<GitRepository[]> {
-    const response = await openHands.get<GitRepository[]>(
+    const response = await kledIo.get<GitRepository[]>(
       "/api/user/search/repositories",
       {
         params: {
@@ -266,7 +266,7 @@ class OpenHands {
   static async getTrajectory(
     conversationId: string,
   ): Promise<GetTrajectoryResponse> {
-    const { data } = await openHands.get<GetTrajectoryResponse>(
+    const { data } = await kledIo.get<GetTrajectoryResponse>(
       `/api/conversations/${conversationId}/trajectory`,
     );
     return data;
@@ -275,8 +275,8 @@ class OpenHands {
   static async logout(appMode: GetConfigResponse["APP_MODE"]): Promise<void> {
     const endpoint =
       appMode === "saas" ? "/api/logout" : "/api/unset-settings-tokens";
-    await openHands.post(endpoint);
+    await kledIo.post(endpoint);
   }
 }
 
-export default OpenHands;
+export default KledIo;
