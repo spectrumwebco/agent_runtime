@@ -1,0 +1,85 @@
+/* Aceternity UI Styles */
+
+/* Text Gradient */
+.aceternity-text-gradient {
+  @apply bg-gradient-to-r from-emerald-500 to-blue-500 bg-clip-text text-transparent;
+}
+
+/* Gradient Card */
+.aceternity-card {
+  @apply bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 relative overflow-hidden;
+}
+
+.aceternity-card .aceternity-glow {
+  @apply absolute inset-0 z-0 opacity-0 transition-opacity duration-300;
+  background: radial-gradient(circle at center, rgba(16, 185, 129, 0.2) 0%, transparent 70%);
+}
+
+.aceternity-card:hover .aceternity-glow {
+  @apply opacity-100;
+}
+
+/* Aceternity Button */
+.aceternity-button {
+  @apply relative overflow-hidden bg-emerald-500 text-white hover:bg-emerald-600 transition-all duration-300;
+}
+
+.aceternity-button::before {
+  content: "";
+  @apply absolute inset-0 opacity-0 transition-opacity duration-300;
+  background: linear-gradient(45deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.2));
+}
+
+.aceternity-button:hover::before {
+  @apply opacity-100;
+}
+
+/* Animated Border */
+.aceternity-animated-border {
+  @apply relative rounded-xl overflow-hidden p-px;
+}
+
+.aceternity-animated-border::before {
+  content: "";
+  @apply absolute inset-0 rounded-xl;
+  background: linear-gradient(
+    to right,
+    rgba(16, 185, 129, 0.5),
+    rgba(59, 130, 246, 0.5),
+    rgba(16, 185, 129, 0.5)
+  );
+  background-size: 200% 100%;
+  animation: border-animation 3s linear infinite;
+}
+
+@keyframes border-animation {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 200% 0%;
+  }
+}
+
+/* Shimmer Effect */
+.aceternity-shimmer {
+  @apply relative overflow-hidden;
+}
+
+.aceternity-shimmer::after {
+  content: "";
+  @apply absolute inset-0 transform -translate-x-full;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.1),
+    transparent
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
