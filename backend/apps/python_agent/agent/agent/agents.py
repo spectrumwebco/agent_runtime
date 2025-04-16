@@ -28,9 +28,9 @@ from agent import (
     get_rex_version,
 )
 from .action_sampler import AbstractActionSampler, ActionSamplerConfig
-from agent.agent.history_processors import DefaultHistoryProcessor, HistoryProcessor
-from agent.agent.hooks.abstract import AbstractAgentHook, CombinedAgentHook
-from agent.agent.models import (
+from .history_processors import DefaultHistoryProcessor, HistoryProcessor
+from .hooks.abstract import AbstractAgentHook, CombinedAgentHook
+from .models import (
     AbstractModel,
     HumanModel,
     HumanThoughtModel,
