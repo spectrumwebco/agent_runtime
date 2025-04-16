@@ -34,6 +34,7 @@ api = NinjaAPI(
     description="API for the Agent Runtime system",
     auth=ApiKey(),
     csrf=False,  # Disable CSRF for API testing
+    urls_namespace="agent_api"
 )
 
 
