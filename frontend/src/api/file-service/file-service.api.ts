@@ -1,4 +1,4 @@
-import { openHands } from "../open-hands-axios";
+import { kledIo } from "../kled-io-axios";
 import { GetFilesResponse, GetFileResponse } from "./file-service.types";
 import { getConversationUrl } from "./file-service.utils";
 
@@ -14,7 +14,7 @@ export class FileService {
     path?: string,
   ): Promise<GetFilesResponse> {
     const url = `${getConversationUrl(conversationId)}/list-files`;
-    const { data } = await openHands.get<GetFilesResponse>(url, {
+    const { data } = await kledIo.get<GetFilesResponse>(url, {
       params: { path },
     });
 
@@ -29,7 +29,7 @@ export class FileService {
    */
   static async getFile(conversationId: string, path: string): Promise<string> {
     const url = `${getConversationUrl(conversationId)}/select-file`;
-    const { data } = await openHands.get<GetFileResponse>(url, {
+    const { data } = await kledIo.get<GetFileResponse>(url, {
       params: { file: path },
     });
 

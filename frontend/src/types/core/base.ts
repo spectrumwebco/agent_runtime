@@ -1,4 +1,4 @@
-export type OpenHandsEventType =
+export type KledioEventType =
   | "message"
   | "agent_state_changed"
   | "run"
@@ -15,21 +15,21 @@ export type OpenHandsEventType =
   | "error"
   | "recall";
 
-interface OpenHandsBaseEvent {
+interface KledioBaseEvent {
   id: number;
   source: "agent" | "user";
   message: string;
   timestamp: string; // ISO 8601
 }
 
-export interface OpenHandsActionEvent<T extends OpenHandsEventType>
-  extends OpenHandsBaseEvent {
+export interface KledioActionEvent<T extends KledioEventType>
+  extends KledioBaseEvent {
   action: T;
   args: Record<string, unknown>;
 }
 
-export interface OpenHandsObservationEvent<T extends OpenHandsEventType>
-  extends OpenHandsBaseEvent {
+export interface KledioObservationEvent<T extends KledioEventType>
+  extends KledioBaseEvent {
   cause: number;
   observation: T;
   content: string;

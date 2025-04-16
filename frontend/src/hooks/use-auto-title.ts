@@ -4,7 +4,7 @@ import { useSelector, useDispatch } from "react-redux";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUpdateConversation } from "./mutation/use-update-conversation";
 import { RootState } from "#/store";
-import OpenHands from "#/api/open-hands";
+import KledIo from "#/api/kled-io";
 import { useUserConversation } from "#/hooks/query/use-user-conversation";
 
 const defaultTitlePattern = /^Conversation [a-f0-9]+$/;
@@ -57,7 +57,7 @@ export function useAutoTitle() {
         onSuccess: async () => {
           try {
             const updatedConversation =
-              await OpenHands.getConversation(conversationId);
+              await KledIo.getConversation(conversationId);
 
             queryClient.setQueryData(
               ["user", "conversation", conversationId],
