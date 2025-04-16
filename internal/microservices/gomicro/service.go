@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"time"
 
-	"go-micro.dev/v4"
-	"go-micro.dev/v4/client"
-	"go-micro.dev/v4/registry"
-	"go-micro.dev/v4/server"
+	"github.com/micro/go-micro"
+	"github.com/micro/go-micro/client"
+	"github.com/micro/go-micro/registry"
+	"github.com/micro/go-micro/server"
 )
 
 type Service struct {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/micro/go-micro/v2/registry"
+	"github.com/micro/go-micro/registry"
 	"github.com/spectrumwebco/agent_runtime/internal/database/models"
 	"github.com/spectrumwebco/agent_runtime/internal/microservices/service"
 )
