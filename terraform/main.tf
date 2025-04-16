@@ -120,6 +120,51 @@ module "rocketmq" {
   depends_on = [module.k8s]
 }
 
+module "doris" {
+  source = "./modules/doris"
+  
+  namespace = var.namespace
+  doris_version = var.doris_version
+  fe_replicas = var.doris_fe_replicas
+  be_replicas = var.doris_be_replicas
+  admin_password = var.doris_admin_password
+  
+  depends_on = [module.k8s]
+}
+
+module "kafka" {
+  source = "./modules/kafka"
+  
+  namespace = var.namespace
+  kafka_version = var.kafka_version
+  zookeeper_version = var.zookeeper_version
+  kafka_replicas = var.kafka_replicas
+  
+  depends_on = [module.k8s]
+}
+
+module "postgres_operator" {
+  source = "./modules/postgres"
+  
+  namespace = var.namespace
+  cluster_name = var.postgres_cluster_name
+  replicas = var.postgres_replicas
+  
+  depends_on = [module.k8s]
+}
+
+module "kafka_k8s_monitor" {
+  source = "./modules/kafka_k8s_monitor"
+  
+  namespace = var.namespace
+  kafka_replicas = var.kafka_replicas
+  monitor_namespace = var.monitor_namespace
+  poll_interval = var.poll_interval
+  resources_to_monitor = var.resources_to_monitor
+  
+  depends_on = [module.k8s, module.kafka]
+}
+
 module "monitoring" {
   source = "./modules/monitoring"
   

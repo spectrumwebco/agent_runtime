@@ -6,16 +6,16 @@ from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel, Field
-from swerex.runtime.abstract import Command as RexCommand
-from swerex.runtime.abstract import UploadRequest
+from ..swerex.runtime.abstract import Command as RexCommand
+from ..swerex.runtime.abstract import UploadRequest
 from typing_extensions import Self
 
-from agent.environment.swe_env import SWEEnv
-from agent.tools.bundle import Bundle
-from agent.tools.commands import BASH_COMMAND, Command
-from agent.tools.parsing import FunctionCallingParser, JsonParser, ParseFunction
-from agent.tools.utils import _guard_multiline_input, generate_command_docs
-from agent.utils.log import get_logger
+from ..environment.swe_env import SWEEnv
+from .bundle import Bundle
+from .commands import BASH_COMMAND, Command
+from .parsing import FunctionCallingParser, JsonParser, ParseFunction
+from .utils import _guard_multiline_input, generate_command_docs
+from ..utils.log import get_logger
 
 
 class ToolFilterConfig(BaseModel):

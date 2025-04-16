@@ -1,0 +1,197 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: doris-fe
+  namespace: default
+  labels:
+    app: doris
+    component: fe
+    service: database
+spec:
+  ports:
+  - port: 8030
+    targetPort: 8030
+    protocol: TCP
+    name: http
+  - port: 9020
+    targetPort: 9020
+    protocol: TCP
+    name: rpc
+  - port: 9030
+    targetPort: 9030
+    protocol: TCP
+    name: query
+  selector:
+    app: doris
+    component: fe
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: doris-be
+  namespace: default
+  labels:
+    app: doris
+    component: be
+    service: database
+spec:
+  ports:
+  - port: 9050
+    targetPort: 9050
+    protocol: TCP
+    name: be-port
+  - port: 8040
+    targetPort: 8040
+    protocol: TCP
+    name: webserver
+  selector:
+    app: doris
+    component: be
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: doris-fe
+  namespace: default
+  labels:
+    app: doris
+    component: fe
+    service: database
+spec:
+  serviceName: "doris-fe"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: doris
+      component: fe
+  template:
+    metadata:
+      labels:
+        app: doris
+        component: fe
+        service: database
+    spec:
+      containers:
+      - name: doris-fe
+        image: apache/doris:2.0.2-fe
+        ports:
+        - containerPort: 8030
+          name: http
+        - containerPort: 9020
+          name: rpc
+        - containerPort: 9030
+          name: query
+        env:
+        - name: FE_SERVERS
+          value: "doris-fe-0.doris-fe.default.svc.cluster.local:9010"
+        - name: DORIS_ADMIN_USER
+          value: "root"
+        - name: DORIS_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: doris-credentials
+              key: admin-password
+        volumeMounts:
+        - name: doris-fe-data
+          mountPath: /opt/apache-doris/fe/doris-meta
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1000m"
+          limits:
+            memory: "4Gi"
+            cpu: "2000m"
+        readinessProbe:
+          httpGet:
+            path: /api/bootstrap
+            port: 8030
+          initialDelaySeconds: 30
+          periodSeconds: 15
+        livenessProbe:
+          httpGet:
+            path: /api/bootstrap
+            port: 8030
+          initialDelaySeconds: 60
+          periodSeconds: 30
+  volumeClaimTemplates:
+  - metadata:
+      name: doris-fe-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 10Gi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: doris-be
+  namespace: default
+  labels:
+    app: doris
+    component: be
+    service: database
+spec:
+  serviceName: "doris-be"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: doris
+      component: be
+  template:
+    metadata:
+      labels:
+        app: doris
+        component: be
+        service: database
+    spec:
+      containers:
+      - name: doris-be
+        image: apache/doris:2.0.2-be
+        ports:
+        - containerPort: 9050
+          name: be-port
+        - containerPort: 8040
+          name: webserver
+        env:
+        - name: FE_SERVERS
+          value: "doris-fe-0.doris-fe.default.svc.cluster.local:9020"
+        volumeMounts:
+        - name: doris-be-data
+          mountPath: /opt/apache-doris/be/storage
+        resources:
+          requests:
+            memory: "4Gi"
+            cpu: "2000m"
+          limits:
+            memory: "8Gi"
+            cpu: "4000m"
+        readinessProbe:
+          httpGet:
+            path: /api/health
+            port: 8040
+          initialDelaySeconds: 30
+          periodSeconds: 15
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 8040
+          initialDelaySeconds: 60
+          periodSeconds: 30
+  volumeClaimTemplates:
+  - metadata:
+      name: doris-be-data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 20Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: doris-credentials
+  namespace: default
+type: Opaque
+stringData:
+  admin-password: "${DORIS_ADMIN_PASSWORD}"

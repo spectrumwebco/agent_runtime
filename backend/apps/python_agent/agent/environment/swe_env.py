@@ -5,24 +5,24 @@ from pathlib import PurePath
 from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field
-from swerex.deployment.abstract import AbstractDeployment
-from swerex.deployment.config import (
+from ..swerex.deployment.abstract import AbstractDeployment
+from ..swerex.deployment.config import (
     DeploymentConfig,
     DockerDeploymentConfig,
     get_deployment,
 )
-from swerex.runtime.abstract import (
+from ..swerex.runtime.abstract import (
     BashAction,
     BashInterruptAction,
     CreateBashSessionRequest,
     ReadFileRequest,
     WriteFileRequest,
 )
-from swerex.runtime.abstract import Command as RexCommand
+from ..swerex.runtime.abstract import Command as RexCommand
 
-from agent.environment.hooks.abstract import CombinedEnvHooks, EnvHook
-from agent.environment.repo import Repo, RepoConfig
-from agent.utils.log import get_logger
+from .hooks.abstract import CombinedEnvHooks, EnvHook
+from .repo import Repo, RepoConfig
+from ..utils.log import get_logger
 
 
 class EnvironmentConfig(BaseModel):

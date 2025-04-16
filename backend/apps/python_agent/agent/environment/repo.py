@@ -6,14 +6,14 @@ from typing import Any, Literal, Protocol
 from git import InvalidGitRepositoryError
 from git import Repo as GitRepo
 from pydantic import BaseModel, ConfigDict, Field
-from swerex.deployment.abstract import AbstractDeployment
-from swerex.runtime.abstract import Command, UploadRequest
+from ..swerex.deployment.abstract import AbstractDeployment
+from ..swerex.runtime.abstract import Command, UploadRequest
 from typing_extensions import Self
 
-from agent.utils.github import _parse_gh_repo_url
-from agent.utils.gitee import InvalidGiteeURL
+from ..utils.github import _parse_gh_repo_url
+from ..utils.gitee import InvalidGiteeURL
 
-from agent.utils.log import get_logger
+from ..utils.log import get_logger
 
 logger = get_logger("swea-config", emoji="🔧")
 
@@ -288,7 +288,7 @@ def repo_from_simplified_input(
     if type == "preexisting":
         return PreExistingRepoConfig(repo_name=input, base_commit=base_commit)
     if type == "auto":
-        from agent.environment.repo_provider import (
+        from ..repo_provider import (
             detect_provider_from_url,
             RepoProviderType,
         )

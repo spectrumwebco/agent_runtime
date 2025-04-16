@@ -36,20 +36,20 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from agent.agent.agents import AbstractAgent, AgentConfig, get_agent_from_config
-from agent.agent.problem_statement import (
+from ..agent.agents import AbstractAgent, AgentConfig, get_agent_from_config
+from ..agent.problem_statement import (
     EmptyProblemStatement,
     ProblemStatement,
     ProblemStatementConfig,
 )
-from agent.environment.swe_env import EnvironmentConfig, SWEEnv
-from agent.run.common import AutoCorrectSuggestion as ACS
-from agent.run.common import BasicCLI, ConfigHelper, save_predictions
-from agent.run.hooks.abstract import CombinedRunHooks, RunHook
-from agent.run.hooks.apply_patch import SaveApplyPatchHook
-from agent.run.hooks.open_pr import OpenPRConfig, OpenPRHook
-from agent.utils.config import load_environment_variables
-from agent.utils.log import add_file_handler, get_logger
+from ..environment.swe_env import EnvironmentConfig, SWEEnv
+from .common import AutoCorrectSuggestion as ACS
+from .common import BasicCLI, ConfigHelper, save_predictions
+from .hooks.abstract import CombinedRunHooks, RunHook
+from .hooks.apply_patch import SaveApplyPatchHook
+from .hooks.open_pr import OpenPRConfig, OpenPRHook
+from ..utils.config import load_environment_variables
+from ..utils.log import add_file_handler, get_logger
 
 
 class RunSingleActionConfig(BaseModel):
