@@ -35,7 +35,7 @@ export const AIModelSelector: React.FC<AIModelSelectorProps> = ({
               "flex items-start p-4 rounded-lg border transition-all",
               selectedModelId === model.id
                 ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20"
-                : "border-gray-200 dark:border-gray-700 hover:border-emerald-500"
+                : "border-gray-200 dark:border-gray-700 hover:border-emerald-500",
             )}
           >
             <div className="flex-1">

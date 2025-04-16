@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from "react";
 
 interface TerminalProps {
   content: string;
@@ -9,8 +9,8 @@ interface TerminalProps {
 
 export const Terminal: React.FC<TerminalProps> = ({
   content,
-  title = 'Terminal',
-  className = '',
+  title = "Terminal",
+  className = "",
   autoScroll = true,
 }) => {
   const terminalRef = useRef<HTMLDivElement>(null);
@@ -36,7 +36,7 @@ export const Terminal: React.FC<TerminalProps> = ({
       <div
         ref={terminalRef}
         className="p-4 bg-black text-gray-200 font-mono text-sm overflow-auto"
-        style={{ maxHeight: '400px' }}
+        style={{ maxHeight: "400px" }}
       >
         <pre className="whitespace-pre-wrap">{content}</pre>
       </div>

@@ -8,9 +8,11 @@ interface LangGraphIntegrationProps {
   className?: string;
 }
 
-export const LangGraphIntegration: React.FC<LangGraphIntegrationProps> = ({ className }) => {
+export const LangGraphIntegration: React.FC<LangGraphIntegrationProps> = ({
+  className,
+}) => {
   const { state, updateState } = useSharedState();
-  
+
   const {
     graphId,
     graphState,
@@ -45,7 +47,7 @@ export const LangGraphIntegration: React.FC<LangGraphIntegrationProps> = ({ clas
         modelId: (state.activeModelId as any) || "gemini-2.5-pro",
       });
     }
-    
+
     await executeStep({
       input: "Execute next step in the agent workflow",
     });
@@ -60,10 +62,12 @@ export const LangGraphIntegration: React.FC<LangGraphIntegrationProps> = ({ clas
             <Button
               variant="outline"
               size="sm"
-              onClick={() => createGraph({
-                agentType: (state.activeAgentId as any) || "swe-agent",
-                modelId: (state.activeModelId as any) || "gemini-2.5-pro",
-              })}
+              onClick={() =>
+                createGraph({
+                  agentType: (state.activeAgentId as any) || "swe-agent",
+                  modelId: (state.activeModelId as any) || "gemini-2.5-pro",
+                })
+              }
               disabled={isLoading}
             >
               Reset Graph
@@ -78,13 +82,13 @@ export const LangGraphIntegration: React.FC<LangGraphIntegrationProps> = ({ clas
             </Button>
           </div>
         </div>
-        
+
         {error && (
           <div className="bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 p-3 rounded-md text-sm">
             {error}
           </div>
         )}
-        
+
         {graphState ? (
           <LangGraphVisualizer
             nodes={graphState.nodes}
@@ -93,11 +97,13 @@ export const LangGraphIntegration: React.FC<LangGraphIntegrationProps> = ({ clas
         ) : (
           <div className="border rounded-lg p-8 flex items-center justify-center">
             <p className="text-gray-500 dark:text-gray-400">
-              {isLoading ? "Creating agent graph..." : "No active agent graph. Click 'Reset Graph' to create one."}
+              {isLoading
+                ? "Creating agent graph..."
+                : "No active agent graph. Click 'Reset Graph' to create one."}
             </p>
           </div>
         )}
-        
+
         {graphState && (
           <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-900">
             <h4 className="text-sm font-medium mb-2">Current State</h4>

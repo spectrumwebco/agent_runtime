@@ -19,11 +19,11 @@ export const SpotlightCard: React.FC<SpotlightCardProps> = ({
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
-    
+
     const rect = cardRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
-    
+
     setPosition({ x, y });
   };
 
@@ -43,7 +43,7 @@ export const SpotlightCard: React.FC<SpotlightCardProps> = ({
       className={cn(
         "relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-md transition-all duration-200",
         isHovered && "shadow-xl",
-        className
+        className,
       )}
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
@@ -57,7 +57,7 @@ export const SpotlightCard: React.FC<SpotlightCardProps> = ({
           background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 40%)`,
         }}
       />
-      
+
       {/* Card content */}
       <div className="relative z-10">{children}</div>
     </div>

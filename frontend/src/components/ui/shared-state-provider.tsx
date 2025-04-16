@@ -30,7 +30,9 @@ interface SharedStateContextType {
   resetState: () => void;
 }
 
-const SharedStateContext = createContext<SharedStateContextType | undefined>(undefined);
+const SharedStateContext = createContext<SharedStateContextType | undefined>(
+  undefined,
+);
 
 interface SharedStateProviderProps {
   children: React.ReactNode;
@@ -47,61 +49,63 @@ export const SharedStateProvider: React.FC<SharedStateProviderProps> = ({
   });
 
   useEffect(() => {
-    const ws = new WebSocket(`${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.host}/api/ws/state`);
-    
+    const ws = new WebSocket(
+      `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/api/ws/state`,
+    );
+
     ws.onopen = () => {
-      console.log('WebSocket connection established');
+      console.log("WebSocket connection established");
     };
-    
+
     ws.onmessage = (event) => {
       try {
         const updates = JSON.parse(event.data);
-        setState(prevState => ({
+        setState((prevState) => ({
           ...prevState,
           ...updates,
         }));
       } catch (error) {
-        console.error('Error parsing WebSocket message:', error);
+        console.error("Error parsing WebSocket message:", error);
       }
     };
-    
+
     ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
+      console.error("WebSocket error:", error);
     };
-    
+
     ws.onclose = () => {
-      console.log('WebSocket connection closed');
+      console.log("WebSocket connection closed");
     };
-    
+
     return () => {
       ws.close();
     };
   }, []);
 
   const updateState = (updates: Partial<SharedAppState>) => {
-    setState(prevState => ({
+    setState((prevState) => ({
       ...prevState,
       ...updates,
     }));
-    
-    fetch('/api/state', {
-      method: 'POST',
+
+    fetch("/api/state", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(updates),
-    }).catch(error => {
-      console.error('Error sending state update to backend:', error);
+    }).catch((error) => {
+      console.error("Error sending state update to backend:", error);
     });
   };
 
   const resetState = () => {
     setState(defaultState);
-    
-    fetch('/api/state/reset', {
-      method: 'POST',
-    }).catch(error => {
-      console.error('Error resetting state on backend:', error);
+
+    fetch("/api/state/reset", {
+      method: "POST",
+    }).catch((error) => {
+      console.error("Error resetting state on backend:", error);
     });
   };
 
@@ -114,10 +118,10 @@ export const SharedStateProvider: React.FC<SharedStateProviderProps> = ({
 
 export const useSharedState = () => {
   const context = useContext(SharedStateContext);
-  
+
   if (context === undefined) {
-    throw new Error('useSharedState must be used within a SharedStateProvider');
+    throw new Error("useSharedState must be used within a SharedStateProvider");
   }
-  
+
   return context;
 };
