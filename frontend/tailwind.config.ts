@@ -1,9 +1,9 @@
-/** @type {import('tailwindcss').Config} */
+import type { Config } from 'tailwindcss';
 import { heroui } from "@heroui/react";
 import typography from "@tailwindcss/typography";
 import animate from "tailwindcss-animate";
 
-export default {
+const config: Config = {
   darkMode: ["class"],
   content: [
     "./src/**/*.{js,ts,jsx,tsx}",
@@ -119,3 +119,5 @@ export default {
     animate,
   ],
 };
+
+export default config;

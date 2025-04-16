@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
-const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
+import { execSync } from 'child_process';
+import fs from 'fs';
+import path from 'path';
 
 const colors = {
   reset: '\x1b[0m',
@@ -65,7 +65,7 @@ if (!fs.existsSync(componentsJsonPath)) {
     "rsc": false,
     "tsx": true,
     "tailwind": {
-      "config": "tailwind.config.js",
+      "config": "tailwind.config.ts", // Updated to .ts extension
       "css": "src/styles/globals.css",
       "baseColor": "slate",
       "cssVariables": true
@@ -121,7 +121,7 @@ components.forEach((component) => {
     execSync(`npx shadcn-ui@latest add ${component} --yes`, { stdio: 'inherit' });
     console.log(`${colors.green}Successfully installed ${component}${colors.reset}`);
   } catch (error) {
-    console.error(`Error installing ${component}:`, error.message);
+    console.error(`Error installing ${component}:`, (error as Error).message);
   }
 });
 
