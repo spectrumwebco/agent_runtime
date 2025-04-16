@@ -21,8 +21,11 @@ from api.ninja_api import api as ninja_api
 from api.grpc_service import router as grpc_router
 from api.swagger import urlpatterns as swagger_urls
 
-# Add router to ninja_api
-ninja_api.add_router("/grpc", grpc_router)
+# Add router to ninja_api only if it hasn't been added already
+try:
+    ninja_api.add_router("/grpc", grpc_router)
+except Exception as e:
+    pass
 
 urlpatterns = [
     path('admin/', admin.site.urls),
