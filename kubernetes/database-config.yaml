@@ -17,3 +17,6 @@ data:
   
   ROCKETMQ_HOST: "rocketmq.default.svc.cluster.local"
   ROCKETMQ_PORT: "9876"
+  
+  YAP2DB_HOST: "yap2db.default.svc.cluster.local"
+  YAP2DB_PORT: "10824"
