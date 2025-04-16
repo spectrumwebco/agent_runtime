@@ -21,12 +21,14 @@ from api.ninja_api import api as ninja_api
 from api.grpc_service import router as grpc_router
 from api.swagger import urlpatterns as swagger_urls
 
+# Add router to ninja_api
+ninja_api.add_router("/grpc", grpc_router)
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include('api.urls')),
     path('ml-api/', include('ml_api.urls')),
-    path('ninja-api/', ninja_api.urls),
+    path('ninja-api/', ninja_api.urls, name='ninja-api'),
     path('docs/', include(swagger_urls)),
     path('agent/', include('apps.python_agent.urls')),
     path('ml/', include('apps.python_ml.urls')),
