@@ -1,0 +1,205 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: postgres-operator
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: postgres-operator
+  namespace: postgres-operator
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: postgres-operator
+rules:
+- apiGroups:
+  - '*'
+  resources:
+  - configmaps
+  - deployments
+  - pods
+  - secrets
+  - services
+  - statefulsets
+  - persistentvolumeclaims
+  verbs:
+  - '*'
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - '*'
+- apiGroups:
+  - postgres-operator.crunchydata.com
+  resources:
+  - postgresclusters
+  verbs:
+  - '*'
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: postgres-operator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: postgres-operator
+subjects:
+- kind: ServiceAccount
+  name: postgres-operator
+  namespace: postgres-operator
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres-operator
+  namespace: postgres-operator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: postgres-operator
+  template:
+    metadata:
+      labels:
+        name: postgres-operator
+    spec:
+      serviceAccountName: postgres-operator
+      containers:
+      - name: postgres-operator
+        image: registry.developers.crunchydata.com/crunchydata/postgres-operator:v5.3.1
+        imagePullPolicy: IfNotPresent
+        env:
+        - name: CRUNCHY_DEBUG
+          value: "false"
+        - name: RELATED_IMAGE_PGBACKREST
+          value: registry.developers.crunchydata.com/crunchydata/crunchy-pgbackrest:ubi8-2.41-0
+        - name: RELATED_IMAGE_PGEXPORTER
+          value: registry.developers.crunchydata.com/crunchydata/crunchy-postgres-exporter:ubi8-5.3.1-0
+        - name: RELATED_IMAGE_PGUPGRADE
+          value: registry.developers.crunchydata.com/crunchydata/crunchy-upgrade:ubi8-5.3.1-0
+        - name: RELATED_IMAGE_POSTGRES_14
+          value: registry.developers.crunchydata.com/crunchydata/crunchy-postgres:ubi8-14.7-0
+        resources:
+          limits:
+            cpu: 500m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: postgresclusters.postgres-operator.crunchydata.com
+spec:
+  group: postgres-operator.crunchydata.com
+  names:
+    kind: PostgresCluster
+    listKind: PostgresClusterList
+    plural: postgresclusters
+    singular: postgrescluster
+    shortNames:
+    - pgc
+  scope: Namespaced
+  versions:
+  - name: v1beta1
+    served: true
+    storage: true
+    schema:
+      openAPIV3Schema:
+        type: object
+        properties:
+          spec:
+            type: object
+            properties:
+              image:
+                type: string
+              postgresVersion:
+                type: integer
+              instances:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    replicas:
+                      type: integer
+                    dataVolumeClaimSpec:
+                      type: object
+                      properties:
+                        accessModes:
+                          type: array
+                          items:
+                            type: string
+                        resources:
+                          type: object
+                          properties:
+                            requests:
+                              type: object
+                              properties:
+                                storage:
+                                  type: string
+              backups:
+                type: object
+                properties:
+                  pgbackrest:
+                    type: object
+                    properties:
+                      image:
+                        type: string
+                      repos:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                            volume:
+                              type: object
+                              properties:
+                                volumeClaimSpec:
+                                  type: object
+                                  properties:
+                                    accessModes:
+                                      type: array
+                                      items:
+                                        type: string
+                                    resources:
+                                      type: object
+                                      properties:
+                                        requests:
+                                          type: object
+                                          properties:
+                                            storage:
+                                              type: string
+              users:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    databases:
+                      type: array
+                      items:
+                        type: string
+                    options:
+                      type: string
+              patroni:
+                type: object
+                properties:
+                  dynamicConfiguration:
+                    type: object
+                    properties:
+                      postgresql:
+                        type: object
+                        properties:
+                          parameters:
+                            type: object
+                            additionalProperties:
+                              type: string

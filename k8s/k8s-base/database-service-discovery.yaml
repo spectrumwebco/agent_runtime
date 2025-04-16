@@ -1,0 +1,88 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: database-service-discovery
+  namespace: default
+data:
+  doris_fe_service: "doris-fe.default.svc.cluster.local"
+  doris_fe_http_port: "8030"
+  doris_fe_rpc_port: "9020"
+  doris_fe_query_port: "9030"
+  doris_be_service: "doris-be.default.svc.cluster.local"
+  doris_be_port: "9050"
+  doris_be_webserver_port: "8040"
+  
+  kafka_bootstrap_servers: "kafka.default.svc.cluster.local:9092"
+  zookeeper_servers: "zookeeper.default.svc.cluster.local:2181"
+  
+  postgres_service: "agent-postgres-cluster-primary.default.svc.cluster.local"
+  postgres_port: "5432"
+  postgres_operator_service: "postgres-operator.postgres-operator.svc.cluster.local"
+  
+  yap2db_service: "yap2db.default.svc.cluster.local"
+  yap2db_port: "10824"
+  
+  database_integration_enabled: "true"
+  kafka_to_doris_integration_enabled: "true"
+  postgres_to_doris_integration_enabled: "true"
+  
+  doris_connection_string_template: "jdbc:mysql://${doris_fe_service}:${doris_fe_query_port}/agent_runtime"
+  kafka_connection_string_template: "${kafka_bootstrap_servers}"
+  postgres_connection_string_template: "postgresql://agent_user:${POSTGRES_PASSWORD}@${postgres_service}:${postgres_port}/agent_runtime"
+  yap2db_connection_string_template: "http://${yap2db_service}:${yap2db_port}/api"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: database-service-discovery
+  namespace: default
+  labels:
+    app: database-service-discovery
+    service: database
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: database-service-discovery
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: database-service-discovery
+  namespace: default
+  labels:
+    app: database-service-discovery
+    service: database
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: database-service-discovery
+  template:
+    metadata:
+      labels:
+        app: database-service-discovery
+        service: database
+    spec:
+      containers:
+      - name: database-service-discovery
+        image: nginx:alpine
+        ports:
+        - containerPort: 8080
+        volumeMounts:
+        - name: config-volume
+          mountPath: /usr/share/nginx/html/config
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+      volumes:
+      - name: config-volume
+        configMap:
+          name: database-service-discovery

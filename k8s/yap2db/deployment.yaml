@@ -1,0 +1,134 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: yap2db
+  namespace: default
+  labels:
+    app: yap2db
+    service: database-management
+spec:
+  ports:
+  - port: 10824
+    targetPort: 10824
+    protocol: TCP
+    name: http
+  selector:
+    app: yap2db
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yap2db
+  namespace: default
+  labels:
+    app: yap2db
+    service: database-management
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: yap2db
+  template:
+    metadata:
+      labels:
+        app: yap2db
+        service: database-management
+    spec:
+      containers:
+      - name: yap2db
+        image: spectrumwebco/yap2db:latest
+        ports:
+        - containerPort: 10824
+          name: http
+        env:
+        - name: SUPABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: POSTGRES_HOST
+        - name: SUPABASE_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: POSTGRES_PORT
+        - name: SUPABASE_USER
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: POSTGRES_USER
+        - name: SUPABASE_DB
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: POSTGRES_DB
+        - name: DRAGONFLY_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: REDIS_HOST
+        - name: DRAGONFLY_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: REDIS_PORT
+        - name: ROCKETMQ_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: ROCKETMQ_HOST
+        - name: ROCKETMQ_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: ROCKETMQ_PORT
+        - name: RAGFLOW_HOST
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: RAGFLOW_HOST
+        - name: RAGFLOW_PORT
+          valueFrom:
+            configMapKeyRef:
+              name: database-config
+              key: RAGFLOW_PORT
+        - name: JAVA_OPTS
+          value: "-Xms512m -Xmx1g"
+        volumeMounts:
+        - name: yap2db-data
+          mountPath: /app/data
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 10824
+          initialDelaySeconds: 30
+          periodSeconds: 15
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 10824
+          initialDelaySeconds: 60
+          periodSeconds: 30
+      volumes:
+      - name: yap2db-data
+        persistentVolumeClaim:
+          claimName: yap2db-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: yap2db-data
+  namespace: default
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi

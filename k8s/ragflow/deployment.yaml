@@ -1,0 +1,95 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ragflow
+  namespace: default
+  labels:
+    app: ragflow
+    service: vector-db
+spec:
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: ragflow
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ragflow
+  namespace: default
+  labels:
+    app: ragflow
+    service: vector-db
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ragflow
+  template:
+    metadata:
+      labels:
+        app: ragflow
+        service: vector-db
+    spec:
+      containers:
+      - name: ragflow
+        image: ragflow/ragflow:latest
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: RAGFLOW_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: vector-db-credentials
+              key: api-key
+        volumeMounts:
+        - name: ragflow-data
+          mountPath: /data
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "500m"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+      volumes:
+      - name: ragflow-data
+        persistentVolumeClaim:
+          claimName: ragflow-data
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ragflow-data
+  namespace: default
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vector-db-credentials
+  namespace: default
+type: Opaque
+stringData:
+  api-key: "${RAGFLOW_API_KEY}"
