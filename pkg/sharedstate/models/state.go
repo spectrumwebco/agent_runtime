@@ -15,6 +15,10 @@ const (
 	StateTypeSystem StateType = "system"
 	StateTypeModule StateType = "module"
 	StateTypeRuntime StateType = "runtime"
+	StateTypeComponent StateType = "component"
+	StateTypeUI StateType = "ui"
+	StateTypeAction StateType = "action"
+	StateTypeTool StateType = "tool"
 )
 
 type State struct {
