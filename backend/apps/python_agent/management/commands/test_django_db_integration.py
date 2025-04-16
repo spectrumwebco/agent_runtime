@@ -14,9 +14,9 @@ from apps.python_agent.integrations.supabase import SupabaseClient
 from apps.python_agent.integrations.ragflow import RAGflowClient
 from apps.python_agent.integrations.dragonfly import DragonflyClient
 from apps.python_agent.integrations.rocketmq import RocketMQClient
-from apps.python_agent.integrations.doris import DorisClient
-from apps.python_agent.integrations.postgres_operator import PostgresOperatorClient
-from apps.python_agent.integrations.kafka import KafkaClient
+from backend.integrations.doris import DorisClient
+from backend.integrations.postgres_operator import PostgresOperatorClient
+from backend.integrations.kafka import KafkaClient
 from apps.python_agent.integrations.mock_db import (
     MockSupabaseClient, MockRAGflowClient, MockDragonflyClient,
     MockRocketMQClient, MockDorisClient, MockPostgresClient, MockKafkaClient

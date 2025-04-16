@@ -107,7 +107,7 @@ def verify_kafka_integration():
         return False
     
     success, output = run_command(
-        "python -c \"from apps.python_agent.integrations.kafka import KafkaClient; "
+        "python -c \"from backend.integrations.kafka import KafkaClient; "
         "client = KafkaClient(); "
         "client.produce_message('test-topic', {'message': 'test'}); "
         "print('Message produced successfully'); "

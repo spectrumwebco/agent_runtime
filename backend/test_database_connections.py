@@ -181,7 +181,7 @@ def test_doris_connection(config=None):
     logger.info("Testing Apache Doris connection...")
     
     try:
-        from apps.python_agent.integrations.doris import DorisClient
+        from backend.integrations.doris import DorisClient
         
         if config is None:
             config = {
@@ -228,7 +228,7 @@ def test_kafka_connection(config=None):
     logger.info("Testing Apache Kafka connection...")
     
     try:
-        from apps.python_agent.integrations.kafka import KafkaClient
+        from backend.integrations.kafka import KafkaClient
         
         if config is None:
             config = {
@@ -259,7 +259,7 @@ def test_postgres_connection(config=None):
     logger.info("Testing PostgreSQL connection...")
     
     try:
-        from apps.python_agent.integrations.crunchydata import PostgresClient
+        from backend.integrations.crunchydata import PostgresClient
         
         if config is None:
             config = {
@@ -308,9 +308,9 @@ def test_cross_database_integration():
     logger.info("Testing cross-database integration...")
     
     try:
-        from apps.python_agent.integrations.crunchydata import PostgresClient
-        from apps.python_agent.integrations.kafka import KafkaClient
-        from apps.python_agent.integrations.doris import DorisClient
+        from backend.integrations.crunchydata import PostgresClient
+        from backend.integrations.kafka import KafkaClient
+        from backend.integrations.doris import DorisClient
         
         postgres_client = PostgresClient(mock=True)
         kafka_client = KafkaClient(mock=True)

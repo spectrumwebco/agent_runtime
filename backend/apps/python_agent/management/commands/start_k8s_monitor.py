@@ -52,7 +52,7 @@ class Command(BaseCommand):
         
         try:
             from apps.python_agent.integrations.k8s_monitor import K8sMonitor, K8sMonitorConfig
-            from apps.python_agent.integrations.kafka import KafkaClient
+            from backend.integrations.kafka import KafkaClient
         except ImportError as e:
             self.stdout.write(self.style.ERROR(f'❌ Error importing required modules: {e}'))
             self.stdout.write(self.style.ERROR('Make sure the required modules are installed.'))
