@@ -29,6 +29,7 @@ It is a Go port of the SWE-Agent and SWE-ReX frameworks, providing a high-perfor
 	rootCmd.AddCommand(commands.NewGORMCommand())
 	rootCmd.AddCommand(commands.NewGoMicroCommand())
 	rootCmd.AddCommand(commands.NewOrchestrationCommand())
+	rootCmd.AddCommand(commands.NewLeetCodeCommand())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
