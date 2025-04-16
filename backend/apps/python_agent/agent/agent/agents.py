@@ -12,7 +12,7 @@ import yaml
 from jinja2 import Template
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from simple_parsing.helpers.fields import field
-from swerex.exceptions import (
+from ..swerex.exceptions import (
     BashIncorrectSyntaxError,
     CommandTimeoutError,
     SwerexException,
@@ -27,10 +27,10 @@ from agent import (
     get_rex_commit_hash,
     get_rex_version,
 )
-from agent.agent.action_sampler import AbstractActionSampler, ActionSamplerConfig
-from agent.agent.history_processors import DefaultHistoryProcessor, HistoryProcessor
-from agent.agent.hooks.abstract import AbstractAgentHook, CombinedAgentHook
-from agent.agent.models import (
+from .action_sampler import AbstractActionSampler, ActionSamplerConfig
+from .history_processors import DefaultHistoryProcessor, HistoryProcessor
+from .hooks.abstract import AbstractAgentHook, CombinedAgentHook
+from .models import (
     AbstractModel,
     HumanModel,
     HumanThoughtModel,

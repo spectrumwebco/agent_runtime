@@ -6,11 +6,11 @@ from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from agent.utils.github import (
+from ..utils.github import (
     _get_problem_statement_from_github_issue,
     _parse_gh_issue_url,
 )
-from agent.utils.log import get_logger
+from ..utils.log import get_logger
 
 logger = get_logger("swea-config", emoji="🔧")
 

@@ -1,0 +1,175 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault
+  namespace: default
+  labels:
+    app: vault
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault
+  template:
+    metadata:
+      labels:
+        app: vault
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+    spec:
+      containers:
+      - name: vault
+        image: vault:1.15.2
+        ports:
+        - containerPort: 8200
+          name: vault-port
+        env:
+        - name: VAULT_DEV_ROOT_TOKEN_ID
+          valueFrom:
+            secretKeyRef:
+              name: vault-secrets
+              key: root_token
+        - name: VAULT_DEV_LISTEN_ADDRESS
+          value: "0.0.0.0:8200"
+        - name: VAULT_ADDR
+          value: "http://127.0.0.1:8200"
+        resources:
+          limits:
+            cpu: "500m"
+            memory: "512Mi"
+          requests:
+            cpu: "100m"
+            memory: "128Mi"
+        securityContext:
+          capabilities:
+            add:
+              - IPC_LOCK
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault
+  namespace: default
+  labels:
+    app: vault
+spec:
+  selector:
+    app: vault
+  ports:
+  - port: 8200
+    targetPort: vault-port
+    protocol: TCP
+    name: vault-port
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vault-secrets
+  namespace: default
+type: Opaque
+data:
+  root_token: ZGV2LXJvb3QtdG9rZW4= # dev-root-token in base64
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vault-setup
+  namespace: default
+spec:
+  template:
+    spec:
+      containers:
+      - name: vault-setup
+        image: vault:1.15.2
+        command:
+        - /bin/sh
+        - -c
+        - |
+          until vault status -address=http://vault:8200; do
+            echo "Waiting for Vault to be ready..."
+            sleep 2
+          done
+          
+          vault login -address=http://vault:8200 ${VAULT_TOKEN}
+          
+          vault secrets enable -address=http://vault:8200 -version=2 kv
+          
+          vault kv put -address=http://vault:8200 kv/database/default \
+            engine="django.db.backends.postgresql" \
+            name="postgres" \
+            user="postgres" \
+            password="postgres" \
+            host="supabase-db.default.svc.cluster.local" \
+            port="5432"
+            
+          vault kv put -address=http://vault:8200 kv/database/agent \
+            engine="django.db.backends.postgresql" \
+            name="agent_db" \
+            user="postgres" \
+            password="postgres" \
+            host="supabase-db.default.svc.cluster.local" \
+            port="5432"
+            
+          vault kv put -address=http://vault:8200 kv/database/trajectory \
+            engine="django.db.backends.postgresql" \
+            name="trajectory_db" \
+            user="postgres" \
+            password="postgres" \
+            host="supabase-db.default.svc.cluster.local" \
+            port="5432"
+            
+          vault kv put -address=http://vault:8200 kv/database/ml \
+            engine="django.db.backends.postgresql" \
+            name="ml_db" \
+            user="postgres" \
+            password="postgres" \
+            host="supabase-db.default.svc.cluster.local" \
+            port="5432"
+          
+          vault auth enable -address=http://vault:8200 kubernetes
+          
+          vault write -address=http://vault:8200 auth/kubernetes/config \
+            kubernetes_host="https://kubernetes.default.svc.cluster.local:443" \
+            token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+            kubernetes_ca_cert="$(cat /var/run/secrets/kubernetes.io/serviceaccount/ca.crt)"
+          
+          vault policy write -address=http://vault:8200 agent-api - <<EOF
+          path "kv/data/database/*" {
+            capabilities = ["read"]
+          }
+          EOF
+          
+          vault write -address=http://vault:8200 auth/kubernetes/role/agent-api \
+            bound_service_account_names="agent-api" \
+            bound_service_account_namespaces="default" \
+            policies="agent-api" \
+            ttl="1h"
+        env:
+        - name: VAULT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: vault-secrets
+              key: root_token
+        - name: VAULT_ADDR
+          value: "http://vault:8200"
+      restartPolicy: OnFailure
+      serviceAccountName: vault-setup
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vault-setup
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vault-setup
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: vault-setup
+  namespace: default

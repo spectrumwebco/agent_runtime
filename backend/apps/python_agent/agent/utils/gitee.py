@@ -7,7 +7,7 @@ from typing import Dict, List, Optional, Any, Union
 import requests
 from urllib.parse import urlparse
 
-from agent.utils.log import get_logger
+from ..utils.log import get_logger
 
 logger = get_logger("gitee-api", emoji="🐙")
 
