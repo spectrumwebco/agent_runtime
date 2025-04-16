@@ -63,7 +63,9 @@
     "prepare": "cd .. && husky frontend/.husky",
     "typecheck": "tsc",
     "check-unlocalized-strings": "node scripts/check-unlocalized-strings.cjs",
-    "setup-shadcn": "node scripts/setup-shadcn.js"
+    "setup-shadcn": "node scripts/setup-shadcn.js",
+    "v0:start": "node ../scripts/dist/v0_integration.js && npm run dev",
+    "v0:build": "node ../scripts/dist/v0_integration.js && npm run build"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx,js}": [
