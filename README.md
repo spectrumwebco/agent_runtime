@@ -1,35 +1,72 @@
-# Agent Runtime with ML Infrastructure
+# Kled.io - Agent Runtime Ecosystem
 
-A comprehensive Go/Python implementation of SWE-Agent and SWE-ReX frameworks with integrated ML infrastructure for fine-tuning and evaluating Llama 4 models.
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="images/kled-io-dark.png" width="400">
+    <source media="(prefers-color-scheme: light)" srcset="images/kled-io-light.png" width="400">
+    <img alt="Kled.io Logo" src="images/kled-io-dark.png" width="400">
+  </picture>
+</p>
+
+A comprehensive Agent Runtime Ecosystem designed specifically for adopting end-to-end AI/ML into business processes for Australian enterprises. Kled.io enables organizations to maintain data governance in-house while modernizing their infrastructure.
 
 ## Overview
 
-This repository provides a high-performance runtime environment for autonomous software engineering agents with integrated ML infrastructure. The system enables:
+<p align="center">
+  <img src="images/3.jpg" alt="Kled.io Platform" width="800">
+</p>
 
-- Creation, configuration, and execution of AI-powered agents for software engineering tasks
-- Fine-tuning Llama 4 models (Maverick and Scout variants) using data from GitHub and Gitee repositories
-- Deployment in containerized environments (Kubernetes with Kata Containers)
-- Robust infrastructure management, state tracking, and event distribution
+Kled.io by Spectrum Web Co is a powerful Agent Runtime Ecosystem that addresses the low Kubernetes adoption rate in Australian enterprises (approximately 70% don't use Kubernetes) by providing tools that enable organizations to:
 
-The infrastructure includes:
+- Create, configure, and execute AI-powered agents for software engineering tasks
+- Maintain data governance in-house while modernizing infrastructure
+- Deploy in containerized environments with proper monitoring (Prometheus, Grafana, Thanos, Loki)
+- Keep data on their own servers or cloud infrastructure
+- Integrate with existing systems through a flexible multi-agent architecture
 
-- Web scrapers for collecting solved issues from GitOps, Terraform, and Kubernetes repositories
-- Data pipeline for preprocessing and validating training data
-- ML infrastructure components (KubeFlow, MLflow, KServe)
-- API client for interacting with the ML infrastructure
-- Terraform modules for infrastructure deployment
+<p align="center">
+  <img src="images/4.jpg" alt="Kled.io Architecture" width="800">
+</p>
 
-## Agent Runtime Core Features
+The platform consists of:
 
-- **Agent System**: Manages the agent's execution loop, state tracking, and command execution
-- **Tool Registry**: Provides a structured interface for defining and executing tools
-- **FFI System**: Enables execution of Python and C++ code from Go
-- **Event Stream System**: Distributes events between components with DragonflyDB caching
-- **MCP (Model Control Plane)**: Provides interfaces for models and tools to communicate
+- Cobra-based Go CLI tools
+- React-based web application with Shadcn UI and Aceternity UI
+- Lynx-based mobile application
+- Tauri v2 desktop applications
+- SpacetimeDB Server for frontend state management
+- Supabase self-hosted instance
+- Slack authentication with automatic customer addition
 
-## ML Infrastructure API Client
+## Multi-Agent Architecture
 
-The ML Infrastructure API Client provides a Python interface for interacting with the ML infrastructure for Llama 4 fine-tuning.
+<p align="center">
+  <img src="images/6.jpg" alt="Kled.io Multi-Agent System" width="800">
+</p>
+
+Kled.io implements a sophisticated multi-agent architecture powered by LangGraph and LangChain-Go:
+
+- **Software Engineering Agent**: Core development tasks with Gemini 2.5 Pro
+- **UI/UX Agent**: Frontend development with modern UI frameworks
+- **App Scaffolding Agent**: Application assembly and infrastructure setup
+- **Codegen Agent**: Specialized code generation for various languages
+
+<p align="center">
+  <img src="images/6.png" alt="Kled.io Agent Communication" width="800">
+</p>
+
+## Key Features
+
+- **Agent System**: Manages execution loops, state tracking, and command execution
+- **Shared Application State**: Enables Generative UI with synchronized frontend/backend state
+- **LangGraph Integration**: Facilitates communication between specialized agents
+- **Modern UI**: Built with Shadcn UI and Aceternity UI components
+- **AI SDK 4.2**: Integrates with Vercel AI SDK for advanced AI capabilities
+- **Multi-Model Support**: Gemini 2.5 Pro (coding), Llama 4 (operations and reasoning)
+- **Event Stream System**: Distributes events with DragonflyDB caching
+- **MCP (Model Control Plane)**: Provides interfaces for models and tools
+
+## Getting Started
 
 ### Installation
 
@@ -38,11 +75,12 @@ The ML Infrastructure API Client provides a Python interface for interacting wit
 git clone https://github.com/spectrumwebco/agent_runtime.git
 cd agent_runtime
 
-# Install dependencies
+# Install backend dependencies
 pip install -r requirements.txt
 
-# Install the package in development mode
-pip install -e .
+# Install frontend dependencies
+cd frontend
+npm install
 ```
 
 ### Environment Setup
@@ -53,101 +91,67 @@ Create a `.env` file based on the provided `.env.example`:
 cp .env.example .env
 ```
 
-Edit the `.env` file to set your API credentials:
+Edit the `.env` file to set your API credentials and configuration.
 
-```
-# ML Infrastructure API Configuration
-ML_API_BASE_URL=http://your-api-server:8000
-ML_API_USERNAME=your_username
-ML_API_PASSWORD=your_password
+### Running the Application
 
-# Other configuration...
-```
+```bash
+# Start the backend
+cd backend
+python manage.py runserver
 
-### Usage
-
-```python
-from ml_infrastructure.api.client import MLInfrastructureClient
-
-# Initialize client using environment variables
-client = MLInfrastructureClient()
-
-# Or provide credentials directly
-client = MLInfrastructureClient(
-    base_url="http://your-api-server:8000",
-    username="your_username",
-    password="your_password"
-)
-
-# Get API status
-status = client.get_api_status()
-print(f"API Status: {status}")
-
-# Create a dataset
-dataset = client.create_dataset(
-    name="gitops-terraform-k8s-issues",
-    description="Solved issues from GitOps, Terraform, and Kubernetes repositories",
-    source="github-gitee",
-    version="1.0.0",
-    metadata={
-        "topics": ["gitops", "terraform", "kubernetes"],
-        "issue_type": "solved"
-    }
-)
-
-# Submit a training job
-job = client.submit_training_job(
-    name="llama4-maverick-fine-tuning",
-    model_type="llama4-maverick",
-    dataset_id=dataset["id"],
-    config={
-        "training_type": "fine-tuning",
-        "epochs": 3,
-        "batch_size": 8,
-        "learning_rate": 2e-5
-    }
-)
-
-# Monitor training progress
-job_status = client.get_training_job(job["id"])
-print(f"Job status: {job_status}")
+# Start the frontend
+cd frontend
+npm run dev
 ```
 
-For more detailed examples, see the example scripts in `src/ml_infrastructure/api/examples/`.
+Visit `http://localhost:3000` to access the Kled.io interface.
 
 ## Components
 
+<p align="center">
+  <img src="images/3.jpg" alt="Kled.io Components" width="800">
+</p>
+
+Kled.io consists of several key components:
+
 - **Agent System**: Core agent implementation with execution loop and state management
-- **Tool Registry**: Registry for managing and executing tools
-- **Web Scrapers**: Collect solved issues from GitHub and Gitee repositories
-- **Data Pipeline**: Preprocess and validate training data
-- **k8s/**: All Kubernetes manifests (KubeFlow, MLflow, KServe, etc.)
-- **terraform/**: Infrastructure as Code configurations
-- **src/models/**: Pydantic models for type safety and validation
+- **Multi-Agent Framework**: LangGraph-based system for agent communication
+- **Shared State System**: Synchronizes state between frontend and backend
+- **Frontend UI**: Modern interface built with React 19, Shadcn UI, and Aceternity UI
+- **Backend Services**: Go and Python services for agent execution
+- **Kubernetes Integration**: Deployment configurations for containerized environments
+- **Terraform Modules**: Infrastructure as Code for cloud deployments
 
 ## Directory Structure
 
-- **cmd/**: Contains CLI entry points
+- **cmd/**: Contains CLI entry points for Cobra-based tools
 - **pkg/**: Contains core packages intended for external use
 - **internal/**: Contains packages for internal use
+  - api/: API endpoints for frontend communication
+  - langgraph/: LangGraph implementation for agent communication
+  - langchain/: LangChain-Go integration
+  
+- **frontend/**: React-based web application
+  - src/components/: UI components and features
+  - src/hooks/: Custom React hooks
+  - src/services/: API services and integrations
+  
 - **k8s/**: All Kubernetes manifests and configurations
-  - kubeflow/: KubeFlow manifests for orchestrating ML workflows
-  - mlflow/: MLflow configurations for experiment tracking
-  - kserve/: KServe manifests for model serving
-  - minio/: MinIO configurations for artifact storage
-  - monitoring/: Prometheus, Grafana, and Loki for monitoring
-  - argocd/: ArgoCD configurations for GitOps
+  - monitoring/: Prometheus, Grafana, Thanos, and Loki configurations
+  - supabase/: Self-hosted Supabase instance
+  - langsmith/: Self-hosted LangSmith for LangGraph
   
 - **terraform/**: Infrastructure as Code
   - modules/: Terraform modules for each component
   - main.tf: Main Terraform configuration
 
-- **src/models/**: Pydantic models for type safety
-  - api/: API models
-  - data_validation/: Data validation models
-  - integrations/: Integration models (GitHub, Gitee)
-  - ml_infrastructure/: ML infrastructure models
-
 ## License
 
 [MIT License](LICENSE)
+
+---
+
+<p align="center">
+  <em>Kled.io - Empowering Australian enterprises with AI/ML adoption while maintaining data governance</em>
+</p>
