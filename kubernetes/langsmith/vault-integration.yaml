@@ -1,0 +1,87 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: langsmith-vault-config
+  namespace: langsmith
+data:
+  vault-agent-config.hcl: |
+    auto_auth {
+      method "kubernetes" {
+        mount_path = "auth/kubernetes"
+        config = {
+          role = "langsmith"
+        }
+      }
+
+      sink "file" {
+        config = {
+          path = "/vault/secrets/token"
+        }
+      }
+    }
+
+    template {
+      destination = "/vault/secrets/database-url"
+      contents = <<EOH
+        {{ with secret "kv/data/langsmith/database" }}
+        postgresql://{{ .Data.data.username }}:{{ .Data.data.password }}@{{ .Data.data.host }}:{{ .Data.data.port }}/{{ .Data.data.dbname }}
+        {{ end }}
+      EOH
+    }
+
+    template {
+      destination = "/vault/secrets/redis-url"
+      contents = <<EOH
+        {{ with secret "kv/data/langsmith/redis" }}
+        redis://{{ .Data.data.host }}:{{ .Data.data.port }}/{{ .Data.data.db }}
+        {{ end }}
+      EOH
+    }
+
+    template {
+      destination = "/vault/secrets/secret-key"
+      contents = <<EOH
+        {{ with secret "kv/data/langsmith/app" }}
+        {{ .Data.data.secret_key }}
+        {{ end }}
+      EOH
+    }
+
+    template {
+      destination = "/vault/secrets/license-key"
+      contents = <<EOH
+        {{ with secret "kv/data/langsmith/app" }}
+        {{ .Data.data.license_key }}
+        {{ end }}
+      EOH
+    }
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: langsmith
+  namespace: langsmith
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: langsmith
+  namespace: langsmith
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: langsmith
+  namespace: langsmith
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: langsmith
+subjects:
+- kind: ServiceAccount
+  name: langsmith
+  namespace: langsmith
