@@ -15,15 +15,7 @@ const App = () => {
       </header>
       
       <main className="container mx-auto p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="border rounded-lg p-6 bg-gray-800">
-            <h3 className="text-lg font-medium mb-4 text-emerald-500">Magic MCP Server</h3>
-            <p className="text-gray-400 mb-4">Generate UI components with Shadcn + Aceternity UI</p>
-            <button className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 rounded-md text-white">
-              Generate Component
-            </button>
-          </div>
-          
+        <div className="grid grid-cols-1 gap-6 mb-6">
           <div className="border rounded-lg p-6 bg-gray-800">
             <h3 className="text-lg font-medium mb-4 text-emerald-500">CoPilot Integration</h3>
             <p className="text-gray-400 mb-4">AI-powered agent coordination</p>
