@@ -1,0 +1,136 @@
+syntax = "proto3";
+
+package djangobridge;
+
+import "google/protobuf/struct.proto";
+
+option go_package = "github.com/spectrumwebco/agent_runtime/pkg/djangobridge";
+
+// AgentService provides a gRPC interface for interacting with the Django backend
+service AgentService {
+  // ExecuteTask executes a task using the Django agent
+  rpc ExecuteTask(ExecuteTaskRequest) returns (ExecuteTaskResponse);
+  
+  // QueryModel queries a Django model
+  rpc QueryModel(QueryModelRequest) returns (QueryModelResponse);
+  
+  // UpdateModel updates a Django model
+  rpc UpdateModel(UpdateModelRequest) returns (UpdateModelResponse);
+  
+  // CreateModel creates a new Django model instance
+  rpc CreateModel(CreateModelRequest) returns (CreateModelResponse);
+  
+  // DeleteModel deletes a Django model instance
+  rpc DeleteModel(DeleteModelRequest) returns (DeleteModelResponse);
+  
+  // ExecuteCommand executes a Django management command
+  rpc ExecuteCommand(ExecuteCommandRequest) returns (ExecuteCommandResponse);
+  
+  // GetSettings retrieves Django settings
+  rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
+  
+  // ExecutePython executes Python code in the Django environment
+  rpc ExecutePython(ExecutePythonRequest) returns (ExecutePythonResponse);
+  
+  // Log logs a message to the Django logger
+  rpc Log(LogRequest) returns (LogResponse);
+}
+
+// ExecuteTaskRequest is the request for ExecuteTask
+message ExecuteTaskRequest {
+  string task_type = 1;
+  google.protobuf.Struct task_data = 2;
+}
+
+// ExecuteTaskResponse is the response for ExecuteTask
+message ExecuteTaskResponse {
+  google.protobuf.Struct result = 1;
+}
+
+// QueryModelRequest is the request for QueryModel
+message QueryModelRequest {
+  string model_name = 1;
+  google.protobuf.Struct filters = 2;
+}
+
+// QueryModelResponse is the response for QueryModel
+message QueryModelResponse {
+  repeated google.protobuf.Struct results = 1;
+}
+
+// UpdateModelRequest is the request for UpdateModel
+message UpdateModelRequest {
+  string model_name = 1;
+  string model_id = 2;
+  google.protobuf.Struct data = 3;
+}
+
+// UpdateModelResponse is the response for UpdateModel
+message UpdateModelResponse {
+  bool success = 1;
+}
+
+// CreateModelRequest is the request for CreateModel
+message CreateModelRequest {
+  string model_name = 1;
+  google.protobuf.Struct data = 2;
+}
+
+// CreateModelResponse is the response for CreateModel
+message CreateModelResponse {
+  google.protobuf.Struct result = 1;
+}
+
+// DeleteModelRequest is the request for DeleteModel
+message DeleteModelRequest {
+  string model_name = 1;
+  string model_id = 2;
+}
+
+// DeleteModelResponse is the response for DeleteModel
+message DeleteModelResponse {
+  bool success = 1;
+}
+
+// ExecuteCommandRequest is the request for ExecuteCommand
+message ExecuteCommandRequest {
+  string command = 1;
+  repeated string args = 2;
+}
+
+// ExecuteCommandResponse is the response for ExecuteCommand
+message ExecuteCommandResponse {
+  string output = 1;
+}
+
+// GetSettingsRequest is the request for GetSettings
+message GetSettingsRequest {
+  // Empty request
+}
+
+// GetSettingsResponse is the response for GetSettings
+message GetSettingsResponse {
+  google.protobuf.Struct settings = 1;
+}
+
+// ExecutePythonRequest is the request for ExecutePython
+message ExecutePythonRequest {
+  string code = 1;
+}
+
+// ExecutePythonResponse is the response for ExecutePython
+message ExecutePythonResponse {
+  google.protobuf.Struct result = 1;
+}
+
+// LogRequest is the request for Log
+message LogRequest {
+  string level = 1;
+  string message = 2;
+  google.protobuf.Struct data = 3;
+}
+
+// LogResponse is the response for Log
+message LogResponse {
+  bool success = 1;
+}
