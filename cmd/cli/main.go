@@ -24,6 +24,7 @@ It is a Go port of the SWE-Agent and SWE-ReX frameworks, providing a high-perfor
 	rootCmd.AddCommand(commands.NewVersionCommand())
 	rootCmd.AddCommand(commands.NewLangChainCommand())
 	rootCmd.AddCommand(commands.NewAICommand())
+	rootCmd.AddCommand(commands.NewLangGraphCommand())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
