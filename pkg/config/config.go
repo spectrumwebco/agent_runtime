@@ -17,6 +17,7 @@ type Config struct {
 	Python  PythonConfig  `yaml:"python"`
 	CPP     CPPConfig     `yaml:"cpp"`
 	Runtime RuntimeConfig `yaml:"runtime"`
+	Clair   ClairConfig   `yaml:"clair"`
 }
 
 type ServerConfig struct {
@@ -74,6 +75,11 @@ type RuntimeConfig struct {
 	Environment  map[string]string `yaml:"environment"`
 }
 
+type ClairConfig struct {
+	URL     string `yaml:"url"`
+	Timeout int    `yaml:"timeout"`
+}
+
 func DefaultConfig() *Config {
 	return &Config{
 		Agent: AgentConfig{
@@ -122,6 +128,10 @@ func DefaultConfig() *Config {
 		},
 		Runtime: RuntimeConfig{
 			Sandbox: true,
+		},
+		Clair: ClairConfig{
+			URL:     "http://localhost:6060",
+			Timeout: 30,
 		},
 	}
 }
