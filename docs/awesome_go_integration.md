@@ -12,11 +12,10 @@ This document tracks the integration of selected repositories from the [Awesome 
 - [x] **Artificial Intelligence**: [LangChainGo](https://github.com/tmc/langchaingo) - Go port of LangChain for LLM integration
 - [x] **Actor Model**: [Ergo](https://github.com/ergo-services/ergo) - Actor model framework for concurrent computation
 - [x] **Terminal UI**: [BubbleTea](https://github.com/charmbracelet/bubbletea) - Terminal UI framework for building rich interactive interfaces
+- [x] **Kubernetes Management**: [K9s](https://github.com/derailed/k9s) - Terminal UI for managing Kubernetes clusters
 
 ## Repositories Pending Integration
-
-- [ ] **Kubernetes Management**: [K9s](https://github.com/derailed/k9s) - Terminal UI for managing Kubernetes clusters
-- [ ] **Web Scraping**: [Colly](https://github.com/gocolly/colly) - Fast and elegant scraping framework
+- [x] **Web Scraping**: [Colly](https://github.com/gocolly/colly) - Fast and elegant scraping framework
 - [ ] **Data Structures**: [GoDS](https://github.com/emirpasic/gods) - Implementation of various data structures and algorithms
 - [ ] **Kubernetes Operations**: [Kops](https://github.com/kubernetes/kops) - Kubernetes operations tools
 - [ ] **Identity & Access Management**: [Hydra](https://github.com/ory/hydra) - OAuth 2.0 and OpenID Connect server
