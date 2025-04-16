@@ -5,12 +5,12 @@ from typing import Any, Literal
 from jinja2 import Template
 from pydantic import BaseModel
 
-from agent.agent.models import AbstractModel
-from agent.agent.problem_statement import ProblemStatement
-from agent.exceptions import FormatError
-from agent.tools.tools import ToolHandler
-from agent.types import Trajectory
-from agent.utils.log import get_logger
+from .models import AbstractModel
+from .problem_statement import ProblemStatement
+from ..exceptions import FormatError
+from ..tools.tools import ToolHandler
+from ..types import Trajectory
+from ..utils.log import get_logger
 
 
 class ActionSamplerOutput(BaseModel):
