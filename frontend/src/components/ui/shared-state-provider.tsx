@@ -5,6 +5,7 @@ export interface SharedAppState {
   activeModelId: string | null;
   activeToolIds: string[];
   activeView: "code" | "terminal" | "browser" | "graph" | "chat";
+  viewMode: "control" | "worker" | null;
   isGenerating: boolean;
   progress: number;
   lastAction: string | null;
@@ -16,6 +17,7 @@ const defaultState: SharedAppState = {
   activeModelId: null,
   activeToolIds: [],
   activeView: "code",
+  viewMode: "control",
   isGenerating: false,
   progress: 0,
   lastAction: null,

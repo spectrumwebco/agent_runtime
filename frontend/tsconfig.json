@@ -17,7 +17,7 @@
     "target": "es2022",
     "types": [
       "@react-router/node",
-      "vite/client",
+      "vite/client"
     ],
     "rootDirs": [
       ".",
@@ -31,13 +31,16 @@
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "module": "esnext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
       "#/*": [
+        "./src/*"
+      ],
+      "@/*": [
         "./src/*"
       ]
     },
