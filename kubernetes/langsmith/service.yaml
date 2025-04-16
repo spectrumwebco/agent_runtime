@@ -1,0 +1,68 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: langsmith-api
+  labels:
+    app: langsmith
+    component: api
+spec:
+  ports:
+  - port: 8000
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app: langsmith
+    component: api
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: langsmith-frontend
+  labels:
+    app: langsmith
+    component: frontend
+spec:
+  ports:
+  - port: 80
+    targetPort: http
+    protocol: TCP
+    name: http
+  selector:
+    app: langsmith
+    component: frontend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: langsmith-postgres
+  labels:
+    app: langsmith
+    component: postgres
+spec:
+  ports:
+  - port: 5432
+    targetPort: postgres
+    protocol: TCP
+    name: postgres
+  selector:
+    app: langsmith
+    component: postgres
+  clusterIP: None
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: langsmith-redis
+  labels:
+    app: langsmith
+    component: redis
+spec:
+  ports:
+  - port: 6379
+    targetPort: redis
+    protocol: TCP
+    name: redis
+  selector:
+    app: langsmith
+    component: redis

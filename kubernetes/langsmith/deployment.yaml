@@ -1,0 +1,242 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: langsmith-api
+  labels:
+    app: langsmith
+    component: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: langsmith
+      component: api
+  template:
+    metadata:
+      labels:
+        app: langsmith
+        component: api
+    spec:
+      containers:
+      - name: api
+        image: langchain/langsmith-api:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: langsmith-secrets
+              key: database-url
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: langsmith-secrets
+              key: redis-url
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: langsmith-secrets
+              key: secret-key
+        - name: LANGSMITH_LICENSE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: langsmith-secrets
+              key: license-key
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2
+            memory: 4Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: langsmith-frontend
+  labels:
+    app: langsmith
+    component: frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: langsmith
+      component: frontend
+  template:
+    metadata:
+      labels:
+        app: langsmith
+        component: frontend
+    spec:
+      containers:
+      - name: frontend
+        image: langchain/langsmith-frontend:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+          name: http
+        env:
+        - name: API_URL
+          value: "http://langsmith-api:8000"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 512Mi
+        livenessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 5
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: langsmith-postgres
+  labels:
+    app: langsmith
+    component: postgres
+spec:
+  serviceName: langsmith-postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: langsmith
+      component: postgres
+  template:
+    metadata:
+      labels:
+        app: langsmith
+        component: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15.3
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5432
+          name: postgres
+        env:
+        - name: POSTGRES_USER
+          value: "langsmith"
+        - name: POSTGRES_DB
+          value: "langsmith"
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: langsmith-secrets
+              key: postgres-password
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+          limits:
+            cpu: 2
+            memory: 4Gi
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - langsmith
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - langsmith
+          initialDelaySeconds: 5
+          periodSeconds: 5
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: langsmith-redis
+  labels:
+    app: langsmith
+    component: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: langsmith
+      component: redis
+  template:
+    metadata:
+      labels:
+        app: langsmith
+        component: redis
+    spec:
+      containers:
+      - name: redis
+        image: redis:7.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 6379
+          name: redis
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            cpu: 100m
+            memory: 256Mi
+          limits:
+            cpu: 500m
+            memory: 1Gi
+        livenessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - redis-cli
+            - ping
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: langsmith-redis-data
