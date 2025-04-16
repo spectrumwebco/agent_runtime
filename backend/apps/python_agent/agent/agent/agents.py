@@ -12,7 +12,7 @@ import yaml
 from jinja2 import Template
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from simple_parsing.helpers.fields import field
-from swerex.exceptions import (
+from ..swerex.exceptions import (
     BashIncorrectSyntaxError,
     CommandTimeoutError,
     SwerexException,
