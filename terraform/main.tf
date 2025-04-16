@@ -197,6 +197,18 @@ module "ragflow" {
   depends_on = [module.k8s, module.vcluster, module.kata]
 }
 
+module "yap2db" {
+  source = "./modules/yap2db"
+  
+  namespace = "yap2db-system"
+  create_namespace = true
+  
+  vcluster_enabled = var.vcluster_enabled
+  vnode_enabled = var.vnode_runtime_enabled
+  
+  depends_on = [module.k8s, module.vcluster, module.vnode]
+}
+
 module "mcp" {
   source = "./modules/mcp"
   

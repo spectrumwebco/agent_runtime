@@ -422,3 +422,15 @@ variable "librechat_code_api_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "yap2db_version" {
+  description = "Yap2DB version"
+  type        = string
+  default     = "latest"
+}
+
+variable "yap2db_replicas" {
+  description = "Number of Yap2DB replicas"
+  type        = number
+  default     = 2
+}
