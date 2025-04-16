@@ -4,7 +4,7 @@ import { KledHeader } from "./kled-header";
 import { FlippedLayout } from "./flipped-layout";
 import { MultiAgentSelector } from "./multi-agent-selector";
 import { AIModelSelector } from "./ai-model-selector";
-import { LangGraphVisualizer } from "./langgraph-visualizer";
+import { LangGraphVisualizer, GraphNode, GraphEdge } from "./langgraph-visualizer";
 import { useSharedState } from "./shared-state-provider";
 
 interface KledMainLayoutProps {
@@ -70,7 +70,7 @@ export const KledMainLayout: React.FC<KledMainLayoutProps> = ({
     },
   ];
 
-  const nodes = [
+  const nodes: GraphNode[] = [
     { id: "swe", type: "agent", label: "SWE Agent", status: "active" },
     { id: "ui", type: "agent", label: "UI Agent", status: "idle" },
     { id: "codegen", type: "agent", label: "Codegen Agent", status: "idle" },
@@ -79,7 +79,7 @@ export const KledMainLayout: React.FC<KledMainLayoutProps> = ({
     { id: "search-tool", type: "tool", label: "Search", status: "idle" },
   ];
 
-  const edges = [
+  const edges: GraphEdge[] = [
     { source: "swe", target: "code-tool", label: "uses" },
     { source: "swe", target: "ui", label: "delegates to" },
     { source: "ui", target: "codegen", label: "requests from" },
