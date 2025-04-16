@@ -1,5 +1,5 @@
-import React, { ReactNode } from 'react';
-import { usePlatform } from './platform-provider';
+import React, { ReactNode } from "react";
+import { usePlatform } from "./platform-provider";
 
 interface PlatformSpecificProps {
   web?: ReactNode;
@@ -19,28 +19,28 @@ export const PlatformSpecific: React.FC<PlatformSpecificProps> = ({
   fallback,
 }) => {
   const { isWeb, isElectron, isMobile } = usePlatform();
-  
+
   if (isWeb && web !== undefined) {
     return <>{web}</>;
   }
-  
+
   if (isElectron && electron !== undefined) {
     return <>{electron}</>;
   }
-  
+
   if (isMobile && mobile !== undefined) {
     return <>{mobile}</>;
   }
-  
+
   if (fallback !== undefined) {
     return <>{fallback}</>;
   }
-  
+
   return null;
 };
 
 interface PlatformOnlyProps {
-  platform: 'web' | 'electron' | 'mobile';
+  platform: "web" | "electron" | "mobile";
   children: ReactNode;
 }
 
@@ -52,15 +52,15 @@ export const PlatformOnly: React.FC<PlatformOnlyProps> = ({
   children,
 }) => {
   const { isWeb, isElectron, isMobile } = usePlatform();
-  
+
   if (
-    (platform === 'web' && isWeb) ||
-    (platform === 'electron' && isElectron) ||
-    (platform === 'mobile' && isMobile)
+    (platform === "web" && isWeb) ||
+    (platform === "electron" && isElectron) ||
+    (platform === "mobile" && isMobile)
   ) {
     return <>{children}</>;
   }
-  
+
   return null;
 };
 

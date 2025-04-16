@@ -1,5 +1,5 @@
-import React, { ReactNode } from 'react';
-import { PlatformOnly } from './platform-specific';
+import React, { ReactNode } from "react";
+import { PlatformOnly } from "./platform-specific";
 
 interface ElectronWrapperProps {
   children: ReactNode;
@@ -24,37 +24,31 @@ export const ElectronWrapper: React.FC<ElectronWrapperProps> = ({
   windowOptions,
 }) => {
   React.useEffect(() => {
-    if (typeof window !== 'undefined' && 
-        window.electron) {
-      
+    if (typeof window !== "undefined" && window.electron) {
       if (menuTemplate) {
         window.electron.setApplicationMenu(menuTemplate);
       }
-      
+
       if (windowOptions) {
         window.electron.configureWindow(windowOptions);
       }
-      
+
       const handleBeforeUnload = (e: BeforeUnloadEvent) => {
         e.preventDefault();
-        e.returnValue = '';
-        
+        e.returnValue = "";
+
         window.electron.confirmClose();
       };
-      
-      window.addEventListener('beforeunload', handleBeforeUnload);
-      
+
+      window.addEventListener("beforeunload", handleBeforeUnload);
+
       return () => {
-        window.removeEventListener('beforeunload', handleBeforeUnload);
+        window.removeEventListener("beforeunload", handleBeforeUnload);
       };
     }
   }, [menuTemplate, windowOptions]);
-  
-  return (
-    <PlatformOnly platform="electron">
-      {children}
-    </PlatformOnly>
-  );
+
+  return <PlatformOnly platform="electron">{children}</PlatformOnly>;
 };
 
 export default ElectronWrapper;

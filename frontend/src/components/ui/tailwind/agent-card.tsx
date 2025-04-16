@@ -36,20 +36,24 @@ export const AgentCard: React.FC<AgentCardProps> = ({
   };
 
   return (
-    <GradientCard 
-      className={cn("cursor-pointer", className)}
-      onClick={onClick}
-    >
+    <GradientCard className={cn("cursor-pointer", className)} onClick={onClick}>
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold">{title}</h3>
-            <span className={cn("text-xs px-2 py-0.5 rounded-full", statusColors[status])}>
+            <span
+              className={cn(
+                "text-xs px-2 py-0.5 rounded-full",
+                statusColors[status],
+              )}
+            >
               {statusText[status]}
             </span>
           </div>
           {description && (
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{description}</p>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {description}
+            </p>
           )}
         </div>
         {icon && <div className="text-2xl">{icon}</div>}

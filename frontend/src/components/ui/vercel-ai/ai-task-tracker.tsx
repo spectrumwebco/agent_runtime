@@ -26,7 +26,7 @@ export const AITaskTracker: React.FC<AITaskTrackerProps> = ({
   onTaskClick,
 }) => {
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null);
-  
+
   useEffect(() => {
     if (currentTaskId) {
       setExpandedTaskId(currentTaskId);
@@ -78,7 +78,7 @@ export const AITaskTracker: React.FC<AITaskTrackerProps> = ({
     const endTime = end || new Date();
     const durationMs = endTime.getTime() - start.getTime();
     const seconds = Math.floor(durationMs / 1000);
-    
+
     if (seconds < 60) {
       return `${seconds}s`;
     } else if (seconds < 3600) {
@@ -95,18 +95,19 @@ export const AITaskTracker: React.FC<AITaskTrackerProps> = ({
           <TextGradient>Kled Agent Tasks</TextGradient>
         </h3>
         <div className="text-sm text-gray-500">
-          {tasks.filter(t => t.status === "completed").length}/{tasks.length} completed
+          {tasks.filter((t) => t.status === "completed").length}/{tasks.length}{" "}
+          completed
         </div>
       </div>
 
       <div className="space-y-3">
         {tasks.map((task) => (
-          <div 
+          <div
             key={task.id}
             className={cn(
               "border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden transition-all duration-300",
               expandedTaskId === task.id ? "shadow-md" : "",
-              "cursor-pointer"
+              "cursor-pointer",
             )}
             onClick={() => toggleTask(task.id)}
           >
@@ -115,7 +116,9 @@ export const AITaskTracker: React.FC<AITaskTrackerProps> = ({
                 <span className="text-lg" aria-hidden="true">
                   {getStatusIcon(task.status)}
                 </span>
-                <span className={cn("font-medium", getStatusColor(task.status))}>
+                <span
+                  className={cn("font-medium", getStatusColor(task.status))}
+                >
                   {task.name}
                 </span>
               </div>
@@ -131,29 +134,37 @@ export const AITaskTracker: React.FC<AITaskTrackerProps> = ({
                 </span>
               </div>
             </div>
-            
+
             {expandedTaskId === task.id && (
               <div className="p-3 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-200 dark:border-gray-700">
                 <div className="grid grid-cols-2 gap-2 text-sm">
-                  <div className="text-gray-500 dark:text-gray-400">Status:</div>
+                  <div className="text-gray-500 dark:text-gray-400">
+                    Status:
+                  </div>
                   <div className={getStatusColor(task.status)}>
                     {task.status.charAt(0).toUpperCase() + task.status.slice(1)}
                   </div>
-                  
-                  <div className="text-gray-500 dark:text-gray-400">Start Time:</div>
+
+                  <div className="text-gray-500 dark:text-gray-400">
+                    Start Time:
+                  </div>
                   <div>{formatTime(task.startTime)}</div>
-                  
-                  <div className="text-gray-500 dark:text-gray-400">End Time:</div>
+
+                  <div className="text-gray-500 dark:text-gray-400">
+                    End Time:
+                  </div>
                   <div>{formatTime(task.endTime)}</div>
-                  
-                  <div className="text-gray-500 dark:text-gray-400">Duration:</div>
+
+                  <div className="text-gray-500 dark:text-gray-400">
+                    Duration:
+                  </div>
                   <div>{calculateDuration(task.startTime, task.endTime)}</div>
                 </div>
               </div>
             )}
           </div>
         ))}
-        
+
         {tasks.length === 0 && (
           <div className="text-center py-6 text-gray-500 dark:text-gray-400">
             No tasks available

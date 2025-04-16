@@ -4,7 +4,11 @@ import { KledHeader } from "./kled-header";
 import { FlippedLayout } from "./flipped-layout";
 import { MultiAgentSelector } from "./multi-agent-selector";
 import { AIModelSelector } from "./ai-model-selector";
-import { LangGraphVisualizer, GraphNode, GraphEdge } from "./langgraph-visualizer";
+import {
+  LangGraphVisualizer,
+  GraphNode,
+  GraphEdge,
+} from "./langgraph-visualizer";
 import { useSharedState } from "./shared-state-provider";
 
 interface KledMainLayoutProps {
@@ -74,8 +78,18 @@ export const KledMainLayout: React.FC<KledMainLayoutProps> = ({
     { id: "swe", type: "agent", label: "SWE Agent", status: "active" },
     { id: "ui", type: "agent", label: "UI Agent", status: "idle" },
     { id: "codegen", type: "agent", label: "Codegen Agent", status: "idle" },
-    { id: "scaffolding", type: "agent", label: "Scaffolding Agent", status: "idle" },
-    { id: "code-tool", type: "tool", label: "Code Analysis", status: "completed" },
+    {
+      id: "scaffolding",
+      type: "agent",
+      label: "Scaffolding Agent",
+      status: "idle",
+    },
+    {
+      id: "code-tool",
+      type: "tool",
+      label: "Code Analysis",
+      status: "completed",
+    },
     { id: "search-tool", type: "tool", label: "Search", status: "idle" },
   ];
 
@@ -91,30 +105,27 @@ export const KledMainLayout: React.FC<KledMainLayoutProps> = ({
   const controlsContent = (
     <div className="p-4 space-y-6">
       <h2 className="text-xl font-bold mb-4">Kled Control Panel</h2>
-      
+
       <MultiAgentSelector
         agents={agents}
         selectedAgentId={state.activeAgentId || "swe-agent"}
         onSelectAgent={(agentId) => updateState({ activeAgentId: agentId })}
       />
-      
+
       <AIModelSelector
         models={models}
         selectedModelId={state.activeModelId || "gemini-2.5-pro"}
         onSelectModel={(modelId) => updateState({ activeModelId: modelId })}
       />
-      
-      <LangGraphVisualizer
-        nodes={nodes}
-        edges={edges}
-      />
+
+      <LangGraphVisualizer nodes={nodes} edges={edges} />
     </div>
   );
 
   return (
     <div className={cn("flex flex-col h-screen", className)}>
       <KledHeader />
-      
+
       <div className="flex-1 overflow-hidden">
         <FlippedLayout
           editor={

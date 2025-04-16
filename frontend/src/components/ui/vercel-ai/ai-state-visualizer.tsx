@@ -39,39 +39,45 @@ export const AIStateVisualizer: React.FC<AIStateVisualizerProps> = ({
   const renderStateNode = (node: StateNode, depth = 0) => {
     const isExpanded = expandedNodes.has(node.id);
     const hasChildren = node.children && node.children.length > 0;
-    
+
     return (
       <div key={node.id} className="mb-1">
-        <div 
+        <div
           className={cn(
             "flex items-start py-1 px-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer",
-            "transition-colors duration-200"
+            "transition-colors duration-200",
           )}
           style={{ paddingLeft: `${depth * 16 + 8}px` }}
           onClick={() => toggleNode(node.id)}
         >
           {hasChildren && (
-            <span className="mr-2 text-gray-500 dark:text-gray-400 transform transition-transform duration-200" style={{ 
-              transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)'
-            }}>
+            <span
+              className="mr-2 text-gray-500 dark:text-gray-400 transform transition-transform duration-200"
+              style={{
+                transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+              }}
+            >
               ▶
             </span>
           )}
           <div className="flex-1">
-            <span className="font-medium text-emerald-600 dark:text-emerald-400">{node.name}</span>
+            <span className="font-medium text-emerald-600 dark:text-emerald-400">
+              {node.name}
+            </span>
             {!hasChildren && (
               <span className="ml-2 text-gray-600 dark:text-gray-300">
-                {typeof node.value === 'object' 
-                  ? JSON.stringify(node.value).substring(0, 50) + (JSON.stringify(node.value).length > 50 ? '...' : '')
+                {typeof node.value === "object"
+                  ? JSON.stringify(node.value).substring(0, 50) +
+                    (JSON.stringify(node.value).length > 50 ? "..." : "")
                   : String(node.value)}
               </span>
             )}
           </div>
         </div>
-        
+
         {isExpanded && hasChildren && (
           <div className="ml-4">
-            {node.children!.map(child => renderStateNode(child, depth + 1))}
+            {node.children!.map((child) => renderStateNode(child, depth + 1))}
           </div>
         )}
       </div>
@@ -83,12 +89,12 @@ export const AIStateVisualizer: React.FC<AIStateVisualizerProps> = ({
       <div className="p-4 border-b border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-semibold">{title}</h3>
       </div>
-      
+
       <AnimatedBackground variant="dots" color="emerald" animate={false}>
         <div className="p-4 max-h-[400px] overflow-y-auto">
           {state.length > 0 ? (
             <div className="space-y-2">
-              {state.map(node => renderStateNode(node))}
+              {state.map((node) => renderStateNode(node))}
             </div>
           ) : (
             <div className="text-center py-8 text-gray-500 dark:text-gray-400">

@@ -36,7 +36,7 @@ export const AnimatedBackground: React.FC<AnimatedBackgroundProps> = ({
           "absolute inset-0 z-0",
           variantClasses[variant],
           animate && "animate-pulse",
-          colorClasses[color]
+          colorClasses[color],
         )}
       />
       <div className="relative z-10 h-full">{children}</div>

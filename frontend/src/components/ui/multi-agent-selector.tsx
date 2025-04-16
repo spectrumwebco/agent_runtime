@@ -34,7 +34,7 @@ export const MultiAgentSelector: React.FC<MultiAgentSelectorProps> = ({
               "aceternity-card p-4 text-left transition-all",
               selectedAgentId === agent.id
                 ? "border-emerald-500 ring-2 ring-emerald-500"
-                : "border-gray-200 dark:border-gray-700 hover:border-emerald-500"
+                : "border-gray-200 dark:border-gray-700 hover:border-emerald-500",
             )}
           >
             <div className="flex items-center gap-3">

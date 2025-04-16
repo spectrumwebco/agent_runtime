@@ -2,7 +2,7 @@
 // This file exports all Radix UI components
 
 // Import and re-export Radix UI components
-export { 
+export {
   Dialog,
   DialogPortal,
   DialogOverlay,
@@ -13,14 +13,9 @@ export {
   DialogFooter,
   DialogTitle,
   DialogDescription,
-} from './dialog';
+} from "./dialog";
 
-export {
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-} from './tabs';
+export { Tabs, TabsList, TabsTrigger, TabsContent } from "./tabs";
 
 export {
   DropdownMenu,
@@ -38,4 +33,4 @@ export {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuRadioGroup,
-} from './dropdown-menu';
+} from "./dropdown-menu";

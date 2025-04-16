@@ -21,8 +21,10 @@ export const AIAgentStream: React.FC<AIAgentStreamProps> = ({
 }) => {
   const [prompt, setPrompt] = useState(initialPrompt);
   const [progress, setProgress] = useState(0);
-  const [status, setStatus] = useState<"idle" | "running" | "completed" | "error">("idle");
-  
+  const [status, setStatus] = useState<
+    "idle" | "running" | "completed" | "error"
+  >("idle");
+
   const { completion, complete, isLoading, stop } = useCompletion({
     api: "/api/agent",
     body: {
@@ -45,7 +47,7 @@ export const AIAgentStream: React.FC<AIAgentStreamProps> = ({
     if (isLoading && completion) {
       const estimatedProgress = Math.min(
         Math.floor((completion.length / 500) * 100),
-        99
+        99,
       );
       setProgress(estimatedProgress);
       onTaskProgress?.(estimatedProgress);
@@ -68,7 +70,7 @@ export const AIAgentStream: React.FC<AIAgentStreamProps> = ({
     <GradientCard className={cn("p-0 overflow-hidden", className)}>
       <div className="p-6">
         <h3 className="text-lg font-semibold mb-4">Kled.io Agent</h3>
-        
+
         <form onSubmit={handleSubmit} className="mb-4">
           <textarea
             value={prompt}
@@ -77,7 +79,7 @@ export const AIAgentStream: React.FC<AIAgentStreamProps> = ({
             className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-transparent p-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 min-h-[100px]"
             disabled={isLoading}
           />
-          
+
           <div className="flex justify-between mt-2">
             <div className="flex items-center">
               <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mr-2 flex-grow max-w-[200px]">
@@ -90,31 +92,34 @@ export const AIAgentStream: React.FC<AIAgentStreamProps> = ({
                 {progress}%
               </span>
             </div>
-            
+
             {isLoading ? (
               <SpotlightButton onClick={handleStop} variant="outline" size="sm">
                 Stop
               </SpotlightButton>
             ) : (
-              <SpotlightButton type="submit" disabled={!prompt.trim() || isLoading}>
+              <SpotlightButton
+                type="submit"
+                disabled={!prompt.trim() || isLoading}
+              >
                 Run Agent
               </SpotlightButton>
             )}
           </div>
         </form>
       </div>
-      
+
       <div className="border-t border-gray-200 dark:border-gray-700 p-6 bg-gray-50 dark:bg-gray-800/50 min-h-[200px] max-h-[400px] overflow-y-auto">
         <div className="font-mono text-sm whitespace-pre-wrap">
           {completion || (
             <span className="text-gray-400 dark:text-gray-500">
-              {status === "idle" 
-                ? "Agent is ready. Enter a task to begin." 
-                : status === "running" 
-                ? "Agent is working on your task..." 
-                : status === "error" 
-                ? "An error occurred. Please try again." 
-                : "Task completed."}
+              {status === "idle"
+                ? "Agent is ready. Enter a task to begin."
+                : status === "running"
+                  ? "Agent is working on your task..."
+                  : status === "error"
+                    ? "An error occurred. Please try again."
+                    : "Task completed."}
             </span>
           )}
         </div>

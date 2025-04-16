@@ -27,7 +27,7 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
     <AnimatedBackground variant="dots" color="emerald">
       <div className={cn("p-6", className)}>
         <h2 className="text-2xl font-bold mb-6">Agent Dashboard</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {agents.map((agent) => (
             <AgentCard
@@ -41,7 +41,7 @@ export const AgentDashboard: React.FC<AgentDashboardProps> = ({
             />
           ))}
         </div>
-        
+
         {agents.length === 0 && (
           <div className="text-center py-12 text-gray-500 dark:text-gray-400">
             <p>No agents found. Create a new agent to get started.</p>

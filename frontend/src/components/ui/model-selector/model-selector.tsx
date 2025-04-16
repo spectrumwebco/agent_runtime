@@ -1,6 +1,6 @@
-import React from 'react';
-import { useSharedState } from '../../../context/shared-state-context';
-import { cn } from '../../../utils/cn';
+import React from "react";
+import { useSharedState } from "../../../context/shared-state-context";
+import { cn } from "../../../utils/cn";
 
 interface ModelSelectorProps {
   className?: string;
@@ -11,25 +11,25 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({ className }) => {
   const { selectedModel, availableModels } = state.modelState;
 
   const modelInfo = {
-    'gemini-2.5-pro': {
-      name: 'Gemini 2.5 Pro',
-      description: 'Specialized for coding tasks',
-      icon: '💻',
+    "gemini-2.5-pro": {
+      name: "Gemini 2.5 Pro",
+      description: "Specialized for coding tasks",
+      icon: "💻",
     },
-    'llama-4-scout': {
-      name: 'Llama 4 Scout',
-      description: 'Optimized for standard operations',
-      icon: '🔍',
+    "llama-4-scout": {
+      name: "Llama 4 Scout",
+      description: "Optimized for standard operations",
+      icon: "🔍",
     },
-    'llama-4-maverick': {
-      name: 'Llama 4 Maverick',
-      description: 'Specialized for reasoning tasks',
-      icon: '🧠',
+    "llama-4-maverick": {
+      name: "Llama 4 Maverick",
+      description: "Specialized for reasoning tasks",
+      icon: "🧠",
     },
-    'gpt-4o': {
-      name: 'GPT-4o',
-      description: 'General purpose model',
-      icon: '🤖',
+    "gpt-4o": {
+      name: "GPT-4o",
+      description: "General purpose model",
+      icon: "🤖",
     },
   };
 
@@ -38,25 +38,25 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({ className }) => {
   };
 
   return (
-    <div className={cn('flex flex-col space-y-4', className)}>
+    <div className={cn("flex flex-col space-y-4", className)}>
       <h3 className="text-lg font-medium">AI Model Selection</h3>
-      
+
       <div className="grid grid-cols-1 gap-3">
         {availableModels.map((model) => {
           const info = modelInfo[model as keyof typeof modelInfo] || {
             name: model,
-            description: 'AI model',
-            icon: '🤖',
+            description: "AI model",
+            icon: "🤖",
           };
-          
+
           return (
             <button
               key={model}
               className={cn(
-                'flex items-center p-3 rounded-lg border-2 transition-all duration-200',
+                "flex items-center p-3 rounded-lg border-2 transition-all duration-200",
                 selectedModel === model
-                  ? 'border-emerald-500 bg-emerald-500/10'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-emerald-500/50'
+                  ? "border-emerald-500 bg-emerald-500/10"
+                  : "border-gray-200 dark:border-gray-700 hover:border-emerald-500/50",
               )}
               onClick={() => handleModelChange(model)}
             >
@@ -74,7 +74,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({ className }) => {
           );
         })}
       </div>
-      
+
       <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
         Different models are optimized for specific tasks in the agent system.
       </div>

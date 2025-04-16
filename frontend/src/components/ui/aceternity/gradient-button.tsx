@@ -16,16 +16,19 @@ export const GradientButton: React.FC<GradientButtonProps> = ({
   disabled = false,
   variant = "default",
 }) => {
-  const baseClasses = "relative inline-flex items-center justify-center px-4 py-2 rounded-md font-medium text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500";
-  
+  const baseClasses =
+    "relative inline-flex items-center justify-center px-4 py-2 rounded-md font-medium text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500";
+
   const variantClasses = {
     default: "text-white border border-emerald-500 shadow-md",
-    outline: "bg-transparent border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800",
-    secondary: "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700",
+    outline:
+      "bg-transparent border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800",
+    secondary:
+      "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700",
   };
-  
+
   const disabledClasses = "opacity-50 cursor-not-allowed";
-  
+
   return (
     <button
       onClick={onClick}
@@ -34,7 +37,7 @@ export const GradientButton: React.FC<GradientButtonProps> = ({
         baseClasses,
         variantClasses[variant],
         disabled && disabledClasses,
-        className
+        className,
       )}
     >
       {variant === "default" && !disabled && (

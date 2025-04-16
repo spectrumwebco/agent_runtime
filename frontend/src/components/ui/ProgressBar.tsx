@@ -1,8 +1,8 @@
-import React from 'react';
+import React from "react";
 
 interface ProgressBarProps {
   progress: number;
-  status?: 'idle' | 'running' | 'paused' | 'completed' | 'failed';
+  status?: "idle" | "running" | "paused" | "completed" | "failed";
   showPercentage?: boolean;
   className?: string;
   height?: number;
@@ -10,29 +10,29 @@ interface ProgressBarProps {
 
 export const ProgressBar: React.FC<ProgressBarProps> = ({
   progress,
-  status = 'running',
+  status = "running",
   showPercentage = true,
-  className = '',
+  className = "",
   height = 8,
 }) => {
   const normalizedProgress = Math.min(Math.max(progress, 0), 100);
-  
+
   const statusColors = {
-    idle: 'bg-gray-400',
-    running: 'bg-emerald-500',
-    paused: 'bg-yellow-500',
-    completed: 'bg-emerald-500',
-    failed: 'bg-red-500',
+    idle: "bg-gray-400",
+    running: "bg-emerald-500",
+    paused: "bg-yellow-500",
+    completed: "bg-emerald-500",
+    failed: "bg-red-500",
   };
-  
+
   const statusText = {
-    idle: 'Idle',
-    running: 'Running',
-    paused: 'Paused',
-    completed: 'Completed',
-    failed: 'Failed',
+    idle: "Idle",
+    running: "Running",
+    paused: "Paused",
+    completed: "Completed",
+    failed: "Failed",
   };
-  
+
   return (
     <div className={`w-full ${className}`}>
       <div className="flex justify-between items-center mb-1">
@@ -47,13 +47,13 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
           </span>
         )}
       </div>
-      <div 
+      <div
         className="w-full bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden"
         style={{ height: `${height}px` }}
       >
         <div
           className={`${statusColors[status]} transition-all duration-300 ease-in-out`}
-          style={{ width: `${normalizedProgress}%`, height: '100%' }}
+          style={{ width: `${normalizedProgress}%`, height: "100%" }}
         ></div>
       </div>
     </div>

@@ -15,7 +15,7 @@ export const AIChat: React.FC<AIChatProps> = ({
   modelId = "gemini-2.5-pro",
 }) => {
   const [input, setInput] = useState("");
-  
+
   const { messages, handleSubmit, handleInputChange, isLoading } = useChat({
     api: "/api/chat",
     initialMessages,
@@ -40,7 +40,7 @@ export const AIChat: React.FC<AIChatProps> = ({
               "flex flex-col max-w-[80%] rounded-lg p-4",
               message.role === "user"
                 ? "bg-emerald-100 dark:bg-emerald-900/20 ml-auto"
-                : "bg-gray-100 dark:bg-gray-800 mr-auto"
+                : "bg-gray-100 dark:bg-gray-800 mr-auto",
             )}
           >
             <div className="text-xs font-medium mb-1">
@@ -57,7 +57,7 @@ export const AIChat: React.FC<AIChatProps> = ({
           </div>
         )}
       </div>
-      
+
       <div className="border-t border-gray-200 dark:border-gray-700 p-4">
         <form onSubmit={onSubmit} className="flex gap-2">
           <input
@@ -70,7 +70,11 @@ export const AIChat: React.FC<AIChatProps> = ({
             placeholder="Ask Kled anything..."
             className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 bg-transparent px-4 py-2 focus:outline-none focus:ring-2 focus:ring-emerald-500"
           />
-          <Button type="submit" variant="emerald" disabled={isLoading || !input.trim()}>
+          <Button
+            type="submit"
+            variant="emerald"
+            disabled={isLoading || !input.trim()}
+          >
             Send
           </Button>
         </form>

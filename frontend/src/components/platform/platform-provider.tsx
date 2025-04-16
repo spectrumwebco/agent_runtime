@@ -1,5 +1,9 @@
-import React, { createContext, useContext, ReactNode } from 'react';
-import { Platform, currentPlatform, platformFeatures } from '../../utils/platform';
+import React, { createContext, useContext, ReactNode } from "react";
+import {
+  Platform,
+  currentPlatform,
+  platformFeatures,
+} from "../../utils/platform";
 
 interface PlatformContextType {
   platform: Platform;
@@ -10,7 +14,7 @@ interface PlatformContextType {
 }
 
 const PlatformContext = createContext<PlatformContextType>({
-  platform: 'web',
+  platform: "web",
   isWeb: true,
   isElectron: false,
   isMobile: false,
@@ -29,15 +33,15 @@ export const PlatformProvider: React.FC<PlatformProviderProps> = ({
   forcePlatform,
 }) => {
   const platform = forcePlatform || currentPlatform;
-  
+
   const value = {
     platform,
-    isWeb: platform === 'web',
-    isElectron: platform === 'electron',
-    isMobile: platform === 'mobile',
+    isWeb: platform === "web",
+    isElectron: platform === "electron",
+    isMobile: platform === "mobile",
     features: platformFeatures,
   };
-  
+
   return (
     <PlatformContext.Provider value={value}>
       {children}

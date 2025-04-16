@@ -36,7 +36,7 @@ export const SpotlightButton: React.FC<SpotlightButtonProps> = ({
 
   const handleMouseMove = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (!buttonRef.current) return;
-    
+
     const rect = buttonRef.current.getBoundingClientRect();
     setPosition({
       x: e.clientX - rect.left,
@@ -52,7 +52,7 @@ export const SpotlightButton: React.FC<SpotlightButtonProps> = ({
         "hover:shadow-md active:scale-95",
         variantClasses[variant],
         sizeClasses[size],
-        className
+        className,
       )}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
