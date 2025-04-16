@@ -3,7 +3,7 @@ package registry
 import (
 	"time"
 
-	"github.com/micro/go-micro/v2/registry"
+	"github.com/micro/go-micro/registry"
 )
 
 type Registry struct {
