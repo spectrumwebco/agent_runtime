@@ -4,64 +4,63 @@ import { cn } from "../../../utils/cn";
 interface SpotlightCardProps {
   children: React.ReactNode;
   className?: string;
-  spotlightColor?: string;
+  containerClassName?: string;
 }
 
 export const SpotlightCard: React.FC<SpotlightCardProps> = ({
   children,
   className,
-  spotlightColor = "rgba(16, 185, 129, 0.1)", // emerald-500 with low opacity
+  containerClassName,
 }) => {
+  const divRef = useRef<HTMLDivElement>(null);
+  const [isMounted, setIsMounted] = useState(false);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [opacity, setOpacity] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
-  const cardRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+    return () => setIsMounted(false);
+  }, []);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!cardRef.current) return;
-
-    const rect = cardRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-
-    setPosition({ x, y });
+    if (!divRef.current || !isMounted) return;
+    
+    const div = divRef.current;
+    const rect = div.getBoundingClientRect();
+    
+    setPosition({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+    });
   };
 
   const handleMouseEnter = () => {
-    setIsHovered(true);
     setOpacity(1);
   };
 
   const handleMouseLeave = () => {
-    setIsHovered(false);
     setOpacity(0);
   };
 
   return (
     <div
-      ref={cardRef}
+      ref={divRef}
       className={cn(
-        "relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-md transition-all duration-200",
-        isHovered && "shadow-xl",
-        className,
+        "relative flex items-center justify-center overflow-hidden rounded-xl border border-emerald-500/20 bg-background",
+        containerClassName
       )}
       onMouseMove={handleMouseMove}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      {/* Spotlight effect */}
       <div
-        className="pointer-events-none absolute -inset-px opacity-0 transition-opacity duration-300"
+        className="pointer-events-none absolute -inset-px opacity-0 transition duration-300"
         style={{
           opacity,
-          background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, ${spotlightColor}, transparent 40%)`,
+          background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, rgba(16, 185, 129, 0.15), transparent 40%)`,
         }}
       />
-
-      {/* Card content */}
-      <div className="relative z-10">{children}</div>
+      <div className={cn("relative z-10 w-full", className)}>{children}</div>
     </div>
   );
 };
-
-export default SpotlightCard;

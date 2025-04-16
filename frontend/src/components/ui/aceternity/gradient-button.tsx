@@ -1,59 +1,52 @@
 import React from "react";
 import { cn } from "../../../utils/cn";
 
-interface GradientButtonProps {
+interface GradientButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode;
   className?: string;
-  onClick?: () => void;
-  disabled?: boolean;
-  variant?: "default" | "outline" | "secondary";
+  variant?: "primary" | "secondary" | "outline" | "ghost";
+  size?: "sm" | "md" | "lg";
+  gradientFrom?: string;
+  gradientTo?: string;
+  gradientDirection?: "to-r" | "to-l" | "to-t" | "to-b" | "to-tr" | "to-tl" | "to-br" | "to-bl";
 }
 
 export const GradientButton: React.FC<GradientButtonProps> = ({
   children,
   className,
-  onClick,
-  disabled = false,
-  variant = "default",
+  variant = "primary",
+  size = "md",
+  gradientFrom = "from-emerald-500",
+  gradientTo = "to-emerald-600",
+  gradientDirection = "to-r",
+  ...props
 }) => {
-  const baseClasses =
-    "relative inline-flex items-center justify-center px-4 py-2 rounded-md font-medium text-sm transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500";
-
-  const variantClasses = {
-    default: "text-white border border-emerald-500 shadow-md",
-    outline:
-      "bg-transparent border border-gray-300 dark:border-gray-700 text-gray-900 dark:text-gray-100 hover:bg-gray-50 dark:hover:bg-gray-800",
-    secondary:
-      "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700",
+  const baseStyles = "inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background";
+  
+  const variantStyles = {
+    primary: `text-white bg-gradient-${gradientDirection} ${gradientFrom} ${gradientTo} hover:brightness-110`,
+    secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+    outline: "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+    ghost: "hover:bg-accent hover:text-accent-foreground",
   };
-
-  const disabledClasses = "opacity-50 cursor-not-allowed";
+  
+  const sizeStyles = {
+    sm: "h-9 px-3 text-sm",
+    md: "h-10 px-4 py-2",
+    lg: "h-11 px-8 text-lg",
+  };
 
   return (
     <button
-      onClick={onClick}
-      disabled={disabled}
       className={cn(
-        baseClasses,
-        variantClasses[variant],
-        disabled && disabledClasses,
-        className,
+        baseStyles,
+        variantStyles[variant],
+        sizeStyles[size],
+        className
       )}
+      {...props}
     >
-      {variant === "default" && !disabled && (
-        <div className="absolute inset-0 rounded-md overflow-hidden">
-          <div
-            className="absolute inset-0 bg-gradient-to-r from-emerald-400 to-emerald-600 animate-gradient"
-            style={{
-              backgroundSize: "200% 200%",
-              animation: "gradientAnimation 3s ease infinite",
-            }}
-          />
-        </div>
-      )}
-      <span className="relative z-10">{children}</span>
+      {children}
     </button>
   );
 };
-
-export default GradientButton;

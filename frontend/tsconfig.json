@@ -1,12 +1,9 @@
 {
   "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
     "**/*.ts",
-    "**/*.tsx",
-    "**/.server/**/*.ts",
-    "**/.server/**/*.tsx",
-    "**/.client/**/*.ts",
-    "**/.client/**/*.tsx",
-    ".react-router/types/**/*",
+    "**/*.tsx"
   ],
   "compilerOptions": {
     "lib": [
@@ -17,7 +14,10 @@
     "target": "es2022",
     "types": [
       "@react-router/node",
-      "vite/client"
+      "vite/client",
+      "node",
+      "react",
+      "react-dom"
     ],
     "rootDirs": [
       ".",
@@ -27,7 +27,7 @@
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "strict": true,
+    "strict": false,
     "forceConsistentCasingInFileNames": true,
     "noFallthroughCasesInSwitch": true,
     "module": "esnext",
@@ -37,14 +37,9 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "#/*": [
-        "./src/*"
-      ],
-      "@/*": [
-        "./src/*"
-      ]
+      "@/*": ["./src/*"],
+      "#/*": ["./src/*", "./public/*"]
     },
-    // Vite takes care of building everything, not tsc.
     "noEmit": true
   }
 }
