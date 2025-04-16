@@ -20,7 +20,7 @@ This document tracks the integration of selected repositories from the [Awesome 
 - [x] **Kubernetes Operations**: [Kops](https://github.com/kubernetes/kops) - Kubernetes operations tools
 - [x] **Identity & Access Management**: [Hydra](https://github.com/ory/hydra) - OAuth 2.0 and OpenID Connect server
 - [x] **Container Security**: [Clair](https://github.com/quay/clair) - Static analysis of vulnerabilities in containers
-- [ ] **Remote Development**: [Coder](https://github.com/coder/coder) - Remote development platform (Go code only)
+- [x] **Remote Development**: [Coder](https://github.com/coder/coder) - Remote development platform (Go code only)
 
 ## Integration Approach
 

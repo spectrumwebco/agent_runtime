@@ -18,6 +18,8 @@ type Config struct {
 	CPP     CPPConfig     `yaml:"cpp"`
 	Runtime RuntimeConfig `yaml:"runtime"`
 	Clair   ClairConfig   `yaml:"clair"`
+	Coder   CoderConfig   `yaml:"coder"`
+	Kata    KataConfig    `yaml:"kata"`
 }
 
 type ServerConfig struct {
@@ -80,6 +82,17 @@ type ClairConfig struct {
 	Timeout int    `yaml:"timeout"`
 }
 
+type CoderConfig struct {
+	URL      string `yaml:"url"`
+	Token    string `yaml:"token"`
+	Timeout  int    `yaml:"timeout"`
+}
+
+type KataConfig struct {
+	URL     string `yaml:"url"`
+	Timeout int    `yaml:"timeout"`
+}
+
 func DefaultConfig() *Config {
 	return &Config{
 		Agent: AgentConfig{
@@ -131,6 +144,14 @@ func DefaultConfig() *Config {
 		},
 		Clair: ClairConfig{
 			URL:     "http://localhost:6060",
+			Timeout: 30,
+		},
+		Coder: CoderConfig{
+			URL:     "http://localhost:3000",
+			Timeout: 30,
+		},
+		Kata: KataConfig{
+			URL:     "http://localhost:8080",
 			Timeout: 30,
 		},
 	}
