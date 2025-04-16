@@ -14,8 +14,9 @@ import yaml
 from flask import Flask, make_response, render_template, request, session
 from flask_cors import CORS
 from flask_socketio import SocketIO
+from agent.api.langgraph import langgraph_bp
 
-from agent import CONFIG_DIR, PACKAGE_DIR
+from agent.config import CONFIG_DIR, PACKAGE_DIR
 from agent.agent.problem_statement import problem_statement_from_simplified_input
 from agent.api.hooks import AgentUpdateHook, EnvUpdateHook, MainUpdateHook, WebUpdate
 from agent.api.utils import AttrDict, ThreadWithExc
@@ -33,6 +34,8 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 # Setting it here will allow both `flask run` and `python server.py` to work
 app.secret_key = "super secret key"
 app.config["SESSION_TYPE"] = "memcache"
+
+app.register_blueprint(langgraph_bp)
 
 THREADS: dict[str, MainThread] = {}
 
@@ -168,7 +171,7 @@ def _build_cors_preflight_response():
 
 def run_from_cli(args: list[str] | None = None):
     app.debug = True
-    socketio.run(app, port=8000, debug=True, allow_unsafe_werkzeug=True)
+    socketio.run(app, port=8000, debug=True, allow_unsafe_werkzeug=True, use_reloader=True, log_output=True)
 
 
 if __name__ == "__main__":
