@@ -4,11 +4,7 @@ import { KledHeader } from "./kled-header";
 import { FlippedLayout } from "./flipped-layout";
 import { MultiAgentSelector } from "./multi-agent-selector";
 import { AIModelSelector } from "./ai-model-selector";
-import {
-  LangGraphVisualizer,
-  GraphNode,
-  GraphEdge,
-} from "./langgraph-visualizer";
+import { LangGraphVisualizer, GraphNode, GraphEdge } from "./langgraph-visualizer";
 import { useSharedState } from "./shared-state-provider";
 
 interface KledMainLayoutProps {

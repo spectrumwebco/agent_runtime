@@ -1,93 +1,127 @@
-import React from "react";
+import React, { useState } from "react";
 import { cn } from "../../utils/cn";
+import { SpotlightCard } from "./aceternity/spotlight-card";
+import { GradientButton } from "./aceternity/gradient-button";
 import { useSharedState } from "./shared-state-provider";
+
+interface Model {
+  id: string;
+  name: string;
+  type: "reasoning" | "coding" | "standard";
+  description: string;
+  provider: string;
+}
 
 interface ModelSelectionProps {
   className?: string;
 }
 
-const availableModels = [
-  {
-    id: "gemini-2.5-pro",
-    name: "Gemini 2.5 Pro",
-    provider: "Google",
-    type: "Large",
-  },
-  {
-    id: "claude-3-5-sonnet",
-    name: "Claude 3.5 Sonnet",
-    provider: "Anthropic",
-    type: "Large",
-  },
-  { id: "llama-3-70b", name: "Llama 3 70B", provider: "Meta", type: "Large" },
-  { id: "gpt-4o", name: "GPT-4o", provider: "OpenAI", type: "Large" },
-  {
-    id: "gemini-2.5-flash",
-    name: "Gemini 2.5 Flash",
-    provider: "Google",
-    type: "Fast",
-  },
-  {
-    id: "claude-3-haiku",
-    name: "Claude 3 Haiku",
-    provider: "Anthropic",
-    type: "Fast",
-  },
-];
-
 export const ModelSelection: React.FC<ModelSelectionProps> = ({
   className,
 }) => {
   const { state, updateState } = useSharedState();
+  const [isChanging, setIsChanging] = useState(false);
+  
+  const models: Model[] = [
+    {
+      id: "gemini-2.5-pro",
+      name: "Gemini 2.5 Pro",
+      type: "coding",
+      description: "Specialized for coding tasks with strong code generation capabilities",
+      provider: "Google",
+    },
+    {
+      id: "llama-4-scout",
+      name: "Llama 4 Scout",
+      type: "standard",
+      description: "Optimized for standard operations with balanced capabilities",
+      provider: "Meta",
+    },
+    {
+      id: "llama-4-maverick",
+      name: "Llama 4 Maverick",
+      type: "reasoning",
+      description: "Enhanced reasoning capabilities for complex problem-solving",
+      provider: "Meta",
+    },
+  ];
 
   const handleModelChange = (modelId: string) => {
-    updateState({
-      activeModelId: modelId,
-    });
+    setIsChanging(true);
+    
+    setTimeout(() => {
+      updateState({ activeModelId: modelId });
+      setIsChanging(false);
+    }, 1000);
   };
 
-  return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-md p-4",
-        className,
-      )}
-    >
-      <h3 className="text-lg font-medium mb-2">Model Selection</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        Select the AI model to power your agent
-      </p>
+  const activeModelId = state.activeModelId || "llama-4-scout";
 
-      <div className="space-y-2">
-        {availableModels.map((model) => (
+  return (
+    <SpotlightCard className={cn("p-4", className)}>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-medium">Model Selection</h3>
+        <span className={cn(
+          "px-2 py-1 rounded-full text-xs",
+          isChanging ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300" : "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300"
+        )}>
+          {isChanging ? "Changing..." : "Ready"}
+        </span>
+      </div>
+
+      <div className="space-y-4">
+        {models.map((model) => (
           <div
             key={model.id}
             className={cn(
-              "p-3 border rounded-md cursor-pointer transition-colors",
-              state.activeModelId === model.id
-                ? "border-emerald-500 bg-emerald-500/10"
-                : "border-gray-300 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-600",
+              "border rounded-lg p-4 transition-colors cursor-pointer hover:border-emerald-500",
+              model.id === activeModelId ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/10" : "border-gray-200 dark:border-gray-700"
             )}
-            onClick={() => handleModelChange(model.id)}
+            onClick={() => !isChanging && handleModelChange(model.id)}
           >
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-start mb-2">
               <div>
-                <div className="font-medium text-gray-900 dark:text-white">
-                  {model.name}
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-400">
-                  {model.provider} • {model.type}
-                </div>
+                <h4 className="font-medium">{model.name}</h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {model.provider}
+                </p>
               </div>
-              {state.activeModelId === model.id && (
-                <div className="h-4 w-4 rounded-full bg-emerald-500"></div>
-              )}
+              <span className={cn(
+                "px-2 py-1 rounded-full text-xs",
+                model.type === "coding" ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300" :
+                model.type === "reasoning" ? "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300" :
+                "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300"
+              )}>
+                {model.type}
+              </span>
             </div>
+            
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-3">
+              {model.description}
+            </p>
+            
+            {model.id === activeModelId ? (
+              <GradientButton
+                size="sm"
+                className="w-full"
+                disabled
+              >
+                Currently Active
+              </GradientButton>
+            ) : (
+              <GradientButton
+                variant="outline"
+                size="sm"
+                className="w-full"
+                onClick={() => !isChanging && handleModelChange(model.id)}
+                disabled={isChanging}
+              >
+                Switch to this Model
+              </GradientButton>
+            )}
           </div>
         ))}
       </div>
-    </div>
+    </SpotlightCard>
   );
 };
-
-export default ModelSelection;

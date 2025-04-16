@@ -1,96 +1,86 @@
 import React, { useState, useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import { cn } from "../../../utils/cn";
 
-interface ThreeDCardProps {
-  className?: string;
-  children: React.ReactNode;
-  glareEnabled?: boolean;
-  rotationIntensity?: number;
-  glareIntensity?: number;
-  borderRadius?: number;
-}
-
-export const ThreeDCard: React.FC<ThreeDCardProps> = ({
-  className,
+export const Card3D = ({
   children,
-  glareEnabled = true,
-  rotationIntensity = 20,
-  glareIntensity = 0.5,
-  borderRadius = 20,
+  className,
+  containerClassName,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  containerClassName?: string;
 }) => {
+  const [width, setWidth] = useState(0);
+  const [height, setHeight] = useState(0);
+  const [mouseX, setMouseX] = useState(0);
+  const [mouseY, setMouseY] = useState(0);
+  const [mouseLeaveDelay, setMouseLeaveDelay] = useState<NodeJS.Timeout | null>(null);
+
   const cardRef = useRef<HTMLDivElement>(null);
-  const [rotation, setRotation] = useState({ x: 0, y: 0 });
-  const [glarePosition, setGlarePosition] = useState({ x: 0, y: 0 });
-  const [isHovered, setIsHovered] = useState(false);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
-
-    const card = cardRef.current;
-    const rect = card.getBoundingClientRect();
-
-    const x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
-    const y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
-
-    setRotation({
-      x: -y * rotationIntensity,
-      y: x * rotationIntensity,
-    });
-
-    setGlarePosition({
-      x: ((e.clientX - rect.left) / rect.width) * 100,
-      y: ((e.clientY - rect.top) / rect.height) * 100,
-    });
+    
+    const rect = cardRef.current.getBoundingClientRect();
+    
+    setMouseX(e.clientX - rect.left);
+    setMouseY(e.clientY - rect.top);
   };
 
   const handleMouseEnter = () => {
-    setIsHovered(true);
+    if (mouseLeaveDelay) {
+      clearTimeout(mouseLeaveDelay);
+      setMouseLeaveDelay(null);
+    }
   };
 
   const handleMouseLeave = () => {
-    setIsHovered(false);
-    setRotation({ x: 0, y: 0 });
-    setGlarePosition({ x: 50, y: 50 });
+    setMouseLeaveDelay(
+      setTimeout(() => {
+        setMouseX(width / 2);
+        setMouseY(height / 2);
+      }, 100)
+    );
   };
+
+  useEffect(() => {
+    if (cardRef.current) {
+      setWidth(cardRef.current.offsetWidth);
+      setHeight(cardRef.current.offsetHeight);
+      setMouseX(cardRef.current.offsetWidth / 2);
+      setMouseY(cardRef.current.offsetHeight / 2);
+    }
+  }, []);
+
+  const rotateX = mouseY / height - 0.5;
+  const rotateY = -(mouseX / width - 0.5);
 
   return (
     <div
-      ref={cardRef}
-      className={cn(
-        "relative overflow-hidden transition-all duration-200",
-        className,
-      )}
-      style={{
-        borderRadius: `${borderRadius}px`,
-        transform: isHovered
-          ? `perspective(1000px) rotateX(${rotation.x}deg) rotateY(${rotation.y}deg) scale3d(1.05, 1.05, 1.05)`
-          : "perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)",
-        transition: "transform 0.2s ease",
-      }}
-      onMouseMove={handleMouseMove}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      className={cn("flex items-center justify-center", containerClassName)}
+      style={{ perspective: "1000px" }}
     >
-      {glareEnabled && isHovered && (
-        <div
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background: `radial-gradient(circle at ${glarePosition.x}% ${glarePosition.y}%, rgba(255, 255, 255, ${glareIntensity}), transparent)`,
-            mixBlendMode: "overlay",
-          }}
-        />
-      )}
-      <div
-        className="relative z-10 transform-style-3d"
+      <motion.div
+        ref={cardRef}
+        className={cn(
+          "relative bg-transparent rounded-xl transition-all duration-200 ease-linear",
+          className
+        )}
+        onMouseMove={handleMouseMove}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         style={{
-          transform: isHovered ? "translateZ(50px)" : "translateZ(0)",
-          transition: "transform 0.2s ease",
+          transformStyle: "preserve-3d",
         }}
+        animate={{
+          rotateX: rotateX * 20,
+          rotateY: rotateY * 20,
+        }}
+        transition={{ duration: 0.2 }}
       >
         {children}
-      </div>
+      </motion.div>
     </div>
   );
 };
-
-export default ThreeDCard;

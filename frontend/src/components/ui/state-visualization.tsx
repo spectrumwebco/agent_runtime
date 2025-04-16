@@ -1,6 +1,8 @@
 import React from "react";
-import { cn } from "../../utils/cn";
 import { useSharedState } from "./shared-state-provider";
+import { cn } from "../../utils/cn";
+import { SpotlightCard } from "./aceternity/spotlight-card";
+import { GradientButton } from "./aceternity/gradient-button";
 
 interface StateVisualizationProps {
   className?: string;
@@ -9,117 +11,94 @@ interface StateVisualizationProps {
 export const StateVisualization: React.FC<StateVisualizationProps> = ({
   className,
 }) => {
-  const { state } = useSharedState();
+  const { state, updateState, resetState } = useSharedState();
+  
+  const stateHistory = [
+    { timestamp: new Date(Date.now() - 3600000).toISOString(), label: "Initial State" },
+    { timestamp: new Date(Date.now() - 2400000).toISOString(), label: "Tool Execution" },
+    { timestamp: new Date(Date.now() - 1200000).toISOString(), label: "Agent Response" },
+    { timestamp: new Date(Date.now()).toISOString(), label: "Current State" },
+  ];
 
-  const systemResources = {
-    cpu: 45,
-    memory: 32,
-    network: 18,
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
-    <div
-      className={cn(
-        "relative overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-md p-4",
-        className,
-      )}
-    >
-      <h3 className="text-lg font-medium mb-2">State Visualization</h3>
-      <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-        Current state of the Kled.io agent system
-      </p>
+    <SpotlightCard className={cn("p-4", className)}>
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-medium">State Management</h3>
+        <GradientButton 
+          variant="outline" 
+          size="sm"
+          onClick={() => resetState()}
+        >
+          Reset State
+        </GradientButton>
+      </div>
 
       <div className="space-y-4">
-        <div className="border rounded-md p-3 bg-gray-50 dark:bg-gray-900">
-          <h4 className="text-sm font-medium mb-2">Agent State</h4>
+        {/* Current State */}
+        <div className="border rounded-md p-3 bg-white/5">
+          <h4 className="text-sm font-medium mb-2">Current State</h4>
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>Status:</div>
-            <div className="font-mono">
-              {state.isGenerating ? "Active" : "Inactive"}
-            </div>
-
-            <div>View Mode:</div>
-            <div className="font-mono">
-              {state.viewMode === "control" ? "Control Plane" : "Worker Agents"}
-            </div>
-
+            <div>Active Agent:</div>
+            <div className="font-medium">{state.activeAgentId || "None"}</div>
+            
+            <div>Active Model:</div>
+            <div className="font-medium">{state.activeModelId || "None"}</div>
+            
             <div>Active View:</div>
-            <div className="font-mono">{state.activeView}</div>
-
-            <div>Selected Model:</div>
-            <div className="font-mono">{state.activeModelId || "None"}</div>
-
-            <div>Progress:</div>
-            <div className="font-mono">{state.progress}%</div>
-
-            <div>Last Action:</div>
-            <div className="font-mono">{state.lastAction || "None"}</div>
+            <div className="font-medium">{state.activeView}</div>
+            
+            <div>Is Generating:</div>
+            <div className="font-medium">{state.isGenerating ? "Yes" : "No"}</div>
           </div>
         </div>
 
-        <div className="border rounded-md p-3 bg-gray-50 dark:bg-gray-900">
-          <h4 className="text-sm font-medium mb-2">Active Tools</h4>
-          {state.activeToolIds.length > 0 ? (
-            <ul className="space-y-1 text-sm">
-              {state.activeToolIds.map((toolId) => (
-                <li key={toolId} className="border-l-2 border-emerald-500 pl-2">
-                  {toolId}
-                </li>
+        {/* State History Timeline */}
+        <div className="border rounded-md p-3 bg-white/5">
+          <h4 className="text-sm font-medium mb-2">State History</h4>
+          <div className="relative">
+            {/* Timeline line */}
+            <div className="absolute left-2.5 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+            
+            {/* Timeline points */}
+            <div className="space-y-4">
+              {stateHistory.map((item, index) => (
+                <div key={index} className="flex items-start ml-2">
+                  <div className={cn(
+                    "h-5 w-5 rounded-full border-2 border-emerald-500 flex-shrink-0 z-10",
+                    index === stateHistory.length - 1 ? "bg-emerald-500" : "bg-background"
+                  )}></div>
+                  <div className="ml-3">
+                    <div className="text-sm font-medium">{item.label}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      {formatTimestamp(item.timestamp)}
+                    </div>
+                  </div>
+                </div>
               ))}
-            </ul>
-          ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              No active tools
-            </p>
-          )}
+            </div>
+          </div>
         </div>
 
-        <div className="border rounded-md p-3 bg-gray-50 dark:bg-gray-900">
-          <h4 className="text-sm font-medium mb-2">System Resources</h4>
-          <div className="space-y-2">
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span>CPU Usage</span>
-                <span>{systemResources.cpu}%</span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div
-                  className="bg-emerald-500 h-2 rounded-full"
-                  style={{ width: `${systemResources.cpu}%` }}
-                ></div>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span>Memory Usage</span>
-                <span>{systemResources.memory}%</span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div
-                  className="bg-blue-500 h-2 rounded-full"
-                  style={{ width: `${systemResources.memory}%` }}
-                ></div>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span>Network Usage</span>
-                <span>{systemResources.network}%</span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                <div
-                  className="bg-purple-500 h-2 rounded-full"
-                  style={{ width: `${systemResources.network}%` }}
-                ></div>
-              </div>
-            </div>
+        {/* State Database Info */}
+        <div className="border rounded-md p-3 bg-white/5">
+          <h4 className="text-sm font-medium mb-2">State Database</h4>
+          <div className="grid grid-cols-2 gap-2 text-sm">
+            <div>Main DB:</div>
+            <div className="font-medium text-emerald-500">Connected</div>
+            
+            <div>Read-only DB:</div>
+            <div className="font-medium text-emerald-500">Connected</div>
+            
+            <div>Rollback DB:</div>
+            <div className="font-medium text-emerald-500">Connected</div>
           </div>
         </div>
       </div>
-    </div>
+    </SpotlightCard>
   );
 };
-
-export default StateVisualization;
