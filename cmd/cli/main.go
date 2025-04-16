@@ -34,6 +34,7 @@ It is a Go port of the SWE-Agent and SWE-ReX frameworks, providing a high-perfor
 	rootCmd.AddCommand(commands.NewK9sCommand())
 	rootCmd.AddCommand(commands.NewCollyCommand())
 	rootCmd.AddCommand(commands.NewGodsCommand())
+	rootCmd.AddCommand(commands.NewKopsCommand())
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
