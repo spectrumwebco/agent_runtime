@@ -1,25 +1,18 @@
 import { defineConfig } from '@rsbuild/core';
-import { pluginReact } from '@rsbuild/plugin-react';
-import { pluginTypeScript } from '@rsbuild/plugin-typescript';
-import { pluginElectron } from '@rsbuild/plugin-electron';
 
 export default defineConfig({
-  plugins: [
-    pluginReact(),
-    pluginTypeScript(),
-    pluginElectron({
-      main: {
-        entry: {
-          main: './src/electron/main.ts',
-        },
-      },
-      preload: {
-        entry: {
-          preload: './src/electron/preload.ts',
-        },
-      },
-    }),
-  ],
+  tools: {
+    webpack: (config: any) => {
+      config.module.rules.push({
+        test: /\.(ts|tsx)$/,
+        exclude: /node_modules/,
+        use: 'ts-loader',
+      });
+      return config;
+    },
+    tailwindcss: true,
+  },
+
   source: {
     entry: {
       index: './src/entry.client.tsx',
@@ -32,9 +25,6 @@ export default defineConfig({
   html: {
     template: './public/index.html',
     title: 'Agent Runtime',
-  },
-  tools: {
-    tailwindcss: true,
   },
   output: {
     distPath: {
