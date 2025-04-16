@@ -1,6 +1,6 @@
 module github.com/spectrumwebco/agent_runtime
 
-go 1.18
+go 1.21
 
 require (
 	github.com/alicebob/miniredis/v2 v2.34.0
