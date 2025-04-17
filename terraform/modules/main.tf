@@ -1,4 +1,38 @@
 
+module "otf" {
+  source = "./otf"
+  
+  namespace = var.otf_namespace
+  api_key   = var.otf_api_key
+}
+
+module "kubestack" {
+  source = "./kubestack"
+  
+  namespace = var.kubestack_namespace
+}
+
+module "lynx" {
+  source = "./lynx"
+  
+  namespace = var.lynx_namespace
+}
+
+module "terraform_operator" {
+  source = "./terraform-operator"
+  
+  namespace = var.terraform_operator_namespace
+}
+
+module "generator_tf_module" {
+  source = "./generator-tf-module"
+  count  = var.enable_generator_tf_module ? 1 : 0
+  
+  module_name        = var.generator_module_name
+  module_description = var.generator_module_description
+  output_path        = var.generator_output_path
+}
+
 module "pipecd" {
   source = "./modules/pipecd"
 

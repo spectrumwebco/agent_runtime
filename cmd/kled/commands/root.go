@@ -13,6 +13,13 @@ var RootCmd = &cobra.Command{
 	Long:  `Kled.io Framework CLI is a command line interface for the Kled.io Framework.`,
 }
 
+func init() {
+	RootCmd.AddCommand(NewOTFCommand())
+	RootCmd.AddCommand(NewKubestackCommand())
+	RootCmd.AddCommand(NewLynxCommand())
+	RootCmd.AddCommand(NewTerraformOperatorCommand())
+}
+
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Println(err)

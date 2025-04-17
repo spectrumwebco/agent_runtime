@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: lynx
+  labels:
+    app.kubernetes.io/name: lynx
+    app.kubernetes.io/part-of: agent-runtime
