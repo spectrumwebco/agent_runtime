@@ -14,24 +14,113 @@ The Coder integration consists of the following key components:
 4. **Kata Container Support**: Specialized container runtime for enhanced security and isolation
 5. **CLI Commands**: User-friendly command-line interface for Coder operations
 
+## Comprehensive File Mapping
+
+The following table provides a detailed mapping between the original Coder repository files and their corresponding implementations in the agent_runtime repository:
+
+| Coder File | agent_runtime File | Description |
+|------------|-------------------|-------------|
+| agent/agentcontainers/containers.go | pkg/interfaces/container.go | Container interfaces and data structures |
+| agent/agentcontainers/containers_dockercli.go | internal/containers/podman.go | Container implementation (Podman instead of Docker) |
+| agent/agentcontainers/api.go | internal/mcp/librechat_provider.go | API endpoints for container management |
+| agent/agentcontainers/devcontainer.go | internal/containers/kata.go | Container environment configuration |
+| pty/terminal.go | pkg/interfaces/terminal.go | Terminal interface definitions |
+| agent/agentssh/agentssh.go | internal/terminal/neovim.go | Terminal implementation |
+| agent/agent.go | internal/terminal/manager.go | Terminal management |
+| cli/agent.go | cmd/kled/commands/neovim.go | CLI commands for terminal management |
+| cli/cliui/agent.go | cmd/kled/commands/neovim.go | CLI UI components |
+| N/A | pkg/librechat/client.go | LibreChat Code Interpreter API client |
+| N/A | internal/mcp/librechat_provider.go | LibreChat MCP provider |
+| N/A | internal/containers/kata.go | Kata container integration |
+| N/A | internal/terminal/neovim_kata.go | Neovim in Kata container |
+| N/A | internal/exec/exec.go | Command execution utilities |
+
+## Component Mapping
+
+The following table maps the components from the Coder repository to their corresponding implementations in the agent_runtime repository:
+
+| Coder Component | agent_runtime Component | Notes |
+|-----------------|-------------------------|-------|
+| Docker CLI | Podman CLI | Replaced Docker with Podman for container management |
+| Reconnecting PTY | Neovim Terminal | Using Neovim as the terminal implementation |
+| SSH Server | Terminal Manager | Extended to support multiple terminal types |
+| Container Management | Container Interface | Abstracted to support multiple container runtimes |
+| N/A | LibreChat Integration | Added new component for code execution |
+| N/A | Kata Container Integration | Added new component for sandboxed environments |
+| N/A | Multi-Environment Support | Added support for Windows, Mac, and cloud providers |
+
+## Environment Provider Mapping
+
+The following table maps the supported environments in the agent_runtime implementation:
+
+| Environment | agent_runtime Implementation | Configuration |
+|-------------|----------------------------|---------------|
+| Linux VM | Default environment | Native support |
+| Windows | Windows-specific options | Uses PowerShell |
+| Mac | Mac-specific options | Uses zsh |
+| OVHcloud | OVHcloud provider | Requires OVHCLOUD_REGION |
+| Fly.io | Fly.io provider | Requires FLYIO_REGION |
+| GCP | GCP provider | Requires GCP_PROJECT, GCP_ZONE |
+| Azure | Azure provider | Requires AZURE_SUBSCRIPTION_ID, AZURE_RESOURCE_GROUP |
+| AWS | AWS provider | Requires AWS_REGION |
+| Remote Server | SSH provider | Requires SSH_HOST, SSH_USERNAME, SSH_KEY |
+
+## Removed Components
+
+The following components from Coder were not ported to the agent_runtime implementation:
+
+- Frontend application (web UI)
+- Helm charts for Kubernetes deployment
+- coderd server (main API server)
+- DERP networking (direct connection protocol)
+- Database migrations and models
+- User authentication and authorization
+- Workspace provisioning
+- Template management
+- Audit logging
+- Metrics collection
+- OAuth providers
+- SCIM integration
+- External authentication providers
+
+## File Count Comparison
+
+| Directory | Coder Files | agent_runtime Files | Notes |
+|-----------|------------|---------------------|-------|
+| agent/ | 15 | N/A | Replaced with internal/ structure |
+| cli/ | 8 | 1 | Simplified CLI implementation |
+| pty/ | 3 | N/A | Integrated into terminal package |
+| internal/ | N/A | 7 | New structure for agent_runtime |
+| pkg/ | N/A | 3 | New structure for agent_runtime |
+| cmd/ | N/A | 1 | New structure for agent_runtime |
+
 ## Directory Structure
 
 ```
 agent_runtime/
 ├── internal/
-│   └── devenv/
-│       └── coder/
-│           ├── client.go         # Coder API client
-│           ├── provisioner.go    # Workspace provisioning
-│           └── terraform.go      # Terraform provider with Kata support
+│   ├── containers/
+│   │   ├── podman.go         # Podman container implementation
+│   │   └── kata.go           # Kata container integration
+│   ├── terminal/
+│   │   ├── neovim.go         # Neovim terminal implementation
+│   │   ├── neovim_kata.go    # Neovim in Kata container
+│   │   └── manager.go        # Terminal management
+│   ├── exec/
+│   │   └── exec.go           # Command execution utilities
+│   └── mcp/
+│       └── librechat_provider.go # LibreChat MCP provider
 ├── pkg/
-│   └── modules/
-│       └── coder/
-│           └── module.go         # Framework module integration
+│   ├── interfaces/
+│   │   ├── container.go      # Container interfaces
+│   │   └── terminal.go       # Terminal interfaces
+│   └── librechat/
+│       └── client.go         # LibreChat Code Interpreter API client
 └── cmd/
-    └── cli/
+    └── kled/
         └── commands/
-            └── coder.go          # CLI commands
+            ├── neovim.go     # Neovim CLI commands
+            └── root.go       # Root CLI command
 ```
 
 ## Configuration
@@ -56,28 +145,25 @@ The Coder integration provides a comprehensive set of CLI commands:
 
 ```bash
 # List workspaces
-kled coder workspace list
+kled neovim list
 
-# Create a new workspace
-kled coder workspace create my-workspace --template template-123
+# Create a new terminal
+kled neovim start my-terminal
 
-# Get workspace details
-kled coder workspace get ws-123
+# Execute a command in a terminal
+kled neovim exec my-terminal "ls -la"
 
-# Start a workspace
-kled coder workspace start ws-123
+# Stop a terminal
+kled neovim stop my-terminal
 
-# Stop a workspace
-kled coder workspace stop ws-123
+# Create multiple terminals
+kled neovim bulk 5
 
-# Delete a workspace
-kled coder workspace delete ws-123
+# Execute code in a terminal
+kled neovim code my-terminal --lang python "print('Hello, World!')"
 
-# List templates
-kled coder template list
-
-# Create a Kata container template
-kled coder kata template my-template --image ubuntu:20.04 --cpu 2 --memory 4096 --disk 10
+# List available providers
+kled neovim providers
 ```
 
 ### Programmatic Usage
@@ -92,33 +178,42 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/spectrumwebco/agent_runtime/internal/devenv/coder"
-	"github.com/spectrumwebco/agent_runtime/pkg/config"
+	"github.com/spectrumwebco/agent_runtime/internal/terminal"
+	"github.com/spectrumwebco/agent_runtime/pkg/librechat"
 )
 
 func main() {
-	// Load configuration
-	cfg, err := config.Load("")
+	// Create terminal manager
+	libreChatURL := "https://librechat.ai"
+	libreChatAPIKey := "your-api-key"
+	apiURL := "http://localhost:8080"
+	
+	terminalManager := terminal.NewManager(apiURL, libreChatURL, libreChatAPIKey)
+	
+	// Create terminal
+	options := map[string]interface{}{
+		"api_url": apiURL,
+		"cpus":    2,
+		"memory":  2048,
+	}
+	
+	term, err := terminalManager.CreateTerminal(context.Background(), "neovim", "my-terminal", options)
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		log.Fatalf("Failed to create terminal: %v", err)
 	}
-
-	// Create client
-	client, err := coder.NewClient(cfg)
+	
+	// Start terminal
+	if err := term.Start(context.Background()); err != nil {
+		log.Fatalf("Failed to start terminal: %v", err)
+	}
+	
+	// Execute command
+	output, err := term.Execute(context.Background(), "ls -la")
 	if err != nil {
-		log.Fatalf("Failed to create client: %v", err)
+		log.Fatalf("Failed to execute command: %v", err)
 	}
-
-	// List workspaces
-	workspaces, err := client.ListWorkspaces(context.Background())
-	if err != nil {
-		log.Fatalf("Failed to list workspaces: %v", err)
-	}
-
-	// Print workspaces
-	for _, workspace := range workspaces {
-		fmt.Printf("Workspace: %s (Status: %s)\n", workspace.Name, workspace.Status)
-	}
+	
+	fmt.Println(output)
 }
 ```
 
@@ -126,23 +221,28 @@ func main() {
 
 The Coder integration includes support for Kata Containers, providing enhanced security and isolation for development environments. Kata Containers combine the security advantages of VMs with the performance and density of containers.
 
-### Creating a Kata Container Template
+### Creating a Kata Container Terminal
 
 ```go
-// Create a Kata container template
-terraformProvider := coder.NewTerraformProvider(cfg)
-config := &coder.KataContainerConfig{
-    Image:  "ubuntu:20.04",
-    CPU:    2,
-    Memory: 4096,
-    Disk:   10,
+// Create a Kata container terminal
+options := map[string]interface{}{
+	"api_url":         "http://localhost:8080",
+	"kata_config_path": "/etc/kata-containers/configuration.toml",
+	"kata_runtime_dir": "/var/run/kata-containers",
+	"cpus":            2,
+	"memory":          2048,
+	"debug":           false,
 }
-templateDir, err := terraformProvider.GenerateKataContainerTemplate(
-    context.Background(), 
-    "my-template", 
-    "A development environment with Kata Containers", 
-    config,
-)
+
+terminalManager := terminal.NewManager("http://localhost:8080", "https://librechat.ai", "your-api-key")
+term, err := terminalManager.CreateTerminal(context.Background(), "neovim-kata", "my-terminal", options)
+if err != nil {
+	log.Fatalf("Failed to create terminal: %v", err)
+}
+
+if err := term.Start(context.Background()); err != nil {
+	log.Fatalf("Failed to start terminal: %v", err)
+}
 ```
 
 ## Integration with Other Kled.io Components
