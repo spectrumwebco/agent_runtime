@@ -18,6 +18,7 @@ func init() {
 	RootCmd.AddCommand(NewKubestackCommand())
 	RootCmd.AddCommand(NewLynxCommand())
 	RootCmd.AddCommand(NewTerraformOperatorCommand())
+	RootCmd.AddCommand(NewNeovimCommand())
 }
 
 func Execute() {

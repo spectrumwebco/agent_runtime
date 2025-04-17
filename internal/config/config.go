@@ -10,7 +10,7 @@ type AgentConfig struct {
 	ConfigSource         string `mapstructure:"config_source" yaml:"config_source"`
 }
 
-type ToolsConfig struct {
+type ToolsConfiguration struct {
 	ExecutionTimeout      int `mapstructure:"execution_timeout" yaml:"execution_timeout"`
 	MaxOutputSize         int `mapstructure:"max_output_size" yaml:"max_output_size"`
 	TotalExecutionTimeout int `mapstructure:"total_execution_timeout" yaml:"total_execution_timeout"`
@@ -21,7 +21,7 @@ type Config struct {
 	ServerPort string         `mapstructure:"server_port" yaml:"server_port"`
 	LogLevel   string         `mapstructure:"log_level" yaml:"log_level"`
 	Agent      AgentConfig    `mapstructure:"agent" yaml:"agent"`
-	Tools      ToolsConfig    `mapstructure:"tools" yaml:"tools"`
+	Tools      ToolsConfiguration    `mapstructure:"tools" yaml:"tools"`
 	RocketMQ   RocketMQConfig `mapstructure:"rocketmq" yaml:"rocketmq"`
 	Supabase   SupabaseConfig `mapstructure:"supabase" yaml:"supabase"`
 	Dragonfly  DragonflyConfig `mapstructure:"dragonfly" yaml:"dragonfly"`
@@ -68,7 +68,7 @@ func NewDefaultConfig() *Config {
 			ExecutionTimeout:     60,
 			ConfigSource:         "pkg",
 		},
-		Tools: ToolsConfig{
+		Tools: ToolsConfiguration{
 			ExecutionTimeout:      60,
 			MaxOutputSize:         10000,
 			TotalExecutionTimeout: 1800,

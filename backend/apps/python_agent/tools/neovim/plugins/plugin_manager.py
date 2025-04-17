@@ -1,16 +1,15 @@
 """
-Plugin manager for Neovim in agent_runtime.
+Plugin manager for Neovim in the agent_runtime system.
 
-This script manages Neovim plugins for the agent_runtime system.
+This module provides functionality for managing Neovim plugins,
+including installation, configuration, and verification.
 """
 
 import os
-import sys
 import subprocess
 import json
-import yaml
 import logging
-from typing import Dict, Any, List, Optional
+from typing import Dict, List, Optional, Any, Tuple
 
 logging.basicConfig(
     level=logging.INFO,
@@ -20,238 +19,232 @@ logger = logging.getLogger("neovim-plugin-manager")
 
 
 class NeovimPluginManager:
-    """Manager for Neovim plugins in agent_runtime."""
+    """Manager for Neovim plugins in the agent_runtime system."""
 
-    def __init__(self, config_path: str, plugins_dir: str):
-        """Initialize the plugin manager.
+    def __init__(self):
+        """Initialize the Neovim plugin manager."""
+        self.script_dir = os.path.dirname(os.path.abspath(__file__))
+        self.nvim_config_dir = os.path.expanduser("~/.config/nvim")
+        self.nvim_data_dir = os.path.expanduser("~/.local/share/nvim")
+        self.plugin_dir = os.path.join(
+            self.nvim_data_dir, "site", "pack", "packer", "start"
+        )
+        self.install_script = os.path.join(self.script_dir, "install.sh")
+        self.init_lua = os.path.join(self.script_dir, "init.lua")
         
-        Args:
-            config_path: Path to the config.yaml file
-            plugins_dir: Path to the plugins directory
-        """
-        self.config_path = config_path
-        self.plugins_dir = plugins_dir
-        self.config = self._load_config()
-        self.neovim_config_dir = os.path.expanduser("~/.config/nvim")
-        self.plugin_configs = {}
+        self.core_plugins = [
+            "packer.nvim",
+            "tmux.nvim",
+            "fzf-lua",
+            "molten-nvim",
+            "tokyonight.nvim",
+            "coc.nvim",
+            "markdown-preview.nvim"
+        ]
+        
+        self.terraform_plugins = [
+            "vim-terraform",
+            "vim-terraform-completion",
+            "vim-hcl"
+        ]
+        
+        self.all_plugins = self.core_plugins + self.terraform_plugins
 
-    def _load_config(self) -> Dict[str, Any]:
-        """Load the config.yaml file.
+    def install_plugins(self) -> bool:
+        """Install all Neovim plugins.
         
         Returns:
-            Dict[str, Any]: Configuration data
+            bool: True if installation was successful, False otherwise
         """
         try:
-            with open(self.config_path, "r") as f:
-                return yaml.safe_load(f)
-        except Exception as e:
-            logger.error(f"Error loading config: {e}")
-            return {}
-
-    def get_plugins(self) -> List[Dict[str, Any]]:
-        """Get the list of plugins from the config.
-        
-        Returns:
-            List[Dict[str, Any]]: List of plugin configurations
-        """
-        return self.config.get("plugins", [])
-
-    def install_plugin(self, plugin_name: str) -> bool:
-        """Install a specific plugin.
-        
-        Args:
-            plugin_name: Name of the plugin to install
-            
-        Returns:
-            bool: True if installation was successful
-        """
-        plugins = self.get_plugins()
-        plugin = next((p for p in plugins if p["name"] == plugin_name), None)
-        
-        if not plugin:
-            logger.error(f"Plugin {plugin_name} not found in config")
-            return False
-        
-        logger.info(f"Installing plugin: {plugin_name} from {plugin['url']}")
-        
-        self.plugin_configs[plugin_name] = plugin
-        
-        return True
-
-    def install_all_plugins(self) -> bool:
-        """Install all plugins from the config.
-        
-        Returns:
-            bool: True if all installations were successful
-        """
-        plugins = self.get_plugins()
-        success = True
-        
-        for plugin in plugins:
-            plugin_name = plugin["name"]
-            if not self.install_plugin(plugin_name):
-                success = False
-        
-        return success
-
-    def run_install_script(self) -> bool:
-        """Run the install.sh script.
-        
-        Returns:
-            bool: True if the script ran successfully
-        """
-        install_script = os.path.join(self.plugins_dir, "install.sh")
-        
-        if not os.path.exists(install_script):
-            logger.error(f"Install script not found: {install_script}")
-            return False
-        
-        try:
-            logger.info(f"Running install script: {install_script}")
-            subprocess.run(["bash", install_script], check=True)
+            logger.info("Installing Neovim plugins...")
+            result = subprocess.run(
+                ["bash", self.install_script],
+                check=True,
+                capture_output=True,
+                text=True
+            )
+            logger.info(result.stdout)
+            if result.stderr:
+                logger.warning(result.stderr)
             return True
         except subprocess.CalledProcessError as e:
-            logger.error(f"Error running install script: {e}")
+            logger.error(f"Error installing plugins: {e}")
+            logger.error(f"Stderr: {e.stderr}")
             return False
 
-    def setup_neovim_config(self) -> bool:
-        """Set up the Neovim configuration.
+    def verify_plugins(self) -> Tuple[bool, List[str]]:
+        """Verify that all required plugins are installed.
         
         Returns:
-            bool: True if setup was successful
+            Tuple[bool, List[str]]: (success, missing_plugins)
+        """
+        missing_plugins = []
+        
+        for plugin in self.all_plugins:
+            plugin_path = os.path.join(self.plugin_dir, plugin)
+            if not os.path.exists(plugin_path):
+                missing_plugins.append(plugin)
+        
+        return len(missing_plugins) == 0, missing_plugins
+
+    def verify_terraform_plugins(self) -> Tuple[bool, List[str]]:
+        """Verify that all Terraform plugins are installed.
+        
+        Returns:
+            Tuple[bool, List[str]]: (success, missing_plugins)
+        """
+        missing_plugins = []
+        
+        for plugin in self.terraform_plugins:
+            plugin_path = os.path.join(self.plugin_dir, plugin)
+            if not os.path.exists(plugin_path):
+                missing_plugins.append(plugin)
+        
+        return len(missing_plugins) == 0, missing_plugins
+
+    def update_plugins(self) -> bool:
+        """Update all Neovim plugins.
+        
+        Returns:
+            bool: True if update was successful, False otherwise
         """
         try:
-            os.makedirs(self.neovim_config_dir, exist_ok=True)
-            
-            init_lua = os.path.join(self.plugins_dir, "init.lua")
-            if os.path.exists(init_lua):
-                logger.info(f"Copying {init_lua} to {self.neovim_config_dir}")
-                with open(init_lua, "r") as src, open(os.path.join(self.neovim_config_dir, "init.lua"), "w") as dst:
-                    dst.write(src.read())
-            
+            logger.info("Updating Neovim plugins...")
+            for plugin in self.all_plugins:
+                plugin_path = os.path.join(self.plugin_dir, plugin)
+                if os.path.exists(plugin_path):
+                    logger.info(f"Updating {plugin}...")
+                    result = subprocess.run(
+                        ["git", "pull"],
+                        cwd=plugin_path,
+                        check=True,
+                        capture_output=True,
+                        text=True
+                    )
+                    logger.info(result.stdout)
             return True
-        except Exception as e:
-            logger.error(f"Error setting up Neovim config: {e}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Error updating plugins: {e}")
             return False
 
-    def verify_installation(self) -> Dict[str, bool]:
-        """Verify that all plugins are installed correctly.
+    def get_plugin_info(self) -> Dict[str, Any]:
+        """Get information about installed plugins.
         
         Returns:
-            Dict[str, bool]: Status of each plugin
+            Dict[str, Any]: Information about installed plugins
         """
-        plugins = self.get_plugins()
-        status = {}
+        plugin_info = {
+            "core_plugins": {},
+            "terraform_plugins": {}
+        }
         
-        for plugin in plugins:
-            plugin_name = plugin["name"]
-            status[plugin_name] = plugin_name in self.plugin_configs
+        for plugin in self.core_plugins:
+            plugin_path = os.path.join(self.plugin_dir, plugin)
+            plugin_info["core_plugins"][plugin] = os.path.exists(plugin_path)
         
-        return status
+        for plugin in self.terraform_plugins:
+            plugin_path = os.path.join(self.plugin_dir, plugin)
+            plugin_info["terraform_plugins"][plugin] = os.path.exists(plugin_path)
+        
+        return plugin_info
 
-    def get_plugin_commands(self, plugin_name: str) -> List[Dict[str, str]]:
-        """Get the commands for a specific plugin.
+    def configure_terraform_plugins(self) -> bool:
+        """Configure Terraform plugins.
         
-        Args:
-            plugin_name: Name of the plugin
+        Returns:
+            bool: True if configuration was successful, False otherwise
+        """
+        try:
+            coc_settings_path = os.path.join(self.nvim_config_dir, "coc-settings.json")
             
-        Returns:
-            List[Dict[str, str]]: List of commands
-        """
-        plugins = self.get_plugins()
-        plugin = next((p for p in plugins if p["name"] == plugin_name), None)
-        
-        if not plugin:
-            logger.error(f"Plugin {plugin_name} not found in config")
-            return []
-        
-        return plugin.get("commands", [])
-
-    def get_plugin_info(self, plugin_name: str) -> Optional[Dict[str, Any]]:
-        """Get information about a specific plugin.
-        
-        Args:
-            plugin_name: Name of the plugin
+            if os.path.exists(coc_settings_path):
+                with open(coc_settings_path, 'r') as f:
+                    settings = json.load(f)
+            else:
+                settings = {}
             
-        Returns:
-            Optional[Dict[str, Any]]: Plugin information
-        """
-        plugins = self.get_plugins()
-        return next((p for p in plugins if p["name"] == plugin_name), None)
+            if "languageserver" not in settings:
+                settings["languageserver"] = {}
+            
+            settings["languageserver"]["terraform"] = {
+                "command": "terraform-ls",
+                "args": ["serve"],
+                "filetypes": ["terraform", "tf"],
+                "initializationOptions": {},
+                "settings": {}
+            }
+            
+            with open(coc_settings_path, 'w') as f:
+                json.dump(settings, f, indent=2)
+            
+            logger.info("Terraform plugins configured successfully")
+            return True
+        except Exception as e:
+            logger.error(f"Error configuring Terraform plugins: {e}")
+            return False
 
 
-def main():
-    """Main entry point for the plugin manager."""
-    script_dir = os.path.dirname(os.path.abspath(__file__))
+plugin_manager = NeovimPluginManager()
+
+
+def install_all_plugins() -> bool:
+    """Install all Neovim plugins.
     
-    neovim_dir = os.path.dirname(script_dir)
+    Returns:
+        bool: True if installation was successful, False otherwise
+    """
+    return plugin_manager.install_plugins()
+
+
+def verify_all_plugins() -> Tuple[bool, List[str]]:
+    """Verify that all required plugins are installed.
     
-    config_path = os.path.join(neovim_dir, "config.yaml")
+    Returns:
+        Tuple[bool, List[str]]: (success, missing_plugins)
+    """
+    return plugin_manager.verify_plugins()
+
+
+def verify_terraform_plugins() -> Tuple[bool, List[str]]:
+    """Verify that all Terraform plugins are installed.
     
-    manager = NeovimPluginManager(config_path, script_dir)
+    Returns:
+        Tuple[bool, List[str]]: (success, missing_plugins)
+    """
+    return plugin_manager.verify_terraform_plugins()
+
+
+def update_all_plugins() -> bool:
+    """Update all Neovim plugins.
     
-    if len(sys.argv) > 1:
-        command = sys.argv[1]
-        
-        if command == "install":
-            if len(sys.argv) > 2:
-                plugin_name = sys.argv[2]
-                success = manager.install_plugin(plugin_name)
-                print(f"Installation of {plugin_name}: {'Successful' if success else 'Failed'}")
-            else:
-                success = manager.install_all_plugins()
-                print(f"Installation of all plugins: {'Successful' if success else 'Failed'}")
-        
-        elif command == "setup":
-            success = manager.setup_neovim_config()
-            print(f"Setup of Neovim config: {'Successful' if success else 'Failed'}")
-        
-        elif command == "run-install-script":
-            success = manager.run_install_script()
-            print(f"Running install script: {'Successful' if success else 'Failed'}")
-        
-        elif command == "verify":
-            status = manager.verify_installation()
-            print("Plugin installation status:")
-            for plugin, installed in status.items():
-                print(f"  {plugin}: {'Installed' if installed else 'Not installed'}")
-        
-        elif command == "list":
-            plugins = manager.get_plugins()
-            print("Available plugins:")
-            for plugin in plugins:
-                print(f"  {plugin['name']}: {plugin['description']}")
-                print(f"    URL: {plugin['url']}")
-                print("    Commands:")
-                for cmd in plugin.get("commands", []):
-                    print(f"      {cmd['name']}: {cmd['description']}")
-                    print(f"        Usage: {cmd['usage']}")
-                print()
-        
-        elif command == "info":
-            if len(sys.argv) > 2:
-                plugin_name = sys.argv[2]
-                plugin = manager.get_plugin_info(plugin_name)
-                if plugin:
-                    print(f"Plugin: {plugin['name']}")
-                    print(f"Description: {plugin['description']}")
-                    print(f"URL: {plugin['url']}")
-                    print("Commands:")
-                    for cmd in plugin.get("commands", []):
-                        print(f"  {cmd['name']}: {cmd['description']}")
-                        print(f"    Usage: {cmd['usage']}")
-                else:
-                    print(f"Plugin {plugin_name} not found")
-            else:
-                print("Please specify a plugin name")
-        
-        else:
-            print(f"Unknown command: {command}")
-            print("Available commands: install, setup, run-install-script, verify, list, info")
-    else:
-        print("Please specify a command")
-        print("Available commands: install, setup, run-install-script, verify, list, info")
+    Returns:
+        bool: True if update was successful, False otherwise
+    """
+    return plugin_manager.update_plugins()
+
+
+def get_plugin_info() -> Dict[str, Any]:
+    """Get information about installed plugins.
+    
+    Returns:
+        Dict[str, Any]: Information about installed plugins
+    """
+    return plugin_manager.get_plugin_info()
+
+
+def configure_terraform_plugins() -> bool:
+    """Configure Terraform plugins.
+    
+    Returns:
+        bool: True if configuration was successful, False otherwise
+    """
+    return plugin_manager.configure_terraform_plugins()
 
 
 if __name__ == "__main__":
-    main()
+    success = install_all_plugins()
+    if success:
+        logger.info("Plugin installation completed successfully")
+    else:
+        logger.error("Plugin installation failed")
