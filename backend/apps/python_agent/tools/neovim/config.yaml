@@ -1,0 +1,51 @@
+name: neovim
+description: Commands for working with Neovim as a parallel workflow environment
+end_name: NEOVIM_END
+command_docs: |
+  
+  The Neovim tool allows you to execute commands in Neovim as a parallel workflow environment.
+  This enables you to run operations in Neovim simultaneously with operations in the main IDE.
+  
+  
+  ```
+  neovim [--file=path/to/file] [--background] command
+  ... multiline command content ...
+  NEOVIM_END
+  ```
+  
+  - `--file`: Optional path to a file to open before executing the command
+  - `--background`: Run the command in the background (parallel to IDE operations)
+  - `command`: The Neovim command to execute (can be normal mode commands, ex commands, or key sequences)
+  
+  
+  1. Open a file and search for a pattern:
+  
+  ```
+  neovim --file=src/main.py
+  :/%s/oldPattern/newPattern/g
+  NEOVIM_END
+  ```
+  
+  2. Run a background task to analyze a file while continuing work in the IDE:
+  
+  ```
+  neovim --file=large_data.csv --background
+  :g/ERROR/y A
+  :w /tmp/errors.txt
+  NEOVIM_END
+  ```
+  
+  3. Execute a complex editing operation:
+  
+  ```
+  neovim --file=src/utils.py
+  gg
+  /def process_data
+  jjjjjj
+  i    # Add additional validation
+  if not isinstance(data, dict):
+      raise TypeError("Expected dict input")
+  <ESC>
+  :w
+  NEOVIM_END
+  ```

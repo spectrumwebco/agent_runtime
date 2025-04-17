@@ -468,6 +468,7 @@ class DefaultAgent(AbstractAgent):
         _catch_errors: bool = True,
         _always_require_zero_exit_code: bool = False,
         action_sampler_config: ActionSamplerConfig | None = None,
+        enable_neovim: bool = True,
     ):
         """The agent handles the behaviour of the model and how it interacts with the environment.
 
@@ -479,6 +480,8 @@ class DefaultAgent(AbstractAgent):
         self.model = model
         self.templates = templates
         self.tools = tools
+        self._neovim_executor = None
+        self._enable_neovim = enable_neovim
         if isinstance(self.model, HumanThoughtModel):
             self.tools.config.parse_function = ThoughtActionParser()
         elif isinstance(self.model, HumanModel):
@@ -609,6 +612,16 @@ class DefaultAgent(AbstractAgent):
         self._env.set_env_variables(
             {"PROBLEM_STATEMENT": self._problem_statement.get_problem_statement()}
         )
+        
+        if self._enable_neovim:
+            self._neovim_executor = NeovimExecutor(env, self.logger)
+            try:
+                asyncio.run(self._neovim_executor.initialize())
+                self.logger.info("Neovim executor initialized successfully")
+            except Exception as e:
+                self.logger.warning(f"Failed to initialize Neovim executor: {e}")
+                self._neovim_executor = None
+                
         self.add_system_message_to_history()
         self.add_demonstrations_to_history()
         self.add_instance_template_to_history(state=self.tools.get_state(self._env))
@@ -999,6 +1012,9 @@ class DefaultAgent(AbstractAgent):
         """
         if self.tools.should_block_action(step.action):
             raise _BlockedActionError()
+            
+        if self._neovim_executor is not None and (step.action.startswith("neovim ") or step.action.startswith("neovim\n")):
+            return self._handle_neovim_action(step)
 
         if step.action.strip() == "exit":
             self.logger.info("Exiting agent")
@@ -1061,6 +1077,61 @@ class DefaultAgent(AbstractAgent):
             raise _ExitForfeit()
 
         return self.handle_submission(step)
+        
+    def _handle_neovim_action(self, step: StepOutput) -> StepOutput:
+        """Handle execution of a Neovim command.
+        
+        Args:
+            step: The step containing the Neovim action
+            
+        Returns:
+            StepOutput: The result of the action
+        """
+        import re
+        
+        action = step.action
+        command_parts = action.split("\n", 1)
+        command_line = command_parts[0]
+        command_content = command_parts[1] if len(command_parts) > 1 else ""
+        
+        file_path = None
+        background = False
+        
+        if "--file=" in command_line:
+            file_match = re.search(r"--file=([^\s]+)", command_line)
+            if file_match:
+                file_path = file_match.group(1)
+                command_line = command_line.replace(file_match.group(0), "").strip()
+                
+        if "--background" in command_line:
+            background = True
+            command_line = command_line.replace("--background", "").strip()
+            
+        if command_line.startswith("neovim "):
+            command = command_line[7:].strip()
+        else:
+            command = command_line.strip()
+            
+        if command_content and command_content.strip():
+            command = command_content.strip()
+            
+        if background:
+            result = asyncio.run(self._neovim_executor.execute_background(command, file_path))
+            task_id = result.get("task_id", "unknown")
+            step.observation = f"Neovim command started in background. Task ID: {task_id}"
+            step.execution_time = 0.0
+            if not step.extra_info:
+                step.extra_info = {}
+            if "state" not in step.extra_info:
+                step.extra_info["state"] = {}
+            step.extra_info["state"]["neovim_task_id"] = task_id
+        else:
+            start_time = time.perf_counter()
+            result = asyncio.run(self._neovim_executor.execute(command, file_path))
+            step.execution_time = time.perf_counter() - start_time
+            step.observation = str(result)
+            
+        return step
 
     def forward(self, history: list[dict[str, str]]) -> StepOutput:
         """Forward the model without handling errors.
@@ -1358,13 +1429,18 @@ class DefaultAgent(AbstractAgent):
         """
         self.setup(env=env, problem_statement=problem_statement, output_dir=output_dir)
 
-        # Run action/observation loop
-        self._chook.on_run_start()
-        step_output = StepOutput()
-        while not step_output.done:
-            step_output = self.step()
-            self.save_trajectory()
-        self._chook.on_run_done(trajectory=self.trajectory, info=self.info)
+        try:
+            # Run action/observation loop
+            self._chook.on_run_start()
+            step_output = StepOutput()
+            while not step_output.done:
+                step_output = self.step()
+                self.save_trajectory()
+            self._chook.on_run_done(trajectory=self.trajectory, info=self.info)
+        finally:
+            if self._neovim_executor is not None:
+                self.logger.info("Cleaning up Neovim resources")
+                asyncio.run(self._neovim_executor.cleanup())
 
         self.logger.info("Trajectory saved to %s", self.traj_path)
 
@@ -1372,3 +1448,193 @@ class DefaultAgent(AbstractAgent):
         # be the best submission instead of the last one, etc.), so we get it from the traj file
         data = self.get_trajectory_data()
         return AgentRunResult(info=data["info"], trajectory=data["trajectory"])
+
+
+class NeovimExecutor:
+    """Executor for running Neovim commands in parallel with the main agent.
+    
+    This class enables the agent to have a second stream of work running in Neovim
+    simultaneously with its primary operations in the IDE.
+    """
+    
+    def __init__(self, env, logger=None):
+        """Initialize the Neovim executor.
+        
+        Args:
+            env: The environment to run commands in
+            logger: Logger instance (optional)
+        """
+        self.env = env
+        self.logger = logger or get_logger("neovim-executor", emoji="📝")
+        self.active_tasks = {}
+        self.results = {}
+        self.neovim_instance_id = f"agent_{id(self)}"
+        self.is_initialized = False
+        
+    async def initialize(self):
+        """Initialize the Neovim executor and start a Neovim instance."""
+        if self.is_initialized:
+            return
+            
+        from ..tools.neovim_tool import neovim_tool
+        success = await neovim_tool.start_instance(self.neovim_instance_id)
+        
+        if success:
+            self.is_initialized = True
+            self.logger.info(f"Initialized Neovim executor with instance ID: {self.neovim_instance_id}")
+        else:
+            self.logger.error(f"Failed to initialize Neovim executor")
+        
+        return success
+        
+    async def cleanup(self):
+        """Clean up the Neovim executor and stop any running tasks."""
+        if not self.is_initialized:
+            return
+            
+        from ..tools.neovim_tool import neovim_tool
+        
+        for task_id, task in list(self.active_tasks.items()):
+            if not task.done():
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+            del self.active_tasks[task_id]
+        
+        success = await neovim_tool.stop_instance(self.neovim_instance_id)
+        
+        if success:
+            self.is_initialized = False
+            self.logger.info(f"Cleaned up Neovim executor")
+        else:
+            self.logger.error(f"Failed to clean up Neovim executor")
+        
+        return success
+        
+    async def execute(self, command, file=None, task_id=None):
+        """Execute a command in Neovim synchronously.
+        
+        Args:
+            command: The command to execute
+            file: Optional file to open first
+            task_id: Optional task identifier
+            
+        Returns:
+            Dict[str, Any]: Command result
+        """
+        if not self.is_initialized:
+            success = await self.initialize()
+            if not success:
+                return {"error": "Failed to initialize Neovim executor"}
+                
+        from ..tools.neovim_tool import neovim_tool
+        
+        if task_id is None:
+            task_id = f"task_{len(self.results)}"
+            
+        self.logger.info(f"Executing Neovim command: {command}")
+        result = await neovim_tool.execute_command(
+            self.neovim_instance_id, 
+            command,
+            file=file,
+            background=False
+        )
+        
+        self.results[task_id] = result
+        if "error" in result:
+            self.logger.error(f"Neovim command failed: {result['error']}")
+        
+        return result
+        
+    async def execute_background(self, command, file=None):
+        """Execute a command in Neovim in the background (parallel).
+        
+        Args:
+            command: The command to execute
+            file: Optional file to open first
+            
+        Returns:
+            str: Task ID for the background task
+        """
+        if not self.is_initialized:
+            success = await self.initialize()
+            if not success:
+                return {"error": "Failed to initialize Neovim executor"}
+                
+        task_id = f"task_{len(self.active_tasks)}"
+        
+        self.logger.info(f"Starting background Neovim task: {command}")
+        task = asyncio.create_task(self._execute_background(task_id, command, file))
+        self.active_tasks[task_id] = task
+        
+        return {"status": "running", "task_id": task_id}
+        
+    async def _execute_background(self, task_id, command, file=None):
+        """Internal method to execute a background task."""
+        from ..tools.neovim_tool import neovim_tool
+        
+        try:
+            result = await neovim_tool.execute_command(
+                self.neovim_instance_id,
+                command,
+                file=file,
+                background=True
+            )
+            self.results[task_id] = result
+            self.logger.info(f"Background Neovim task {task_id} completed")
+        except Exception as e:
+            self.logger.error(f"Error in background Neovim task {task_id}: {e}")
+            self.results[task_id] = {"error": str(e)}
+        finally:
+            if task_id in self.active_tasks:
+                del self.active_tasks[task_id]
+                
+    async def get_task_result(self, task_id):
+        """Get the result of a background task.
+        
+        Args:
+            task_id: Task identifier
+            
+        Returns:
+            Dict[str, Any]: Task result or status
+        """
+        if task_id in self.results:
+            return self.results[task_id]
+        elif task_id in self.active_tasks:
+            return {"status": "running"}
+        else:
+            return {"error": f"Task not found: {task_id}"}
+    
+    async def get_active_tasks(self):
+        """Get a list of all active background tasks.
+        
+        Returns:
+            List[str]: List of task IDs
+        """
+        return list(self.active_tasks.keys())
+    
+    async def cancel_task(self, task_id):
+        """Cancel a background task.
+        
+        Args:
+            task_id: Task identifier
+            
+        Returns:
+            Dict[str, Any]: Cancellation result
+        """
+        if task_id not in self.active_tasks:
+            return {"error": f"No active task with ID {task_id}"}
+        
+        task = self.active_tasks[task_id]
+        if not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+        
+        del self.active_tasks[task_id]
+        self.results[task_id] = {"status": "cancelled"}
+        return {"status": "cancelled"}
