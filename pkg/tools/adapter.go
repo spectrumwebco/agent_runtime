@@ -3,7 +3,6 @@ package tools
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	
@@ -11,7 +10,7 @@ import (
 )
 
 func LoadToolsFromConfig(toolRegistry *ToolRegistry) error {
-	repoRoot, err := config.FindRepoRoot()
+	_, err := config.FindRepoRoot()
 	if err != nil {
 		return fmt.Errorf("failed to find repository root: %w", err)
 	}
@@ -90,7 +89,7 @@ func SaveToolsToConfig(toolRegistry *ToolRegistry) error {
 	}
 	
 	pkgToolsPath := filepath.Join(repoRoot, "pkg", "tools", "tools.json")
-	if err := ioutil.WriteFile(pkgToolsPath, data, 0644); err != nil {
+	if err := os.WriteFile(pkgToolsPath, data, 0644); err != nil {
 		return fmt.Errorf("failed to write tools configuration: %w", err)
 	}
 	
