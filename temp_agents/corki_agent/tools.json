@@ -1,0 +1,761 @@
+{
+  "tools": [
+    {
+      "name": "measure_coverage",
+      "description": "Measure code coverage for a repository",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "include_patterns",
+          "type": "array",
+          "description": "Patterns to include in coverage measurement",
+          "required": false
+        },
+        {
+          "name": "exclude_patterns",
+          "type": "array",
+          "description": "Patterns to exclude from coverage measurement",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Coverage data"
+      },
+      "module": "code_coverage"
+    },
+    {
+      "name": "generate_coverage_report",
+      "description": "Generate a coverage report for a repository",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "output_dir",
+          "type": "string",
+          "description": "Directory to output the report to",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Coverage report"
+      },
+      "module": "code_coverage"
+    },
+    {
+      "name": "get_uncovered_code",
+      "description": "Get uncovered code in a repository",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "threshold",
+          "type": "number",
+          "description": "Coverage threshold (0-100)",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Uncovered code"
+      },
+      "module": "code_coverage"
+    },
+    {
+      "name": "analyze_coverage_trends",
+      "description": "Analyze coverage trends for a repository",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "num_commits",
+          "type": "number",
+          "description": "Number of commits to analyze",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Coverage trends"
+      },
+      "module": "code_coverage"
+    },
+    {
+      "name": "integrate_with_ci",
+      "description": "Integrate coverage measurement with CI/CD",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "ci_system",
+          "type": "string",
+          "description": "CI/CD system (github, gitlab, jenkins, etc.)"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "threshold",
+          "type": "number",
+          "description": "Coverage threshold (0-100)",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "CI integration"
+      },
+      "module": "code_coverage"
+    },
+    {
+      "name": "discover_repositories",
+      "description": "Discover repositories in a directory",
+      "args": [
+        {
+          "name": "base_dir",
+          "type": "string",
+          "description": "Base directory to search in"
+        },
+        {
+          "name": "recursive",
+          "type": "boolean",
+          "description": "Whether to search recursively",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Discovered repositories"
+      },
+      "module": "repository_tracking"
+    },
+    {
+      "name": "analyze_repository_structure",
+      "description": "Analyze the structure of a repository",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Repository structure"
+      },
+      "module": "repository_tracking"
+    },
+    {
+      "name": "detect_repository_languages",
+      "description": "Detect programming languages used in a repository",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Repository languages"
+      },
+      "module": "repository_tracking"
+    },
+    {
+      "name": "track_repository_changes",
+      "description": "Track changes in a repository",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "since",
+          "type": "string",
+          "description": "Start date or commit hash",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Repository changes"
+      },
+      "module": "repository_tracking"
+    },
+    {
+      "name": "get_repository_info",
+      "description": "Get information about a repository",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Repository information"
+      },
+      "module": "repository_tracking"
+    },
+    {
+      "name": "generate_test_for_file",
+      "description": "Generate tests for a file",
+      "args": [
+        {
+          "name": "file_path",
+          "type": "string",
+          "description": "Path to the file"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "test_framework",
+          "type": "string",
+          "description": "Test framework to use",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Generated tests"
+      },
+      "module": "test_generation"
+    },
+    {
+      "name": "generate_test_for_function",
+      "description": "Generate a test for a function",
+      "args": [
+        {
+          "name": "file_path",
+          "type": "string",
+          "description": "Path to the file"
+        },
+        {
+          "name": "function_name",
+          "type": "string",
+          "description": "Name of the function"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "test_framework",
+          "type": "string",
+          "description": "Test framework to use",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Generated test"
+      },
+      "module": "test_generation"
+    },
+    {
+      "name": "get_test_template",
+      "description": "Get a test template for a language and framework",
+      "args": [
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "test_framework",
+          "type": "string",
+          "description": "Test framework",
+          "required": false
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "description": "Name to use in the template",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "string",
+        "description": "Test template"
+      },
+      "module": "test_generation"
+    },
+    {
+      "name": "prioritize_tests",
+      "description": "Prioritize tests based on coverage impact",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "coverage_data",
+          "type": "object",
+          "description": "Coverage data from the code coverage module",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Prioritized tests"
+      },
+      "module": "test_generation"
+    },
+    {
+      "name": "run_tests",
+      "description": "Run tests for a repository",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "test_path",
+          "type": "string",
+          "description": "Path to the test file or directory",
+          "required": false
+        },
+        {
+          "name": "test_args",
+          "type": "string",
+          "description": "Additional arguments for the test command",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Test results"
+      },
+      "module": "test_execution"
+    },
+    {
+      "name": "run_specific_test",
+      "description": "Run a specific test",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "test_file",
+          "type": "string",
+          "description": "Path to the test file"
+        },
+        {
+          "name": "test_name",
+          "type": "string",
+          "description": "Name of the test to run",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Test results"
+      },
+      "module": "test_execution"
+    },
+    {
+      "name": "analyze_test_failures",
+      "description": "Analyze test failures",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "test_results",
+          "type": "object",
+          "description": "Test results from run_tests",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Test failure analysis"
+      },
+      "module": "test_execution"
+    },
+    {
+      "name": "run_tests_with_timeout",
+      "description": "Run tests with a timeout",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "timeout",
+          "type": "number",
+          "description": "Timeout in seconds"
+        },
+        {
+          "name": "test_path",
+          "type": "string",
+          "description": "Path to the test file or directory",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Test results"
+      },
+      "module": "test_execution"
+    },
+    {
+      "name": "get_test_summary",
+      "description": "Get a summary of test results",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "test_results",
+          "type": "object",
+          "description": "Test results from run_tests",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Test summary"
+      },
+      "module": "test_execution"
+    },
+    {
+      "name": "analyze_code_complexity",
+      "description": "Analyze code complexity for a repository",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "file_path",
+          "type": "string",
+          "description": "Path to the file to analyze",
+          "required": false
+        },
+        {
+          "name": "threshold",
+          "type": "number",
+          "description": "Complexity threshold",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Code complexity analysis"
+      },
+      "module": "code_analysis"
+    },
+    {
+      "name": "perform_static_analysis",
+      "description": "Perform static analysis on a repository",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "file_path",
+          "type": "string",
+          "description": "Path to the file to analyze",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Static analysis results"
+      },
+      "module": "code_analysis"
+    },
+    {
+      "name": "identify_untested_code_paths",
+      "description": "Identify untested code paths in a repository",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "coverage_data",
+          "type": "object",
+          "description": "Coverage data from the code coverage module"
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Untested code paths"
+      },
+      "module": "code_analysis"
+    },
+    {
+      "name": "analyze_code_quality",
+      "description": "Analyze code quality for a repository",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "file_path",
+          "type": "string",
+          "description": "Path to the file to analyze",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Code quality analysis"
+      },
+      "module": "code_analysis"
+    },
+    {
+      "name": "identify_test_priorities",
+      "description": "Identify test priorities for a repository",
+      "args": [
+        {
+          "name": "repo_path",
+          "type": "string",
+          "description": "Path to the repository"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "complexity_results",
+          "type": "object",
+          "description": "Complexity analysis results",
+          "required": false
+        },
+        {
+          "name": "coverage_data",
+          "type": "object",
+          "description": "Coverage data from the code coverage module",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Test priorities"
+      },
+      "module": "code_analysis"
+    },
+    {
+      "name": "execute_code",
+      "description": "Execute code using the LibreChat Code Interpreter API",
+      "args": [
+        {
+          "name": "code",
+          "type": "string",
+          "description": "Code to execute"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "timeout",
+          "type": "number",
+          "description": "Timeout in seconds",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Execution results"
+      },
+      "module": "librechat_api_client"
+    },
+    {
+      "name": "generate_test",
+      "description": "Generate a test for a given function using the LibreChat Code Interpreter API",
+      "args": [
+        {
+          "name": "function_code",
+          "type": "string",
+          "description": "Function code to test"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "test_framework",
+          "type": "string",
+          "description": "Test framework to use",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Generated test"
+      },
+      "module": "librechat_api_client"
+    },
+    {
+      "name": "analyze_code",
+      "description": "Analyze code using the LibreChat Code Interpreter API",
+      "args": [
+        {
+          "name": "code",
+          "type": "string",
+          "description": "Code to analyze"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "analysis_type",
+          "type": "string",
+          "description": "Type of analysis to perform",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Analysis results"
+      },
+      "module": "librechat_api_client"
+    },
+    {
+      "name": "fix_code",
+      "description": "Fix code issues using the LibreChat Code Interpreter API",
+      "args": [
+        {
+          "name": "code",
+          "type": "string",
+          "description": "Code to fix"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "description": "Programming language"
+        },
+        {
+          "name": "issues",
+          "type": "array",
+          "description": "List of issues to fix",
+          "required": false
+        }
+      ],
+      "returns": {
+        "type": "object",
+        "description": "Fixed code"
+      },
+      "module": "librechat_api_client"
+    }
+  ]
+}
