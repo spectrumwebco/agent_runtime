@@ -39,3 +39,18 @@ module "kubefirst" {
   gitops_template_branch  = var.kubefirst_gitops_template_branch
   vault_token             = var.kubefirst_vault_token
 }
+
+module "neovim" {
+  source = "./modules/neovim"
+
+  namespace         = var.neovim_namespace
+  replicas          = var.neovim_replicas
+  image             = var.neovim_image
+  supabase_url      = var.supabase_url
+  supabase_key      = var.supabase_key
+  storage_size      = var.neovim_storage_size
+  enable_kata       = var.neovim_enable_kata
+  kata_runtime_class = var.kata_runtime_class
+  resource_limits   = var.neovim_resource_limits
+  resource_requests = var.neovim_resource_requests
+}
