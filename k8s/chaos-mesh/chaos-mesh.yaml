@@ -1,0 +1,74 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: chaos-mesh
+  namespace: chaos-mesh
+spec:
+  interval: 5m
+  chart:
+    spec:
+      chart: chaos-mesh
+      version: 2.5.1
+      sourceRef:
+        kind: HelmRepository
+        name: chaos-mesh
+        namespace: flux-system
+  values:
+    controllerManager:
+      replicaCount: 3
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 512Mi
+      service:
+        type: ClusterIP
+    
+    chaosDaemon:
+      runtime: containerd
+      socketPath: /run/containerd/containerd.sock
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 512Mi
+    
+    dashboard:
+      enabled: true
+      replicaCount: 1
+      service:
+        type: ClusterIP
+    
+    webhook:
+      certManager:
+        enabled: true
+    
+    rbac:
+      create: true
+    
+    clusterScoped: true
+    
+    enableProfiling: false
+    
+    podSecurityPolicy:
+      enabled: true
+    
+    podAnnotations:
+      prometheus.io/scrape: "true"
+      prometheus.io/port: "10080"
+    
+    podSecurityContext:
+      runAsNonRoot: true
+      runAsUser: 65534
+    
+    nodeSelector:
+      kubernetes.io/os: linux
+    
+    tolerations:
+      - key: "node-role.kubernetes.io/master"
+        operator: "Exists"
+        effect: "NoSchedule"
