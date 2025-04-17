@@ -227,3 +227,30 @@ BASH_COMMAND = Command(
         )
     ],
 )
+
+NEOVIM_COMMAND = Command(
+    name="neovim",
+    signature="<command>",
+    docstring="Execute commands in Neovim as a parallel workflow environment",
+    end_name="NEOVIM_END",
+    arguments=[
+        Argument(
+            name="command",
+            type="string",
+            description="The Neovim command to execute. Can be normal mode commands, ex commands, or key sequences.",
+            required=True,
+        ),
+        Argument(
+            name="file",
+            type="string",
+            description="The file to open in Neovim (if applicable).",
+            required=False,
+        ),
+        Argument(
+            name="background",
+            type="boolean",
+            description="Whether to run the command in the background (parallel to IDE operations).",
+            required=False,
+        )
+    ],
+)

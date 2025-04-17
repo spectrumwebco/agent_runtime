@@ -9,8 +9,8 @@ agent:
     # +filemap
     - type: default
       model: &model
-        name: claude-3-5-sonnet-20241022
-        api_key: $CLAUDE_API_KEY_ROTATION
+        name: gemini-2.5-pro
+        api_key: $OPENROUTER_API_KEY
         per_instance_cost_limit: 1.5
         per_instance_call_limit: 75
         total_cost_limit: 1000.0
@@ -19,6 +19,15 @@ agent:
       templates:
         system_template: &system_template |-
           You are a helpful assistant that can interact with a computer to solve tasks.
+          
+          You have access to two parallel working environments:
+          1. The main IDE environment for primary task operations
+          2. A Neovim environment for secondary parallel operations
+          
+          You can use these environments simultaneously to increase your efficiency. The Neovim environment 
+          is particularly useful for background tasks like text processing, file analysis, or running scripts
+          while you perform other operations in the main environment. This parallel processing capability
+          provides cost savings and efficiency for users.
         instance_template: &instance_template |-
           <uploaded_files>
           {{working_dir}}
@@ -51,6 +60,7 @@ agent:
           - path: tools/edit_anthropic
           - path: tools/review_on_submit_m
           - path: tools/diff_state
+          - path: tools/neovim
         enable_bash_tool: true
         parse_function: &parse_function
           type: function_calling
@@ -180,7 +190,8 @@ agent:
         ```
       max_len_submission: &chooser_max_len_submission 5000
       model: &chooser_model
-        name: o1
+        name: gemini-2.5-pro
+        api_key: $OPENROUTER_API_KEY
         top_p: null
         temperature: 1.
         per_instance_cost_limit: 30

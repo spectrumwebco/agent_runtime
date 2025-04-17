@@ -12,7 +12,7 @@ from typing_extensions import Self
 
 from ..environment.swe_env import SWEEnv
 from .bundle import Bundle
-from .commands import BASH_COMMAND, Command
+from .commands import BASH_COMMAND, NEOVIM_COMMAND, Command
 from .parsing import FunctionCallingParser, JsonParser, ParseFunction
 from .utils import _guard_multiline_input, generate_command_docs
 from ..utils.log import get_logger
@@ -23,8 +23,6 @@ class ToolFilterConfig(BaseModel):
         "Operation '{{action}}' is not supported by this environment."
     )
     blocklist: list[str] = [
-        "vim",
-        "vi",
         "emacs",
         "nano",
         "nohup",
@@ -44,8 +42,6 @@ class ToolFilterConfig(BaseModel):
         "/bin/bash",
         "/bin/sh",
         "nohup",
-        "vi",
-        "vim",
         "emacs",
         "nano",
         "su",
@@ -125,6 +121,8 @@ class ToolConfig(BaseModel):
         if self.enable_bash_tool:
             commands.append(BASH_COMMAND)
             tool_sources[BASH_COMMAND.name] = Path("<builtin>")
+            commands.append(NEOVIM_COMMAND)
+            tool_sources[NEOVIM_COMMAND.name] = Path("<builtin>")
 
         # Collect commands from all bundles
         for bundle in self.bundles:
