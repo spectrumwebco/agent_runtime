@@ -1,0 +1,112 @@
+import React, { createContext, useContext, useEffect, useState } from 'react';
+
+// Teemo UI Theme Provider Template
+// This template provides a theme provider with dark/light mode support
+
+type Theme = 'dark' | 'light' | 'system';
+
+interface ThemeProviderProps {
+  children: React.ReactNode;
+  defaultTheme?: Theme;
+  storageKey?: string;
+}
+
+interface ThemeProviderState {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+}
+
+const initialState: ThemeProviderState = {
+  theme: 'system',
+  setTheme: () => null,
+};
+
+const ThemeProviderContext = createContext<ThemeProviderState>(initialState);
+
+export function ThemeProvider({
+  children,
+  defaultTheme = 'system',
+  storageKey = 'teemo-ui-theme',
+  ...props
+}: ThemeProviderProps) {
+  const [theme, setTheme] = useState<Theme>(
+    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
+  );
+
+  useEffect(() => {
+    const root = window.document.documentElement;
+    
+    root.classList.remove('light', 'dark');
+    
+    if (theme === 'system') {
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)')
+        .matches
+        ? 'dark'
+        : 'light';
+      
+      root.classList.add(systemTheme);
+      return;
+    }
+    
+    root.classList.add(theme);
+  }, [theme]);
+
+  const value = {
+    theme,
+    setTheme: (theme: Theme) => {
+      localStorage.setItem(storageKey, theme);
+      setTheme(theme);
+    },
+  };
+
+  return (
+    <ThemeProviderContext.Provider {...props} value={value}>
+      {children}
+    </ThemeProviderContext.Provider>
+  );
+}
+
+export const useTheme = () => {
+  const context = useContext(ThemeProviderContext);
+  
+  if (context === undefined)
+    throw new Error('useTheme must be used within a ThemeProvider');
+  
+  return context;
+};
+
+export const ThemeToggle = () => {
+  const { theme, setTheme } = useTheme();
+
+  return (
+    <div className="theme-toggle">
+      <button
+        onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
+        className="theme-toggle-button"
+      >
+        {theme === 'light' ? 'Dark Mode' : 'Light Mode'}
+      </button>
+      
+      <style jsx>{`
+        .theme-toggle {
+          display: inline-flex;
+        }
+        
+        .theme-toggle-button {
+          background-color: ${theme === 'light' ? '#1a202c' : '#f7fafc'};
+          color: ${theme === 'light' ? '#f7fafc' : '#1a202c'};
+          border: none;
+          padding: 8px 12px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+          transition: all 0.2s;
+        }
+        
+        .theme-toggle-button:hover {
+          opacity: 0.9;
+        }
+      `}</style>
+    </div>
+  );
+};

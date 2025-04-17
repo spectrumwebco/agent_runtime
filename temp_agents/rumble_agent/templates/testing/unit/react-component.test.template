@@ -1,0 +1,467 @@
+{{#typescript}}
+import React from 'react';
+import { render, screen, fireEvent{{#testing_library_hooks}}, renderHook, act{{/testing_library_hooks}} } from '@testing-library/react';
+{{#testing_library_user_event}}
+import userEvent from '@testing-library/user-event';
+{{/testing_library_user_event}}
+{{#jest_fetch_mock}}
+import fetchMock from 'jest-fetch-mock';
+{{/jest_fetch_mock}}
+{{#mock_router}}
+import { BrowserRouter } from 'react-router-dom';
+{{/mock_router}}
+{{#mock_redux}}
+import { Provider } from 'react-redux';
+import { configureStore } from '@reduxjs/toolkit';
+import { rootReducer } from '../store/rootReducer';
+{{/mock_redux}}
+{{#mock_context}}
+import { {{context_name}}Provider } from '../contexts/{{context_file_name}}';
+{{/mock_context}}
+import {{component_name}} from '../{{component_path}}';
+
+{{#jest_fetch_mock}}
+// Enable fetch mocks
+fetchMock.enableMocks();
+{{/jest_fetch_mock}}
+
+describe('{{component_name}}', () => {
+  {{#setup}}
+  // Setup before each test
+  beforeEach(() => {
+    {{#jest_fetch_mock}}
+    fetchMock.resetMocks();
+    {{/jest_fetch_mock}}
+  });
+  {{/setup}}
+  
+  {{#mock_redux}}
+  // Create a mock store for testing
+  const createMockStore = (initialState = {}) => {
+    return configureStore({
+      reducer: rootReducer,
+      preloadedState: initialState
+    });
+  };
+  {{/mock_redux}}
+  
+  {{#render_function}}
+  // Helper function to render the component with all required providers
+  const renderComponent = (props = {}) => {
+    {{#mock_redux}}
+    const store = createMockStore();
+    {{/mock_redux}}
+    
+    return render(
+      {{#mock_router}}
+      <BrowserRouter>
+      {{/mock_router}}
+        {{#mock_redux}}
+        <Provider store={store}>
+        {{/mock_redux}}
+          {{#mock_context}}
+          <{{context_name}}Provider>
+          {{/mock_context}}
+            <{{component_name}} {...props} />
+          {{#mock_context}}
+          </{{context_name}}Provider>
+          {{/mock_context}}
+        {{#mock_redux}}
+        </Provider>
+        {{/mock_redux}}
+      {{#mock_router}}
+      </BrowserRouter>
+      {{/mock_router}}
+    );
+  };
+  {{/render_function}}
+  
+  test('renders without crashing', () => {
+    {{#render_function}}
+    renderComponent();
+    {{/render_function}}
+    {{^render_function}}
+    render(<{{component_name}} />);
+    {{/render_function}}
+    // Basic assertion to verify component renders
+    expect(screen.getByTestId('{{component_test_id}}')).toBeInTheDocument();
+  });
+  
+  {{#test_props}}
+  test('renders with props correctly', () => {
+    const testProps = {
+      {{#props}}
+      {{name}}: {{value}},
+      {{/props}}
+    };
+    
+    {{#render_function}}
+    renderComponent(testProps);
+    {{/render_function}}
+    {{^render_function}}
+    render(<{{component_name}} {...testProps} />);
+    {{/render_function}}
+    
+    {{#props}}
+    {{#if_text}}
+    expect(screen.getByText(testProps.{{name}})).toBeInTheDocument();
+    {{/if_text}}
+    {{#if_test_id}}
+    expect(screen.getByTestId('{{test_id}}')).toHaveTextContent(testProps.{{name}});
+    {{/if_test_id}}
+    {{/props}}
+  });
+  {{/test_props}}
+  
+  {{#test_events}}
+  test('handles events correctly', () => {
+    const handleClick = jest.fn();
+    
+    {{#render_function}}
+    renderComponent({ onClick: handleClick });
+    {{/render_function}}
+    {{^render_function}}
+    render(<{{component_name}} onClick={handleClick} />);
+    {{/render_function}}
+    
+    {{#testing_library_user_event}}
+    // Using userEvent for more realistic browser simulation
+    userEvent.click(screen.getByRole('button'));
+    {{/testing_library_user_event}}
+    {{^testing_library_user_event}}
+    fireEvent.click(screen.getByRole('button'));
+    {{/testing_library_user_event}}
+    
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+  {{/test_events}}
+  
+  {{#test_state}}
+  test('manages state correctly', () => {
+    {{#render_function}}
+    renderComponent();
+    {{/render_function}}
+    {{^render_function}}
+    render(<{{component_name}} />);
+    {{/render_function}}
+    
+    // Test initial state
+    expect(screen.getByTestId('counter-value')).toHaveTextContent('0');
+    
+    // Interact with component to change state
+    {{#testing_library_user_event}}
+    userEvent.click(screen.getByRole('button', { name: /increment/i }));
+    {{/testing_library_user_event}}
+    {{^testing_library_user_event}}
+    fireEvent.click(screen.getByRole('button', { name: /increment/i }));
+    {{/testing_library_user_event}}
+    
+    // Test updated state
+    expect(screen.getByTestId('counter-value')).toHaveTextContent('1');
+  });
+  {{/test_state}}
+  
+  {{#test_async}}
+  test('handles async operations correctly', async () => {
+    {{#jest_fetch_mock}}
+    // Mock API response
+    fetchMock.mockResponseOnce(JSON.stringify({ data: 'test data' }));
+    {{/jest_fetch_mock}}
+    
+    {{#render_function}}
+    renderComponent();
+    {{/render_function}}
+    {{^render_function}}
+    render(<{{component_name}} />);
+    {{/render_function}}
+    
+    // Test loading state
+    expect(screen.getByTestId('loading-indicator')).toBeInTheDocument();
+    
+    // Wait for async operation to complete
+    await screen.findByText('test data');
+    
+    // Test loaded state
+    expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument();
+    expect(screen.getByText('test data')).toBeInTheDocument();
+    
+    {{#jest_fetch_mock}}
+    // Verify API was called correctly
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith('/api/data');
+    {{/jest_fetch_mock}}
+  });
+  {{/test_async}}
+  
+  {{#test_conditional_rendering}}
+  test('renders conditionally based on props', () => {
+    // Test with feature enabled
+    {{#render_function}}
+    renderComponent({ showFeature: true });
+    {{/render_function}}
+    {{^render_function}}
+    render(<{{component_name}} showFeature={true} />);
+    {{/render_function}}
+    expect(screen.getByTestId('feature')).toBeInTheDocument();
+    
+    // Test with feature disabled
+    {{#render_function}}
+    renderComponent({ showFeature: false });
+    {{/render_function}}
+    {{^render_function}}
+    render(<{{component_name}} showFeature={false} />);
+    {{/render_function}}
+    expect(screen.queryByTestId('feature')).not.toBeInTheDocument();
+  });
+  {{/test_conditional_rendering}}
+  
+  {{#testing_library_hooks}}
+  test('custom hook works correctly', () => {
+    // Test custom hook if component uses one
+    const { result } = renderHook(() => useCustomHook());
+    
+    expect(result.current.value).toBe(initialValue);
+    
+    act(() => {
+      result.current.setValue(newValue);
+    });
+    
+    expect(result.current.value).toBe(newValue);
+  });
+  {{/testing_library_hooks}}
+});
+{{/typescript}}
+
+{{^typescript}}
+import React from 'react';
+import { render, screen, fireEvent{{#testing_library_hooks}}, renderHook, act{{/testing_library_hooks}} } from '@testing-library/react';
+{{#testing_library_user_event}}
+import userEvent from '@testing-library/user-event';
+{{/testing_library_user_event}}
+{{#jest_fetch_mock}}
+import fetchMock from 'jest-fetch-mock';
+{{/jest_fetch_mock}}
+{{#mock_router}}
+import { BrowserRouter } from 'react-router-dom';
+{{/mock_router}}
+{{#mock_redux}}
+import { Provider } from 'react-redux';
+import { configureStore } from '@reduxjs/toolkit';
+import { rootReducer } from '../store/rootReducer';
+{{/mock_redux}}
+{{#mock_context}}
+import { {{context_name}}Provider } from '../contexts/{{context_file_name}}';
+{{/mock_context}}
+import {{component_name}} from '../{{component_path}}';
+
+{{#jest_fetch_mock}}
+// Enable fetch mocks
+fetchMock.enableMocks();
+{{/jest_fetch_mock}}
+
+describe('{{component_name}}', () => {
+  {{#setup}}
+  // Setup before each test
+  beforeEach(() => {
+    {{#jest_fetch_mock}}
+    fetchMock.resetMocks();
+    {{/jest_fetch_mock}}
+  });
+  {{/setup}}
+  
+  {{#mock_redux}}
+  // Create a mock store for testing
+  const createMockStore = (initialState = {}) => {
+    return configureStore({
+      reducer: rootReducer,
+      preloadedState: initialState
+    });
+  };
+  {{/mock_redux}}
+  
+  {{#render_function}}
+  // Helper function to render the component with all required providers
+  const renderComponent = (props = {}) => {
+    {{#mock_redux}}
+    const store = createMockStore();
+    {{/mock_redux}}
+    
+    return render(
+      {{#mock_router}}
+      <BrowserRouter>
+      {{/mock_router}}
+        {{#mock_redux}}
+        <Provider store={store}>
+        {{/mock_redux}}
+          {{#mock_context}}
+          <{{context_name}}Provider>
+          {{/mock_context}}
+            <{{component_name}} {...props} />
+          {{#mock_context}}
+          </{{context_name}}Provider>
+          {{/mock_context}}
+        {{#mock_redux}}
+        </Provider>
+        {{/mock_redux}}
+      {{#mock_router}}
+      </BrowserRouter>
+      {{/mock_router}}
+    );
+  };
+  {{/render_function}}
+  
+  test('renders without crashing', () => {
+    {{#render_function}}
+    renderComponent();
+    {{/render_function}}
+    {{^render_function}}
+    render(<{{component_name}} />);
+    {{/render_function}}
+    // Basic assertion to verify component renders
+    expect(screen.getByTestId('{{component_test_id}}')).toBeInTheDocument();
+  });
+  
+  {{#test_props}}
+  test('renders with props correctly', () => {
+    const testProps = {
+      {{#props}}
+      {{name}}: {{value}},
+      {{/props}}
+    };
+    
+    {{#render_function}}
+    renderComponent(testProps);
+    {{/render_function}}
+    {{^render_function}}
+    render(<{{component_name}} {...testProps} />);
+    {{/render_function}}
+    
+    {{#props}}
+    {{#if_text}}
+    expect(screen.getByText(testProps.{{name}})).toBeInTheDocument();
+    {{/if_text}}
+    {{#if_test_id}}
+    expect(screen.getByTestId('{{test_id}}')).toHaveTextContent(testProps.{{name}});
+    {{/if_test_id}}
+    {{/props}}
+  });
+  {{/test_props}}
+  
+  {{#test_events}}
+  test('handles events correctly', () => {
+    const handleClick = jest.fn();
+    
+    {{#render_function}}
+    renderComponent({ onClick: handleClick });
+    {{/render_function}}
+    {{^render_function}}
+    render(<{{component_name}} onClick={handleClick} />);
+    {{/render_function}}
+    
+    {{#testing_library_user_event}}
+    // Using userEvent for more realistic browser simulation
+    userEvent.click(screen.getByRole('button'));
+    {{/testing_library_user_event}}
+    {{^testing_library_user_event}}
+    fireEvent.click(screen.getByRole('button'));
+    {{/testing_library_user_event}}
+    
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+  {{/test_events}}
+  
+  {{#test_state}}
+  test('manages state correctly', () => {
+    {{#render_function}}
+    renderComponent();
+    {{/render_function}}
+    {{^render_function}}
+    render(<{{component_name}} />);
+    {{/render_function}}
+    
+    // Test initial state
+    expect(screen.getByTestId('counter-value')).toHaveTextContent('0');
+    
+    // Interact with component to change state
+    {{#testing_library_user_event}}
+    userEvent.click(screen.getByRole('button', { name: /increment/i }));
+    {{/testing_library_user_event}}
+    {{^testing_library_user_event}}
+    fireEvent.click(screen.getByRole('button', { name: /increment/i }));
+    {{/testing_library_user_event}}
+    
+    // Test updated state
+    expect(screen.getByTestId('counter-value')).toHaveTextContent('1');
+  });
+  {{/test_state}}
+  
+  {{#test_async}}
+  test('handles async operations correctly', async () => {
+    {{#jest_fetch_mock}}
+    // Mock API response
+    fetchMock.mockResponseOnce(JSON.stringify({ data: 'test data' }));
+    {{/jest_fetch_mock}}
+    
+    {{#render_function}}
+    renderComponent();
+    {{/render_function}}
+    {{^render_function}}
+    render(<{{component_name}} />);
+    {{/render_function}}
+    
+    // Test loading state
+    expect(screen.getByTestId('loading-indicator')).toBeInTheDocument();
+    
+    // Wait for async operation to complete
+    await screen.findByText('test data');
+    
+    // Test loaded state
+    expect(screen.queryByTestId('loading-indicator')).not.toBeInTheDocument();
+    expect(screen.getByText('test data')).toBeInTheDocument();
+    
+    {{#jest_fetch_mock}}
+    // Verify API was called correctly
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith('/api/data');
+    {{/jest_fetch_mock}}
+  });
+  {{/test_async}}
+  
+  {{#test_conditional_rendering}}
+  test('renders conditionally based on props', () => {
+    // Test with feature enabled
+    {{#render_function}}
+    renderComponent({ showFeature: true });
+    {{/render_function}}
+    {{^render_function}}
+    render(<{{component_name}} showFeature={true} />);
+    {{/render_function}}
+    expect(screen.getByTestId('feature')).toBeInTheDocument();
+    
+    // Test with feature disabled
+    {{#render_function}}
+    renderComponent({ showFeature: false });
+    {{/render_function}}
+    {{^render_function}}
+    render(<{{component_name}} showFeature={false} />);
+    {{/render_function}}
+    expect(screen.queryByTestId('feature')).not.toBeInTheDocument();
+  });
+  {{/test_conditional_rendering}}
+  
+  {{#testing_library_hooks}}
+  test('custom hook works correctly', () => {
+    // Test custom hook if component uses one
+    const { result } = renderHook(() => useCustomHook());
+    
+    expect(result.current.value).toBe(initialValue);
+    
+    act(() => {
+      result.current.setValue(newValue);
+    });
+    
+    expect(result.current.value).toBe(newValue);
+  });
+  {{/testing_library_hooks}}
+});
+{{/typescript}}

@@ -1,0 +1,92 @@
+import React from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// Teemo UI Fade Animation Template
+// This template provides fade in/out animation components
+
+interface FadeProps {
+  children: React.ReactNode;
+  duration?: number;
+  delay?: number;
+  className?: string;
+  style?: React.CSSProperties;
+  [key: string]: any;
+}
+
+export const FadeIn = ({
+  children,
+  duration = 0.3,
+  delay = 0,
+  className = '',
+  style = {},
+  ...props
+}: FadeProps) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration, delay }}
+      className={className}
+      style={style}
+      {...props}
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+export const FadeOut = ({
+  children,
+  duration = 0.3,
+  delay = 0,
+  className = '',
+  style = {},
+  ...props
+}: FadeProps) => {
+  return (
+    <motion.div
+      initial={{ opacity: 1 }}
+      animate={{ opacity: 0 }}
+      transition={{ duration, delay }}
+      className={className}
+      style={style}
+      {...props}
+    >
+      {children}
+    </motion.div>
+  );
+};
+
+interface FadeInOutProps extends FadeProps {
+  show: boolean;
+}
+
+export const FadeInOut = ({
+  children,
+  show,
+  duration = 0.3,
+  delay = 0,
+  className = '',
+  style = {},
+  ...props
+}: FadeInOutProps) => {
+  return (
+    <AnimatePresence>
+      {show && (
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration, delay }}
+          className={className}
+          style={style}
+          {...props}
+        >
+          {children}
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+};
+
+export default { FadeIn, FadeOut, FadeInOut };

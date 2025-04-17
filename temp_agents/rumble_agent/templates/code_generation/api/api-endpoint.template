@@ -1,0 +1,476 @@
+{{#typescript}}
+import { Request, Response, NextFunction } from 'express';
+import { {{entity_name}}Service } from '../services/{{entity_name}}Service';
+{{#validation}}
+import { body, param, validationResult } from 'express-validator';
+{{/validation}}
+{{#swagger}}
+/**
+ * @swagger
+ * /api/{{api_version}}/{{entity_name_plural}}:
+ *   get:
+ *     summary: Get all {{entity_name_plural}}
+ *     tags: [{{entity_name_plural}}]
+ *     responses:
+ *       200:
+ *         description: List of {{entity_name_plural}}
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/{{entity_name}}'
+ *       500:
+ *         description: Server error
+ */
+{{/swagger}}
+export const getAll{{entity_name_plural}} = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const {{entity_name_plural}} = await {{entity_name}}Service.getAll();
+    return res.status(200).json({{entity_name_plural}});
+  } catch (error) {
+    next(error);
+  }
+};
+
+{{#swagger}}
+/**
+ * @swagger
+ * /api/{{api_version}}/{{entity_name_plural}}/{id}:
+ *   get:
+ *     summary: Get a {{entity_name}} by ID
+ *     tags: [{{entity_name_plural}}]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID of the {{entity_name}}
+ *     responses:
+ *       200:
+ *         description: {{entity_name}} details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/{{entity_name}}'
+ *       404:
+ *         description: {{entity_name}} not found
+ *       500:
+ *         description: Server error
+ */
+{{/swagger}}
+export const get{{entity_name}}ById = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const {{entity_name_camel}} = await {{entity_name}}Service.getById(id);
+    
+    if (!{{entity_name_camel}}) {
+      return res.status(404).json({ message: '{{entity_name}} not found' });
+    }
+    
+    return res.status(200).json({{entity_name_camel}});
+  } catch (error) {
+    next(error);
+  }
+};
+
+{{#validation}}
+export const validate{{entity_name}}Creation = [
+  body('name').notEmpty().withMessage('Name is required'),
+  body('description').optional(),
+  // Add more validation rules as needed
+];
+{{/validation}}
+
+{{#swagger}}
+/**
+ * @swagger
+ * /api/{{api_version}}/{{entity_name_plural}}:
+ *   post:
+ *     summary: Create a new {{entity_name}}
+ *     tags: [{{entity_name_plural}}]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/{{entity_name}}Input'
+ *     responses:
+ *       201:
+ *         description: {{entity_name}} created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/{{entity_name}}'
+ *       400:
+ *         description: Invalid input
+ *       500:
+ *         description: Server error
+ */
+{{/swagger}}
+export const create{{entity_name}} = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    {{#validation}}
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    {{/validation}}
+    
+    const {{entity_name_camel}} = await {{entity_name}}Service.create(req.body);
+    return res.status(201).json({{entity_name_camel}});
+  } catch (error) {
+    next(error);
+  }
+};
+
+{{#validation}}
+export const validate{{entity_name}}Update = [
+  param('id').notEmpty().withMessage('ID is required'),
+  body('name').optional(),
+  body('description').optional(),
+  // Add more validation rules as needed
+];
+{{/validation}}
+
+{{#swagger}}
+/**
+ * @swagger
+ * /api/{{api_version}}/{{entity_name_plural}}/{id}:
+ *   put:
+ *     summary: Update a {{entity_name}} by ID
+ *     tags: [{{entity_name_plural}}]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID of the {{entity_name}}
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/{{entity_name}}Input'
+ *     responses:
+ *       200:
+ *         description: {{entity_name}} updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/{{entity_name}}'
+ *       400:
+ *         description: Invalid input
+ *       404:
+ *         description: {{entity_name}} not found
+ *       500:
+ *         description: Server error
+ */
+{{/swagger}}
+export const update{{entity_name}} = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    {{#validation}}
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    {{/validation}}
+    
+    const { id } = req.params;
+    const updated{{entity_name}} = await {{entity_name}}Service.update(id, req.body);
+    
+    if (!updated{{entity_name}}) {
+      return res.status(404).json({ message: '{{entity_name}} not found' });
+    }
+    
+    return res.status(200).json(updated{{entity_name}});
+  } catch (error) {
+    next(error);
+  }
+};
+
+{{#swagger}}
+/**
+ * @swagger
+ * /api/{{api_version}}/{{entity_name_plural}}/{id}:
+ *   delete:
+ *     summary: Delete a {{entity_name}} by ID
+ *     tags: [{{entity_name_plural}}]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID of the {{entity_name}}
+ *     responses:
+ *       200:
+ *         description: {{entity_name}} deleted successfully
+ *       404:
+ *         description: {{entity_name}} not found
+ *       500:
+ *         description: Server error
+ */
+{{/swagger}}
+export const delete{{entity_name}} = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const deleted = await {{entity_name}}Service.delete(id);
+    
+    if (!deleted) {
+      return res.status(404).json({ message: '{{entity_name}} not found' });
+    }
+    
+    return res.status(200).json({ message: '{{entity_name}} deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+{{/typescript}}
+{{^typescript}}
+const { {{entity_name}}Service } = require('../services/{{entity_name}}Service');
+{{#validation}}
+const { body, param, validationResult } = require('express-validator');
+{{/validation}}
+
+{{#swagger}}
+/**
+ * @swagger
+ * /api/{{api_version}}/{{entity_name_plural}}:
+ *   get:
+ *     summary: Get all {{entity_name_plural}}
+ *     tags: [{{entity_name_plural}}]
+ *     responses:
+ *       200:
+ *         description: List of {{entity_name_plural}}
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/{{entity_name}}'
+ *       500:
+ *         description: Server error
+ */
+{{/swagger}}
+const getAll{{entity_name_plural}} = async (req, res, next) => {
+  try {
+    const {{entity_name_plural}} = await {{entity_name}}Service.getAll();
+    return res.status(200).json({{entity_name_plural}});
+  } catch (error) {
+    next(error);
+  }
+};
+
+{{#swagger}}
+/**
+ * @swagger
+ * /api/{{api_version}}/{{entity_name_plural}}/{id}:
+ *   get:
+ *     summary: Get a {{entity_name}} by ID
+ *     tags: [{{entity_name_plural}}]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID of the {{entity_name}}
+ *     responses:
+ *       200:
+ *         description: {{entity_name}} details
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/{{entity_name}}'
+ *       404:
+ *         description: {{entity_name}} not found
+ *       500:
+ *         description: Server error
+ */
+{{/swagger}}
+const get{{entity_name}}ById = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const {{entity_name_camel}} = await {{entity_name}}Service.getById(id);
+    
+    if (!{{entity_name_camel}}) {
+      return res.status(404).json({ message: '{{entity_name}} not found' });
+    }
+    
+    return res.status(200).json({{entity_name_camel}});
+  } catch (error) {
+    next(error);
+  }
+};
+
+{{#validation}}
+const validate{{entity_name}}Creation = [
+  body('name').notEmpty().withMessage('Name is required'),
+  body('description').optional(),
+  // Add more validation rules as needed
+];
+{{/validation}}
+
+{{#swagger}}
+/**
+ * @swagger
+ * /api/{{api_version}}/{{entity_name_plural}}:
+ *   post:
+ *     summary: Create a new {{entity_name}}
+ *     tags: [{{entity_name_plural}}]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/{{entity_name}}Input'
+ *     responses:
+ *       201:
+ *         description: {{entity_name}} created successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/{{entity_name}}'
+ *       400:
+ *         description: Invalid input
+ *       500:
+ *         description: Server error
+ */
+{{/swagger}}
+const create{{entity_name}} = async (req, res, next) => {
+  try {
+    {{#validation}}
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    {{/validation}}
+    
+    const {{entity_name_camel}} = await {{entity_name}}Service.create(req.body);
+    return res.status(201).json({{entity_name_camel}});
+  } catch (error) {
+    next(error);
+  }
+};
+
+{{#validation}}
+const validate{{entity_name}}Update = [
+  param('id').notEmpty().withMessage('ID is required'),
+  body('name').optional(),
+  body('description').optional(),
+  // Add more validation rules as needed
+];
+{{/validation}}
+
+{{#swagger}}
+/**
+ * @swagger
+ * /api/{{api_version}}/{{entity_name_plural}}/{id}:
+ *   put:
+ *     summary: Update a {{entity_name}} by ID
+ *     tags: [{{entity_name_plural}}]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID of the {{entity_name}}
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/{{entity_name}}Input'
+ *     responses:
+ *       200:
+ *         description: {{entity_name}} updated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/{{entity_name}}'
+ *       400:
+ *         description: Invalid input
+ *       404:
+ *         description: {{entity_name}} not found
+ *       500:
+ *         description: Server error
+ */
+{{/swagger}}
+const update{{entity_name}} = async (req, res, next) => {
+  try {
+    {{#validation}}
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+    {{/validation}}
+    
+    const { id } = req.params;
+    const updated{{entity_name}} = await {{entity_name}}Service.update(id, req.body);
+    
+    if (!updated{{entity_name}}) {
+      return res.status(404).json({ message: '{{entity_name}} not found' });
+    }
+    
+    return res.status(200).json(updated{{entity_name}});
+  } catch (error) {
+    next(error);
+  }
+};
+
+{{#swagger}}
+/**
+ * @swagger
+ * /api/{{api_version}}/{{entity_name_plural}}/{id}:
+ *   delete:
+ *     summary: Delete a {{entity_name}} by ID
+ *     tags: [{{entity_name_plural}}]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: string
+ *         required: true
+ *         description: ID of the {{entity_name}}
+ *     responses:
+ *       200:
+ *         description: {{entity_name}} deleted successfully
+ *       404:
+ *         description: {{entity_name}} not found
+ *       500:
+ *         description: Server error
+ */
+{{/swagger}}
+const delete{{entity_name}} = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const deleted = await {{entity_name}}Service.delete(id);
+    
+    if (!deleted) {
+      return res.status(404).json({ message: '{{entity_name}} not found' });
+    }
+    
+    return res.status(200).json({ message: '{{entity_name}} deleted successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = {
+  getAll{{entity_name_plural}},
+  get{{entity_name}}ById,
+  {{#validation}}
+  validate{{entity_name}}Creation,
+  {{/validation}}
+  create{{entity_name}},
+  {{#validation}}
+  validate{{entity_name}}Update,
+  {{/validation}}
+  update{{entity_name}},
+  delete{{entity_name}}
+};
+{{/typescript}}

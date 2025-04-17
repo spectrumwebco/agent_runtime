@@ -1,0 +1,72 @@
+{{#typescript}}
+import React, { {{#has_state}}useState, {{/has_state}}{{#has_effect}}useEffect, {{/has_effect}}FC } from 'react';
+{{#has_styles}}
+import './{{component_name}}.css';
+{{/has_styles}}
+
+interface {{component_name}}Props {
+  {{#props}}
+  {{name}}: {{type}};
+  {{/props}}
+}
+
+const {{component_name}}: FC<{{component_name}}Props> = ({ {{#props}}{{name}}, {{/props}} }) => {
+  {{#state_variables}}
+  const [{{name}}, set{{name_capitalized}}] = useState<{{type}}>({{default_value}});
+  {{/state_variables}}
+
+  {{#has_effect}}
+  useEffect(() => {
+    // Effect implementation
+    {{effect_content}}
+    
+    return () => {
+      // Cleanup implementation
+      {{cleanup_content}}
+    };
+  }, [{{effect_dependencies}}]);
+  {{/has_effect}}
+
+  return (
+    <div className="{{component_name_kebab}}">
+      {/* Component content */}
+      {{component_content}}
+    </div>
+  );
+};
+
+export default {{component_name}};
+{{/typescript}}
+{{^typescript}}
+import React, { {{#has_state}}useState, {{/has_state}}{{#has_effect}}useEffect, {{/has_effect}} } from 'react';
+{{#has_styles}}
+import './{{component_name}}.css';
+{{/has_styles}}
+
+const {{component_name}} = ({ {{#props}}{{name}}, {{/props}} }) => {
+  {{#state_variables}}
+  const [{{name}}, set{{name_capitalized}}] = useState({{default_value}});
+  {{/state_variables}}
+
+  {{#has_effect}}
+  useEffect(() => {
+    // Effect implementation
+    {{effect_content}}
+    
+    return () => {
+      // Cleanup implementation
+      {{cleanup_content}}
+    };
+  }, [{{effect_dependencies}}]);
+  {{/has_effect}}
+
+  return (
+    <div className="{{component_name_kebab}}">
+      {/* Component content */}
+      {{component_content}}
+    </div>
+  );
+};
+
+export default {{component_name}};
+{{/typescript}}

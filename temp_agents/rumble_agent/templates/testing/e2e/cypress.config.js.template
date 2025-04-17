@@ -1,0 +1,157 @@
+{{#typescript}}
+import { defineConfig } from 'cypress';
+
+export default defineConfig({
+  e2e: {
+    setupNodeEvents(on, config) {
+      {{#plugins}}
+      // Import and register Cypress plugins
+      {{#plugin_name}}
+      require('{{plugin_name}}')(on, config);
+      {{/plugin_name}}
+      {{/plugins}}
+      
+      {{#custom_tasks}}
+      // Register custom tasks
+      on('task', {
+        {{#task_name}}
+        '{{task_name}}'(value) {
+          // Task implementation
+          console.log('Running {{task_name}} with value:', value);
+          return null; // Tasks must return null or a promise
+        },
+        {{/task_name}}
+      });
+      {{/custom_tasks}}
+      
+      return config;
+    },
+    baseUrl: '{{#base_url}}{{.}}{{/base_url}}{{^base_url}}http://localhost:{{#port}}{{.}}{{/port}}{{^port}}3000{{/port}}{{/base_url}}',
+    specPattern: '{{#spec_pattern}}{{.}}{{/spec_pattern}}{{^spec_pattern}}cypress/e2e/**/*.cy.{js,jsx,ts,tsx}{{/spec_pattern}}',
+    supportFile: '{{#support_file}}{{.}}{{/support_file}}{{^support_file}}cypress/support/e2e.{js,jsx,ts,tsx}{{/support_file}}',
+    viewportWidth: {{#viewport_width}}{{.}}{{/viewport_width}}{{^viewport_width}}1280{{/viewport_width}},
+    viewportHeight: {{#viewport_height}}{{.}}{{/viewport_height}}{{^viewport_height}}720{{/viewport_height}},
+    defaultCommandTimeout: {{#command_timeout}}{{.}}{{/command_timeout}}{{^command_timeout}}4000{{/command_timeout}},
+    requestTimeout: {{#request_timeout}}{{.}}{{/request_timeout}}{{^request_timeout}}5000{{/request_timeout}},
+    responseTimeout: {{#response_timeout}}{{.}}{{/response_timeout}}{{^response_timeout}}30000{{/response_timeout}},
+    pageLoadTimeout: {{#page_load_timeout}}{{.}}{{/page_load_timeout}}{{^page_load_timeout}}60000{{/page_load_timeout}},
+    video: {{#video}}{{.}}{{/video}}{{^video}}false{{/video}},
+    screenshotOnRunFailure: {{#screenshot_on_failure}}{{.}}{{/screenshot_on_failure}}{{^screenshot_on_failure}}true{{/screenshot_on_failure}},
+    trashAssetsBeforeRuns: {{#trash_assets}}{{.}}{{/trash_assets}}{{^trash_assets}}true{{/trash_assets}},
+    
+    {{#experimental_features}}
+    experimentalSessionAndOrigin: {{#session_and_origin}}{{.}}{{/session_and_origin}}{{^session_and_origin}}true{{/session_and_origin}},
+    experimentalStudio: {{#studio}}{{.}}{{/studio}}{{^studio}}false{{/studio}},
+    {{/experimental_features}}
+    
+    {{#retries}}
+    retries: {
+      runMode: {{#run_mode}}{{.}}{{/run_mode}}{{^run_mode}}2{{/run_mode}},
+      openMode: {{#open_mode}}{{.}}{{/open_mode}}{{^open_mode}}0{{/open_mode}}
+    },
+    {{/retries}}
+    
+    {{#env_vars}}
+    env: {
+      {{#env_var_pairs}}
+      {{key}}: '{{value}}',
+      {{/env_var_pairs}}
+    },
+    {{/env_vars}}
+  },
+  
+  {{#component_testing}}
+  component: {
+    devServer: {
+      framework: '{{#framework}}{{.}}{{/framework}}{{^framework}}react{{/framework}}',
+      bundler: '{{#bundler}}{{.}}{{/bundler}}{{^bundler}}webpack{{/bundler}}'
+    },
+    specPattern: '{{#component_spec_pattern}}{{.}}{{/component_spec_pattern}}{{^component_spec_pattern}}src/**/*.cy.{js,jsx,ts,tsx}{{/component_spec_pattern}}',
+    supportFile: '{{#component_support_file}}{{.}}{{/component_support_file}}{{^component_support_file}}cypress/support/component.{js,jsx,ts,tsx}{{/component_support_file}}',
+  },
+  {{/component_testing}}
+  
+  {{#custom_config}}
+  {{key}}: {{value}},
+  {{/custom_config}}
+});
+{{/typescript}}
+
+{{^typescript}}
+const { defineConfig } = require('cypress');
+
+module.exports = defineConfig({
+  e2e: {
+    setupNodeEvents(on, config) {
+      {{#plugins}}
+      // Import and register Cypress plugins
+      {{#plugin_name}}
+      require('{{plugin_name}}')(on, config);
+      {{/plugin_name}}
+      {{/plugins}}
+      
+      {{#custom_tasks}}
+      // Register custom tasks
+      on('task', {
+        {{#task_name}}
+        '{{task_name}}'(value) {
+          // Task implementation
+          console.log('Running {{task_name}} with value:', value);
+          return null; // Tasks must return null or a promise
+        },
+        {{/task_name}}
+      });
+      {{/custom_tasks}}
+      
+      return config;
+    },
+    baseUrl: '{{#base_url}}{{.}}{{/base_url}}{{^base_url}}http://localhost:{{#port}}{{.}}{{/port}}{{^port}}3000{{/port}}{{/base_url}}',
+    specPattern: '{{#spec_pattern}}{{.}}{{/spec_pattern}}{{^spec_pattern}}cypress/e2e/**/*.cy.js{{/spec_pattern}}',
+    supportFile: '{{#support_file}}{{.}}{{/support_file}}{{^support_file}}cypress/support/e2e.js{{/support_file}}',
+    viewportWidth: {{#viewport_width}}{{.}}{{/viewport_width}}{{^viewport_width}}1280{{/viewport_width}},
+    viewportHeight: {{#viewport_height}}{{.}}{{/viewport_height}}{{^viewport_height}}720{{/viewport_height}},
+    defaultCommandTimeout: {{#command_timeout}}{{.}}{{/command_timeout}}{{^command_timeout}}4000{{/command_timeout}},
+    requestTimeout: {{#request_timeout}}{{.}}{{/request_timeout}}{{^request_timeout}}5000{{/request_timeout}},
+    responseTimeout: {{#response_timeout}}{{.}}{{/response_timeout}}{{^response_timeout}}30000{{/response_timeout}},
+    pageLoadTimeout: {{#page_load_timeout}}{{.}}{{/page_load_timeout}}{{^page_load_timeout}}60000{{/page_load_timeout}},
+    video: {{#video}}{{.}}{{/video}}{{^video}}false{{/video}},
+    screenshotOnRunFailure: {{#screenshot_on_failure}}{{.}}{{/screenshot_on_failure}}{{^screenshot_on_failure}}true{{/screenshot_on_failure}},
+    trashAssetsBeforeRuns: {{#trash_assets}}{{.}}{{/trash_assets}}{{^trash_assets}}true{{/trash_assets}},
+    
+    {{#experimental_features}}
+    experimentalSessionAndOrigin: {{#session_and_origin}}{{.}}{{/session_and_origin}}{{^session_and_origin}}true{{/session_and_origin}},
+    experimentalStudio: {{#studio}}{{.}}{{/studio}}{{^studio}}false{{/studio}},
+    {{/experimental_features}}
+    
+    {{#retries}}
+    retries: {
+      runMode: {{#run_mode}}{{.}}{{/run_mode}}{{^run_mode}}2{{/run_mode}},
+      openMode: {{#open_mode}}{{.}}{{/open_mode}}{{^open_mode}}0{{/open_mode}}
+    },
+    {{/retries}}
+    
+    {{#env_vars}}
+    env: {
+      {{#env_var_pairs}}
+      {{key}}: '{{value}}',
+      {{/env_var_pairs}}
+    },
+    {{/env_vars}}
+  },
+  
+  {{#component_testing}}
+  component: {
+    devServer: {
+      framework: '{{#framework}}{{.}}{{/framework}}{{^framework}}react{{/framework}}',
+      bundler: '{{#bundler}}{{.}}{{/bundler}}{{^bundler}}webpack{{/bundler}}'
+    },
+    specPattern: '{{#component_spec_pattern}}{{.}}{{/component_spec_pattern}}{{^component_spec_pattern}}src/**/*.cy.js{{/component_spec_pattern}}',
+    supportFile: '{{#component_support_file}}{{.}}{{/component_support_file}}{{^component_support_file}}cypress/support/component.js{{/component_support_file}}',
+  },
+  {{/component_testing}}
+  
+  {{#custom_config}}
+  {{key}}: {{value}},
+  {{/custom_config}}
+});
+{{/typescript}}

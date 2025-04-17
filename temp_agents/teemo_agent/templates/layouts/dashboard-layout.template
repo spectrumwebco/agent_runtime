@@ -1,0 +1,141 @@
+import React from 'react';
+
+// Teemo UI Dashboard Layout Template
+// This template provides a responsive dashboard layout with sidebar and main content area
+
+export const DashboardLayout = ({ 
+  children, 
+  sidebar, 
+  header, 
+  footer,
+  sidebarWidth = '250px',
+  collapsible = true
+}) => {
+  const [collapsed, setCollapsed] = React.useState(false);
+  
+  return (
+    <div className="dashboard-layout">
+      <div className={`sidebar ${collapsed ? 'collapsed' : ''}`} style={{ width: collapsed ? '64px' : sidebarWidth }}>
+        {collapsible && (
+          <button 
+            className="collapse-button"
+            onClick={() => setCollapsed(!collapsed)}
+            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? '→' : '←'}
+          </button>
+        )}
+        <div className="sidebar-content">
+          {sidebar}
+        </div>
+      </div>
+      
+      <div className="main-container">
+        {header && (
+          <header className="header">
+            {header}
+          </header>
+        )}
+        
+        <main className="main-content">
+          {children}
+        </main>
+        
+        {footer && (
+          <footer className="footer">
+            {footer}
+          </footer>
+        )}
+      </div>
+      
+      <style jsx>{`
+        .dashboard-layout {
+          display: flex;
+          height: 100vh;
+          width: 100%;
+          overflow: hidden;
+        }
+        
+        .sidebar {
+          background-color: #1a202c;
+          color: #e2e8f0;
+          height: 100%;
+          transition: width 0.3s ease;
+          position: relative;
+          overflow-y: auto;
+          overflow-x: hidden;
+        }
+        
+        .sidebar.collapsed {
+          width: 64px;
+        }
+        
+        .collapse-button {
+          position: absolute;
+          top: 16px;
+          right: 16px;
+          background-color: #2d3748;
+          color: #e2e8f0;
+          border: none;
+          border-radius: 4px;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          z-index: 10;
+        }
+        
+        .sidebar-content {
+          padding: 16px;
+          padding-top: 48px;
+        }
+        
+        .main-container {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
+        }
+        
+        .header {
+          background-color: #ffffff;
+          border-bottom: 1px solid #e2e8f0;
+          padding: 16px;
+          height: 64px;
+        }
+        
+        .main-content {
+          flex: 1;
+          padding: 24px;
+          overflow-y: auto;
+          background-color: #f7fafc;
+        }
+        
+        .footer {
+          background-color: #ffffff;
+          border-top: 1px solid #e2e8f0;
+          padding: 16px;
+          height: 64px;
+        }
+        
+        /* Dark mode styles */
+        @media (prefers-color-scheme: dark) {
+          .header, .footer {
+            background-color: #1a202c;
+            border-color: #2d3748;
+            color: #e2e8f0;
+          }
+          
+          .main-content {
+            background-color: #0f172a;
+            color: #e2e8f0;
+          }
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default DashboardLayout;

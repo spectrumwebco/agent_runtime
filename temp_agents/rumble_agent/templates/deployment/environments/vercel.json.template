@@ -1,0 +1,211 @@
+{
+  "version": 2,
+  "name": "{{project_name}}",
+  "builds": [
+    {{#static_site}}
+    {
+      "src": "{{#src}}{{.}}{{/src}}{{^src}}**/*{{/src}}",
+      "use": "@vercel/static"
+    }
+    {{/static_site}}
+    {{#next_js}}
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+    {{/next_js}}
+    {{#node}}
+    {
+      "src": "{{#src}}{{.}}{{/src}}{{^src}}src/index.js{{/src}}",
+      "use": "@vercel/node"
+    }
+    {{/node}}
+    {{#express}}
+    {
+      "src": "{{#src}}{{.}}{{/src}}{{^src}}src/index.js{{/src}}",
+      "use": "@vercel/node"
+    }
+    {{/express}}
+    {{#react}}
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "{{#dist_dir}}{{.}}{{/dist_dir}}{{^dist_dir}}dist{{/dist_dir}}"
+      }
+    }
+    {{/react}}
+    {{#vue}}
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "{{#dist_dir}}{{.}}{{/dist_dir}}{{^dist_dir}}dist{{/dist_dir}}"
+      }
+    }
+    {{/vue}}
+    {{#svelte}}
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "{{#dist_dir}}{{.}}{{/dist_dir}}{{^dist_dir}}public{{/dist_dir}}"
+      }
+    }
+    {{/svelte}}
+    {{#python}}
+    {
+      "src": "{{#src}}{{.}}{{/src}}{{^src}}api/index.py{{/src}}",
+      "use": "@vercel/python"
+    }
+    {{/python}}
+    {{#go}}
+    {
+      "src": "{{#src}}{{.}}{{/src}}{{^src}}api/index.go{{/src}}",
+      "use": "@vercel/go"
+    }
+    {{/go}}
+    {{#ruby}}
+    {
+      "src": "{{#src}}{{.}}{{/src}}{{^src}}api/index.rb{{/src}}",
+      "use": "@vercel/ruby"
+    }
+    {{/ruby}}
+    {{#custom_builds}}
+    {
+      "src": "{{src}}",
+      "use": "{{use}}",
+      "config": {{config}}
+    }
+    {{/custom_builds}}
+  ],
+  "routes": [
+    {{#api_routes}}
+    {
+      "src": "{{src}}",
+      "dest": "{{dest}}"
+    },
+    {{/api_routes}}
+    {{#static_routes}}
+    {
+      "src": "{{src}}",
+      "dest": "{{dest}}"
+    },
+    {{/static_routes}}
+    {{#spa}}
+    {
+      "src": "/(.*)",
+      "dest": "{{#dest}}{{.}}{{/dest}}{{^dest}}/index.html{{/dest}}"
+    }
+    {{/spa}}
+    {{#custom_routes}}
+    {
+      "src": "{{src}}",
+      "dest": "{{dest}}",
+      "headers": {{headers}},
+      "methods": {{methods}},
+      "status": {{status}},
+      "continue": {{continue}}
+    },
+    {{/custom_routes}}
+    {{#default_route}}
+    {
+      "src": "/(.*)",
+      "dest": "{{#dest}}{{.}}{{/dest}}{{^dest}}/$1{{/dest}}"
+    }
+    {{/default_route}}
+  ],
+  {{#env}}
+  "env": {
+    {{#env_vars}}
+    "{{name}}": "{{value}}"{{^last}},{{/last}}
+    {{/env_vars}}
+  },
+  {{/env}}
+  {{#build_env}}
+  "build": {
+    "env": {
+      {{#build_env_vars}}
+      "{{name}}": "{{value}}"{{^last}},{{/last}}
+      {{/build_env_vars}}
+    }
+  },
+  {{/build_env}}
+  {{#github}}
+  "github": {
+    "enabled": {{#enabled}}{{.}}{{/enabled}}{{^enabled}}true{{/enabled}},
+    "silent": {{#silent}}{{.}}{{/silent}}{{^silent}}false{{/silent}}
+  },
+  {{/github}}
+  {{#headers}}
+  "headers": [
+    {{#header_rules}}
+    {
+      "source": "{{source}}",
+      "headers": [
+        {{#header_pairs}}
+        {
+          "key": "{{key}}",
+          "value": "{{value}}"
+        }{{^last}},{{/last}}
+        {{/header_pairs}}
+      ]
+    }{{^last}},{{/last}}
+    {{/header_rules}}
+  ],
+  {{/headers}}
+  {{#redirects}}
+  "redirects": [
+    {{#redirect_rules}}
+    {
+      "source": "{{source}}",
+      "destination": "{{destination}}",
+      "permanent": {{#permanent}}{{.}}{{/permanent}}{{^permanent}}true{{/permanent}}
+    }{{^last}},{{/last}}
+    {{/redirect_rules}}
+  ],
+  {{/redirects}}
+  {{#rewrites}}
+  "rewrites": [
+    {{#rewrite_rules}}
+    {
+      "source": "{{source}}",
+      "destination": "{{destination}}"
+    }{{^last}},{{/last}}
+    {{/rewrite_rules}}
+  ],
+  {{/rewrites}}
+  {{#cleanUrls}}
+  "cleanUrls": {{.}},
+  {{/cleanUrls}}
+  {{#trailingSlash}}
+  "trailingSlash": {{.}},
+  {{/trailingSlash}}
+  {{#regions}}
+  "regions": {{.}},
+  {{/regions}}
+  {{#public}}
+  "public": {{.}},
+  {{/public}}
+  {{#functions}}
+  "functions": {
+    {{#function_config}}
+    "{{path}}": {
+      "memory": {{#memory}}{{.}}{{/memory}}{{^memory}}1024{{/memory}},
+      "maxDuration": {{#maxDuration}}{{.}}{{/maxDuration}}{{^maxDuration}}10{{/maxDuration}}
+    }{{^last}},{{/last}}
+    {{/function_config}}
+  },
+  {{/functions}}
+  {{#crons}}
+  "crons": [
+    {{#cron_jobs}}
+    {
+      "path": "{{path}}",
+      "schedule": "{{schedule}}"
+    }{{^last}},{{/last}}
+    {{/cron_jobs}}
+  ],
+  {{/crons}}
+  "ignoreCommand": "{{#ignoreCommand}}{{.}}{{/ignoreCommand}}{{^ignoreCommand}}git check-ignore .{{/ignoreCommand}}"
+}

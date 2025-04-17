@@ -1,0 +1,225 @@
+import SwiftUI
+
+// Teemo UI Button View Template for SwiftUI
+// This template provides a customizable button view with various styles and states
+
+enum TeemoButtonVariant {
+    case primary
+    case secondary
+    case success
+    case danger
+    case warning
+    case info
+    case emerald
+    case outline
+    case ghost
+    
+    var backgroundColor: Color {
+        switch self {
+        case .primary:
+            return Color(hex: "3B82F6") // blue-500
+        case .secondary:
+            return Color(hex: "6B7280") // gray-500
+        case .success:
+            return Color(hex: "10B981") // green-500
+        case .danger:
+            return Color(hex: "EF4444") // red-500
+        case .warning:
+            return Color(hex: "F59E0B") // amber-500
+        case .info:
+            return Color(hex: "3B82F6") // blue-500
+        case .emerald:
+            return Color(hex: "10B981") // emerald-500
+        case .outline, .ghost:
+            return Color.clear
+        }
+    }
+    
+    var foregroundColor: Color {
+        switch self {
+        case .outline, .ghost:
+            return Color(hex: "374151") // gray-700
+        default:
+            return Color.white
+        }
+    }
+    
+    var borderColor: Color? {
+        switch self {
+        case .outline:
+            return Color(hex: "D1D5DB") // gray-300
+        default:
+            return nil
+        }
+    }
+}
+
+enum TeemoButtonSize {
+    case small
+    case medium
+    case large
+    
+    var horizontalPadding: CGFloat {
+        switch self {
+        case .small: return 12
+        case .medium: return 16
+        case .large: return 24
+        }
+    }
+    
+    var verticalPadding: CGFloat {
+        switch self {
+        case .small: return 6
+        case .medium: return 8
+        case .large: return 12
+        }
+    }
+    
+    var fontSize: CGFloat {
+        switch self {
+        case .small: return 14
+        case .medium: return 16
+        case .large: return 18
+        }
+    }
+}
+
+struct TeemoButton: View {
+    let title: String
+    let action: () -> Void
+    let variant: TeemoButtonVariant
+    let size: TeemoButtonSize
+    let isLoading: Bool
+    let icon: Image?
+    let iconPosition: IconPosition
+    let isDisabled: Bool
+    
+    enum IconPosition {
+        case leading
+        case trailing
+    }
+    
+    init(
+        title: String,
+        action: @escaping () -> Void,
+        variant: TeemoButtonVariant = .primary,
+        size: TeemoButtonSize = .medium,
+        isLoading: Bool = false,
+        icon: Image? = nil,
+        iconPosition: IconPosition = .leading,
+        isDisabled: Bool = false
+    ) {
+        self.title = title
+        self.action = action
+        self.variant = variant
+        self.size = size
+        self.isLoading = isLoading
+        self.icon = icon
+        self.iconPosition = iconPosition
+        self.isDisabled = isDisabled
+    }
+    
+    var body: some View {
+        Button(action: isLoading || isDisabled ? {} : action) {
+            HStack(spacing: 8) {
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: variant.foregroundColor))
+                        .scaleEffect(0.7)
+                } else {
+                    if let icon = icon, iconPosition == .leading {
+                        icon
+                            .foregroundColor(variant.foregroundColor)
+                    }
+                    
+                    Text(title)
+                        .font(.system(size: size.fontSize, weight: .medium))
+                    
+                    if let icon = icon, iconPosition == .trailing {
+                        icon
+                            .foregroundColor(variant.foregroundColor)
+                    }
+                }
+            }
+            .padding(.horizontal, size.horizontalPadding)
+            .padding(.vertical, size.verticalPadding)
+            .frame(minHeight: size.verticalPadding * 2 + size.fontSize)
+            .background(variant.backgroundColor)
+            .foregroundColor(variant.foregroundColor)
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(variant.borderColor ?? Color.clear, lineWidth: 1)
+            )
+            .opacity(isDisabled ? 0.6 : 1.0)
+        }
+        .disabled(isLoading || isDisabled)
+    }
+}
+
+// Helper extension for hex colors
+extension Color {
+    init(hex: String) {
+        let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
+        var int: UInt64 = 0
+        Scanner(string: hex).scanHexInt64(&int)
+        let a, r, g, b: UInt64
+        switch hex.count {
+        case 3: // RGB (12-bit)
+            (a, r, g, b) = (255, (int >> 8) * 17, (int >> 4 & 0xF) * 17, (int & 0xF) * 17)
+        case 6: // RGB (24-bit)
+            (a, r, g, b) = (255, int >> 16, int >> 8 & 0xFF, int & 0xFF)
+        case 8: // ARGB (32-bit)
+            (a, r, g, b) = (int >> 24, int >> 16 & 0xFF, int >> 8 & 0xFF, int & 0xFF)
+        default:
+            (a, r, g, b) = (1, 1, 1, 0)
+        }
+
+        self.init(
+            .sRGB,
+            red: Double(r) / 255,
+            green: Double(g) / 255,
+            blue:  Double(b) / 255,
+            opacity: Double(a) / 255
+        )
+    }
+}
+
+// Preview
+struct TeemoButton_Previews: PreviewProvider {
+    static var previews: some View {
+        VStack(spacing: 16) {
+            TeemoButton(
+                title: "Primary Button",
+                action: {},
+                variant: .primary
+            )
+            
+            TeemoButton(
+                title: "Emerald Button",
+                action: {},
+                variant: .emerald
+            )
+            
+            TeemoButton(
+                title: "Outline Button",
+                action: {},
+                variant: .outline
+            )
+            
+            TeemoButton(
+                title: "Loading Button",
+                action: {},
+                isLoading: true
+            )
+            
+            TeemoButton(
+                title: "With Icon",
+                action: {},
+                icon: Image(systemName: "star.fill"),
+                iconPosition: .leading
+            )
+        }
+        .padding()
+    }
+}

@@ -1,0 +1,203 @@
+import React, { useState, useRef } from 'react';
+import { motion } from 'framer-motion';
+
+// Teemo UI Drag and Drop Interaction Template
+// This template provides a customizable drag and drop interaction component
+
+interface DraggableItemProps {
+  id: string;
+  content: React.ReactNode;
+  onDragStart?: () => void;
+  onDragEnd?: () => void;
+}
+
+interface DropZoneProps {
+  id: string;
+  onDrop: (itemId: string) => void;
+  children?: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}
+
+interface DragDropContextProps {
+  children: React.ReactNode;
+  onDragEnd?: (result: { source: string; destination: string | null; itemId: string }) => void;
+}
+
+// Context for drag and drop state
+const DragDropContext = React.createContext<{
+  draggingItemId: string | null;
+  setDraggingItemId: React.Dispatch<React.SetStateAction<string | null>>;
+  registerDropZone: (id: string) => void;
+  unregisterDropZone: (id: string) => void;
+  dropZones: Set<string>;
+  handleDrop: (dropZoneId: string, itemId: string) => void;
+}>({
+  draggingItemId: null,
+  setDraggingItemId: () => {},
+  registerDropZone: () => {},
+  unregisterDropZone: () => {},
+  dropZones: new Set(),
+  handleDrop: () => {},
+});
+
+export const TeemoDragDropProvider: React.FC<DragDropContextProps> = ({ children, onDragEnd }) => {
+  const [draggingItemId, setDraggingItemId] = useState<string | null>(null);
+  const [dropZones, setDropZones] = useState<Set<string>>(new Set());
+
+  const registerDropZone = (id: string) => {
+    setDropZones((prev) => {
+      const newSet = new Set(prev);
+      newSet.add(id);
+      return newSet;
+    });
+  };
+
+  const unregisterDropZone = (id: string) => {
+    setDropZones((prev) => {
+      const newSet = new Set(prev);
+      newSet.delete(id);
+      return newSet;
+    });
+  };
+
+  const handleDrop = (dropZoneId: string, itemId: string) => {
+    if (onDragEnd) {
+      onDragEnd({
+        source: itemId,
+        destination: dropZoneId,
+        itemId,
+      });
+    }
+    setDraggingItemId(null);
+  };
+
+  return (
+    <DragDropContext.Provider
+      value={{
+        draggingItemId,
+        setDraggingItemId,
+        registerDropZone,
+        unregisterDropZone,
+        dropZones,
+        handleDrop,
+      }}
+    >
+      {children}
+    </DragDropContext.Provider>
+  );
+};
+
+export const TeemoDraggableItem: React.FC<DraggableItemProps> = ({
+  id,
+  content,
+  onDragStart,
+  onDragEnd,
+}) => {
+  const { setDraggingItemId } = React.useContext(DragDropContext);
+  const dragControls = useRef(null);
+
+  return (
+    <motion.div
+      drag
+      dragControls={dragControls}
+      onDragStart={() => {
+        setDraggingItemId(id);
+        if (onDragStart) onDragStart();
+      }}
+      onDragEnd={() => {
+        if (onDragEnd) onDragEnd();
+      }}
+      whileDrag={{ scale: 1.05, boxShadow: '0 5px 15px rgba(0,0,0,0.1)' }}
+      dragSnapToOrigin
+      className="teemo-draggable-item"
+      style={{
+        cursor: 'grab',
+        userSelect: 'none',
+      }}
+    >
+      {content}
+    </motion.div>
+  );
+};
+
+export const TeemoDropZone: React.FC<DropZoneProps> = ({
+  id,
+  onDrop,
+  children,
+  className = '',
+  style = {},
+}) => {
+  const { draggingItemId, registerDropZone, unregisterDropZone, handleDrop } = React.useContext(DragDropContext);
+  const [isOver, setIsOver] = useState(false);
+
+  React.useEffect(() => {
+    registerDropZone(id);
+    return () => unregisterDropZone(id);
+  }, [id, registerDropZone, unregisterDropZone]);
+
+  return (
+    <div
+      className={`teemo-drop-zone ${isOver ? 'teemo-drop-zone--active' : ''} ${className}`}
+      style={{
+        position: 'relative',
+        minHeight: '100px',
+        border: `2px dashed ${isOver ? '#10b981' : '#e5e7eb'}`,
+        borderRadius: '0.375rem',
+        transition: 'all 0.2s ease',
+        backgroundColor: isOver ? 'rgba(16, 185, 129, 0.05)' : 'transparent',
+        ...style,
+      }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!isOver) setIsOver(true);
+      }}
+      onDragLeave={() => {
+        setIsOver(false);
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setIsOver(false);
+        if (draggingItemId) {
+          handleDrop(id, draggingItemId);
+          onDrop(draggingItemId);
+        }
+      }}
+    >
+      {children}
+      {isOver && (
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            pointerEvents: 'none',
+          }}
+        >
+          <div
+            style={{
+              padding: '0.5rem 1rem',
+              backgroundColor: '#10b981',
+              color: 'white',
+              borderRadius: '0.25rem',
+              fontSize: '0.875rem',
+            }}
+          >
+            Drop here
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default {
+  TeemoDragDropProvider,
+  TeemoDraggableItem,
+  TeemoDropZone,
+};

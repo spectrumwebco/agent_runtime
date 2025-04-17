@@ -1,0 +1,371 @@
+import React, { useState, useEffect } from 'react';
+{{#typescript}}
+import { useParams, useNavigate } from 'react-router-dom';
+{{#if_has_api}}
+import { {{entity_name}}Service } from '../services/{{entity_name}}Service';
+import { {{entity_interface}} } from '../types/{{entity_name}}Types';
+{{/if_has_api}}
+{{/typescript}}
+{{^typescript}}
+import { useParams, useNavigate } from 'react-router-dom';
+{{#if_has_api}}
+import { {{entity_name}}Service } from '../services/{{entity_name}}Service';
+{{/if_has_api}}
+{{/typescript}}
+
+{{#typescript}}
+interface {{page_name}}Props {
+  title?: string;
+  {{#if_has_breadcrumbs}}
+  showBreadcrumbs?: boolean;
+  {{/if_has_breadcrumbs}}
+}
+{{/typescript}}
+
+const {{page_name}} = ({{#typescript}}props: {{page_name}}Props{{/typescript}}) => {
+  {{#typescript}}
+  const { title = '{{page_title}}', {{#if_has_breadcrumbs}}showBreadcrumbs = true{{/if_has_breadcrumbs}} } = props;
+  {{/typescript}}
+  {{^typescript}}
+  const { title = '{{page_title}}', {{#if_has_breadcrumbs}}showBreadcrumbs = true{{/if_has_breadcrumbs}} } = props;
+  {{/typescript}}
+  
+  {{#if_has_params}}
+  const { id } = useParams();
+  {{/if_has_params}}
+  const navigate = useNavigate();
+  
+  {{#if_has_api}}
+  {{#typescript}}
+  const [data, setData] = useState<{{entity_interface}} | null>(null);
+  {{/typescript}}
+  {{^typescript}}
+  const [data, setData] = useState(null);
+  {{/typescript}}
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        {{#if_has_params}}
+        if (!id) {
+          throw new Error('ID is required');
+        }
+        const result = await {{entity_name}}Service.getById(id);
+        {{/if_has_params}}
+        {{^if_has_params}}
+        const result = await {{entity_name}}Service.getAll();
+        {{/if_has_params}}
+        setData(result);
+        setError('');
+      } catch (err) {
+        console.error('Error fetching data:', err);
+        setError('Failed to load data. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchData();
+  }, [{{#if_has_params}}id{{/if_has_params}}]);
+  {{/if_has_api}}
+  
+  {{#if_has_form}}
+  {{#typescript}}
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    [key: string]: string | number | boolean;
+  }>({
+    name: '',
+    description: '',
+  });
+  {{/typescript}}
+  {{^typescript}}
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+  });
+  {{/typescript}}
+  
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
+  };
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    {{#if_has_api}}
+    try {
+      setLoading(true);
+      {{#if_has_params}}
+      if (id) {
+        await {{entity_name}}Service.update(id, formData);
+      } else {
+        await {{entity_name}}Service.create(formData);
+      }
+      {{/if_has_params}}
+      {{^if_has_params}}
+      await {{entity_name}}Service.create(formData);
+      {{/if_has_params}}
+      navigate('/{{entity_name_plural}}');
+    } catch (err) {
+      console.error('Error submitting form:', err);
+      setError('Failed to save data. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+    {{/if_has_api}}
+    {{^if_has_api}}
+    console.log('Form submitted:', formData);
+    // Add form submission logic here
+    {{/if_has_api}}
+  };
+  {{/if_has_form}}
+  
+  return (
+    <div className="{{page_name_kebab}}-container">
+      <h1>{title}</h1>
+      
+      {{#if_has_breadcrumbs}}
+      {showBreadcrumbs && (
+        <nav aria-label="breadcrumb">
+          <ol className="breadcrumb">
+            <li className="breadcrumb-item"><a href="/">Home</a></li>
+            {{#if_has_params}}
+            <li className="breadcrumb-item"><a href="/{{entity_name_plural}}">{{entity_name_plural}}</a></li>
+            <li className="breadcrumb-item active" aria-current="page">{id ? 'Edit' : 'Create'}</li>
+            {{/if_has_params}}
+            {{^if_has_params}}
+            <li className="breadcrumb-item active" aria-current="page">{{page_title}}</li>
+            {{/if_has_params}}
+          </ol>
+        </nav>
+      )}
+      {{/if_has_breadcrumbs}}
+      
+      {{#if_has_api}}
+      {loading ? (
+        <div className="loading-spinner">Loading...</div>
+      ) : error ? (
+        <div className="error-message">{error}</div>
+      ) : (
+        <div className="content">
+          {{#if_has_form}}
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="name">Name</label>
+              <input
+                type="text"
+                className="form-control"
+                id="name"
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            
+            <div className="form-group">
+              <label htmlFor="description">Description</label>
+              <textarea
+                className="form-control"
+                id="description"
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                rows={3}
+              />
+            </div>
+            
+            <div className="form-actions">
+              <button type="submit" className="btn btn-primary">
+                {{#if_has_params}}
+                {id ? 'Update' : 'Create'}
+                {{/if_has_params}}
+                {{^if_has_params}}
+                Submit
+                {{/if_has_params}}
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => navigate('/{{entity_name_plural}}')}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+          {{/if_has_form}}
+          {{^if_has_form}}
+          {{#if_has_params}}
+          {data && (
+            <div className="data-details">
+              <h2>{data.name}</h2>
+              <p>{data.description}</p>
+              {/* Add more fields as needed */}
+              
+              <div className="action-buttons">
+                <button
+                  className="btn btn-primary"
+                  onClick={() => navigate(`/{{entity_name_plural}}/${data.id}/edit`)}
+                >
+                  Edit
+                </button>
+                <button
+                  className="btn btn-danger"
+                  onClick={async () => {
+                    if (window.confirm('Are you sure you want to delete this item?')) {
+                      try {
+                        await {{entity_name}}Service.delete(data.id);
+                        navigate('/{{entity_name_plural}}');
+                      } catch (err) {
+                        console.error('Error deleting item:', err);
+                        setError('Failed to delete item. Please try again later.');
+                      }
+                    }
+                  }}
+                >
+                  Delete
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => navigate('/{{entity_name_plural}}')}
+                >
+                  Back to List
+                </button>
+              </div>
+            </div>
+          )}
+          {{/if_has_params}}
+          {{^if_has_params}}
+          <div className="data-list">
+            <div className="list-actions">
+              <button
+                className="btn btn-primary"
+                onClick={() => navigate('/{{entity_name_plural}}/new')}
+              >
+                Create New
+              </button>
+            </div>
+            
+            {data && data.length > 0 ? (
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.map((item) => (
+                    <tr key={item.id}>
+                      <td>{item.name}</td>
+                      <td>{item.description}</td>
+                      <td>
+                        <button
+                          className="btn btn-sm btn-info"
+                          onClick={() => navigate(`/{{entity_name_plural}}/${item.id}`)}
+                        >
+                          View
+                        </button>
+                        <button
+                          className="btn btn-sm btn-primary"
+                          onClick={() => navigate(`/{{entity_name_plural}}/${item.id}/edit`)}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          className="btn btn-sm btn-danger"
+                          onClick={async () => {
+                            if (window.confirm('Are you sure you want to delete this item?')) {
+                              try {
+                                await {{entity_name}}Service.delete(item.id);
+                                // Refresh the list
+                                setData(data.filter((i) => i.id !== item.id));
+                              } catch (err) {
+                                console.error('Error deleting item:', err);
+                                setError('Failed to delete item. Please try again later.');
+                              }
+                            }
+                          }}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="no-data">No items found.</div>
+            )}
+          </div>
+          {{/if_has_params}}
+          {{/if_has_form}}
+        </div>
+      )}
+      {{/if_has_api}}
+      {{^if_has_api}}
+      <div className="content">
+        {{#if_has_form}}
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label htmlFor="name">Name</label>
+            <input
+              type="text"
+              className="form-control"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+          
+          <div className="form-group">
+            <label htmlFor="description">Description</label>
+            <textarea
+              className="form-control"
+              id="description"
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              rows={3}
+            />
+          </div>
+          
+          <div className="form-actions">
+            <button type="submit" className="btn btn-primary">Submit</button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={() => navigate('/')}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+        {{/if_has_form}}
+        {{^if_has_form}}
+        <p>This is the {{page_title}} page content.</p>
+        <button
+          className="btn btn-primary"
+          onClick={() => navigate('/')}
+        >
+          Back to Home
+        </button>
+        {{/if_has_form}}
+      </div>
+      {{/if_has_api}}
+    </div>
+  );
+};
+
+export default {{page_name}};

@@ -1,0 +1,196 @@
+<template>
+  <button
+    :class="[
+      'teemo-button',
+      `teemo-button--${variant}`,
+      `teemo-button--${size}`,
+      { 'teemo-button--loading': loading }
+    ]"
+    :disabled="disabled || loading"
+    @click="$emit('click', $event)"
+  >
+    <span v-if="loading" class="teemo-button__loader"></span>
+    <slot v-else></slot>
+  </button>
+</template>
+
+<script>
+// Teemo UI Button Component Template for Vue
+// This template provides a customizable button component with various styles and states
+
+export default {
+  name: 'TeemoButton',
+  props: {
+    variant: {
+      type: String,
+      default: 'primary',
+      validator: (value) => [
+        'primary',
+        'secondary',
+        'success',
+        'danger',
+        'warning',
+        'info',
+        'light',
+        'dark',
+        'emerald',
+        'outline',
+        'ghost'
+      ].includes(value)
+    },
+    size: {
+      type: String,
+      default: 'medium',
+      validator: (value) => ['small', 'medium', 'large'].includes(value)
+    },
+    disabled: {
+      type: Boolean,
+      default: false
+    },
+    loading: {
+      type: Boolean,
+      default: false
+    }
+  },
+  emits: ['click']
+}
+</script>
+
+<style scoped>
+.teemo-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  outline: none;
+}
+
+.teemo-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Sizes */
+.teemo-button--small {
+  padding: 0.375rem 0.75rem;
+  font-size: 0.875rem;
+}
+
+.teemo-button--medium {
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+}
+
+.teemo-button--large {
+  padding: 0.75rem 1.5rem;
+  font-size: 1.125rem;
+}
+
+/* Variants */
+.teemo-button--primary {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.teemo-button--primary:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.teemo-button--secondary {
+  background-color: #6b7280;
+  color: white;
+}
+
+.teemo-button--secondary:hover:not(:disabled) {
+  background-color: #4b5563;
+}
+
+.teemo-button--success {
+  background-color: #10b981;
+  color: white;
+}
+
+.teemo-button--success:hover:not(:disabled) {
+  background-color: #059669;
+}
+
+.teemo-button--danger {
+  background-color: #ef4444;
+  color: white;
+}
+
+.teemo-button--danger:hover:not(:disabled) {
+  background-color: #dc2626;
+}
+
+.teemo-button--warning {
+  background-color: #f59e0b;
+  color: white;
+}
+
+.teemo-button--warning:hover:not(:disabled) {
+  background-color: #d97706;
+}
+
+.teemo-button--info {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.teemo-button--info:hover:not(:disabled) {
+  background-color: #2563eb;
+}
+
+.teemo-button--emerald {
+  background-color: #10b981;
+  color: white;
+}
+
+.teemo-button--emerald:hover:not(:disabled) {
+  background-color: #059669;
+}
+
+.teemo-button--outline {
+  background-color: transparent;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+
+.teemo-button--outline:hover:not(:disabled) {
+  background-color: #f3f4f6;
+}
+
+.teemo-button--ghost {
+  background-color: transparent;
+  color: #374151;
+}
+
+.teemo-button--ghost:hover:not(:disabled) {
+  background-color: #f3f4f6;
+}
+
+.teemo-button--loading {
+  position: relative;
+  color: transparent;
+}
+
+.teemo-button__loader {
+  position: absolute;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+</style>

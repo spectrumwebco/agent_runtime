@@ -1,0 +1,272 @@
+package com.teemo.ui.components;
+
+import android.content.Context;
+import android.content.res.ColorStateList;
+import android.content.res.TypedArray;
+import android.graphics.Color;
+import android.util.AttributeSet;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.ProgressBar;
+import android.widget.TextView;
+
+import androidx.annotation.ColorInt;
+import androidx.annotation.DrawableRes;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.core.content.ContextCompat;
+
+/**
+ * Teemo UI Button Component Template for Android/Java
+ * This template provides a customizable button component with various styles and states
+ */
+public class TeemoButton extends FrameLayout {
+
+    public enum ButtonVariant {
+        PRIMARY,
+        SECONDARY,
+        SUCCESS,
+        DANGER,
+        WARNING,
+        INFO,
+        EMERALD,
+        OUTLINE,
+        GHOST
+    }
+
+    public enum ButtonSize {
+        SMALL,
+        MEDIUM,
+        LARGE
+    }
+
+    private ConstraintLayout container;
+    private TextView textView;
+    private ImageView iconView;
+    private ProgressBar progressBar;
+
+    private ButtonVariant variant = ButtonVariant.PRIMARY;
+    private ButtonSize size = ButtonSize.MEDIUM;
+    private boolean isLoading = false;
+    private boolean iconRight = false;
+    private int iconResId = 0;
+    private String text = "";
+    private OnClickListener clickListener;
+
+    public TeemoButton(@NonNull Context context) {
+        super(context);
+        init(context, null);
+    }
+
+    public TeemoButton(@NonNull Context context, @Nullable AttributeSet attrs) {
+        super(context, attrs);
+        init(context, attrs);
+    }
+
+    public TeemoButton(@NonNull Context context, @Nullable AttributeSet attrs, int defStyleAttr) {
+        super(context, attrs, defStyleAttr);
+        init(context, attrs);
+    }
+
+    private void init(Context context, AttributeSet attrs) {
+        LayoutInflater.from(context).inflate(R.layout.teemo_button, this, true);
+
+        container = findViewById(R.id.teemo_button_container);
+        textView = findViewById(R.id.teemo_button_text);
+        iconView = findViewById(R.id.teemo_button_icon);
+        progressBar = findViewById(R.id.teemo_button_progress);
+
+        if (attrs != null) {
+            TypedArray a = context.obtainStyledAttributes(attrs, R.styleable.TeemoButton);
+            
+            // Get attributes
+            int variantOrdinal = a.getInt(R.styleable.TeemoButton_variant, 0);
+            variant = ButtonVariant.values()[variantOrdinal];
+            
+            int sizeOrdinal = a.getInt(R.styleable.TeemoButton_size, 1);
+            size = ButtonSize.values()[sizeOrdinal];
+            
+            text = a.getString(R.styleable.TeemoButton_text);
+            isLoading = a.getBoolean(R.styleable.TeemoButton_isLoading, false);
+            iconResId = a.getResourceId(R.styleable.TeemoButton_icon, 0);
+            iconRight = a.getBoolean(R.styleable.TeemoButton_iconRight, false);
+            
+            a.recycle();
+        }
+
+        // Set initial state
+        setText(text);
+        setVariant(variant);
+        setSize(size);
+        setLoading(isLoading);
+        setIcon(iconResId, iconRight);
+        
+        // Set click listener
+        container.setOnClickListener(v -> {
+            if (!isLoading && clickListener != null) {
+                clickListener.onClick(v);
+            }
+        });
+        
+        updateVisualState();
+    }
+
+    public void setText(String text) {
+        this.text = text;
+        textView.setText(text);
+    }
+
+    public void setVariant(ButtonVariant variant) {
+        this.variant = variant;
+        updateVisualState();
+    }
+
+    public void setSize(ButtonSize size) {
+        this.size = size;
+        updateVisualState();
+    }
+
+    public void setLoading(boolean isLoading) {
+        this.isLoading = isLoading;
+        updateVisualState();
+    }
+
+    public void setIcon(@DrawableRes int iconResId, boolean iconRight) {
+        this.iconResId = iconResId;
+        this.iconRight = iconRight;
+        
+        if (iconResId != 0) {
+            iconView.setImageResource(iconResId);
+            iconView.setVisibility(View.VISIBLE);
+        } else {
+            iconView.setVisibility(View.GONE);
+        }
+        
+        updateIconPosition();
+    }
+
+    @Override
+    public void setOnClickListener(@Nullable OnClickListener listener) {
+        this.clickListener = listener;
+    }
+
+    private void updateVisualState() {
+        // Update background color based on variant
+        container.setBackgroundTintList(ColorStateList.valueOf(getBackgroundColor()));
+        
+        // Update text color based on variant
+        textView.setTextColor(getTextColor());
+        
+        // Update icon color based on variant
+        if (iconView.getVisibility() == View.VISIBLE) {
+            iconView.setColorFilter(getTextColor());
+        }
+        
+        // Update loading state
+        progressBar.setVisibility(isLoading ? View.VISIBLE : View.GONE);
+        textView.setVisibility(isLoading ? View.GONE : View.VISIBLE);
+        iconView.setVisibility(isLoading || iconResId == 0 ? View.GONE : View.VISIBLE);
+        
+        // Update size
+        updateSize();
+        
+        // Update icon position
+        updateIconPosition();
+        
+        // Update border for outline variant
+        if (variant == ButtonVariant.OUTLINE) {
+            container.setBackgroundResource(R.drawable.teemo_button_outline_bg);
+        } else {
+            container.setBackgroundResource(R.drawable.teemo_button_bg);
+        }
+        
+        // Update enabled state
+        setEnabled(!isLoading);
+    }
+
+    private void updateSize() {
+        int horizontalPadding, verticalPadding;
+        float textSize;
+        
+        switch (size) {
+            case SMALL:
+                horizontalPadding = getResources().getDimensionPixelSize(R.dimen.teemo_button_padding_horizontal_small);
+                verticalPadding = getResources().getDimensionPixelSize(R.dimen.teemo_button_padding_vertical_small);
+                textSize = getResources().getDimension(R.dimen.teemo_button_text_size_small);
+                break;
+            case LARGE:
+                horizontalPadding = getResources().getDimensionPixelSize(R.dimen.teemo_button_padding_horizontal_large);
+                verticalPadding = getResources().getDimensionPixelSize(R.dimen.teemo_button_padding_vertical_large);
+                textSize = getResources().getDimension(R.dimen.teemo_button_text_size_large);
+                break;
+            case MEDIUM:
+            default:
+                horizontalPadding = getResources().getDimensionPixelSize(R.dimen.teemo_button_padding_horizontal_medium);
+                verticalPadding = getResources().getDimensionPixelSize(R.dimen.teemo_button_padding_vertical_medium);
+                textSize = getResources().getDimension(R.dimen.teemo_button_text_size_medium);
+                break;
+        }
+        
+        container.setPadding(horizontalPadding, verticalPadding, horizontalPadding, verticalPadding);
+        textView.setTextSize(textSize);
+    }
+
+    private void updateIconPosition() {
+        if (iconResId == 0) {
+            return;
+        }
+        
+        ConstraintLayout.LayoutParams params = (ConstraintLayout.LayoutParams) iconView.getLayoutParams();
+        
+        if (iconRight) {
+            params.startToEnd = textView.getId();
+            params.endToEnd = ConstraintLayout.LayoutParams.PARENT_ID;
+            params.startToStart = ConstraintLayout.LayoutParams.UNSET;
+        } else {
+            params.endToStart = textView.getId();
+            params.startToStart = ConstraintLayout.LayoutParams.PARENT_ID;
+            params.startToEnd = ConstraintLayout.LayoutParams.UNSET;
+        }
+        
+        iconView.setLayoutParams(params);
+    }
+
+    @ColorInt
+    private int getBackgroundColor() {
+        switch (variant) {
+            case PRIMARY:
+                return Color.parseColor("#3B82F6"); // blue-500
+            case SECONDARY:
+                return Color.parseColor("#6B7280"); // gray-500
+            case SUCCESS:
+                return Color.parseColor("#10B981"); // green-500
+            case DANGER:
+                return Color.parseColor("#EF4444"); // red-500
+            case WARNING:
+                return Color.parseColor("#F59E0B"); // amber-500
+            case INFO:
+                return Color.parseColor("#3B82F6"); // blue-500
+            case EMERALD:
+                return Color.parseColor("#10B981"); // emerald-500
+            case OUTLINE:
+            case GHOST:
+                return Color.TRANSPARENT;
+            default:
+                return Color.parseColor("#3B82F6"); // blue-500
+        }
+    }
+
+    @ColorInt
+    private int getTextColor() {
+        switch (variant) {
+            case OUTLINE:
+            case GHOST:
+                return Color.parseColor("#374151"); // gray-700
+            default:
+                return Color.WHITE;
+        }
+    }
+}

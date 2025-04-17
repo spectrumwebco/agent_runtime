@@ -1,0 +1,695 @@
+{{#typescript}}
+import React, { useState, useEffect } from 'react';
+{{#pagination}}
+import { usePagination } from '../hooks/usePagination';
+{{/pagination}}
+{{#sorting}}
+import { useSorting } from '../hooks/useSorting';
+{{/sorting}}
+{{#filtering}}
+import { useFiltering } from '../hooks/useFiltering';
+{{/filtering}}
+
+interface {{table_name}}Props<T> {
+  data: T[];
+  columns: {
+    key: keyof T | string;
+    header: string;
+    width?: string;
+    render?: (item: T) => React.ReactNode;
+    sortable?: boolean;
+    filterable?: boolean;
+  }[];
+  {{#pagination}}
+  pageSize?: number;
+  {{/pagination}}
+  {{#selection}}
+  selectable?: boolean;
+  onSelectionChange?: (selectedItems: T[]) => void;
+  {{/selection}}
+  {{#actions}}
+  actions?: {
+    name: string;
+    label: string;
+    icon?: string;
+    onClick: (item: T) => void;
+    isVisible?: (item: T) => boolean;
+    isDisabled?: (item: T) => boolean;
+  }[];
+  {{/actions}}
+  {{#row_click}}
+  onRowClick?: (item: T) => void;
+  {{/row_click}}
+  {{#loading}}
+  loading?: boolean;
+  {{/loading}}
+  {{#empty_state}}
+  emptyStateMessage?: string;
+  emptyStateIcon?: string;
+  {{/empty_state}}
+  className?: string;
+}
+
+const {{table_name}} = <T extends { id: string | number }>({
+  data,
+  columns,
+  {{#pagination}}
+  pageSize = 10,
+  {{/pagination}}
+  {{#selection}}
+  selectable = false,
+  onSelectionChange,
+  {{/selection}}
+  {{#actions}}
+  actions = [],
+  {{/actions}}
+  {{#row_click}}
+  onRowClick,
+  {{/row_click}}
+  {{#loading}}
+  loading = false,
+  {{/loading}}
+  {{#empty_state}}
+  emptyStateMessage = 'No data available',
+  emptyStateIcon = 'info-circle',
+  {{/empty_state}}
+  className = '',
+}: {{table_name}}Props<T>) => {
+  {{#selection}}
+  const [selectedItems, setSelectedItems] = useState<T[]>([]);
+  const [selectAll, setSelectAll] = useState(false);
+  {{/selection}}
+  
+  {{#pagination}}
+  const {
+    currentPage,
+    totalPages,
+    paginatedData,
+    goToPage,
+    nextPage,
+    prevPage,
+    canNextPage,
+    canPrevPage
+  } = usePagination<T>(data, pageSize);
+  {{/pagination}}
+  
+  {{#sorting}}
+  const {
+    sortedData,
+    sortConfig,
+    requestSort
+  } = useSorting<T>({{#pagination}}paginatedData{{/pagination}}{{^pagination}}data{{/pagination}});
+  {{/sorting}}
+  
+  {{#filtering}}
+  const [filterValue, setFilterValue] = useState('');
+  const { filteredData } = useFiltering<T>(
+    {{#sorting}}sortedData{{/sorting}}
+    {{^sorting}}{{#pagination}}paginatedData{{/pagination}}{{^pagination}}data{{/pagination}}{{/sorting}},
+    filterValue,
+    columns.filter(col => col.filterable).map(col => col.key as keyof T)
+  );
+  {{/filtering}}
+  
+  // Determine which data to display based on enabled features
+  const displayData = 
+    {{#filtering}}filteredData{{/filtering}}
+    {{^filtering}}{{#sorting}}sortedData{{/sorting}}{{/filtering}}
+    {{^filtering}}{{^sorting}}{{#pagination}}paginatedData{{/pagination}}{{/sorting}}{{/filtering}}
+    {{^filtering}}{{^sorting}}{{^pagination}}data{{/pagination}}{{/sorting}}{{/filtering}};
+  
+  {{#selection}}
+  // Handle selection changes
+  useEffect(() => {
+    if (onSelectionChange) {
+      onSelectionChange(selectedItems);
+    }
+  }, [selectedItems, onSelectionChange]);
+  
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems([...displayData]);
+    }
+    setSelectAll(!selectAll);
+  };
+  
+  const handleSelectItem = (item: T) => {
+    const isSelected = selectedItems.some(selectedItem => 
+      selectedItem.id === item.id
+    );
+    
+    if (isSelected) {
+      setSelectedItems(selectedItems.filter(selectedItem => 
+        selectedItem.id !== item.id
+      ));
+      setSelectAll(false);
+    } else {
+      setSelectedItems([...selectedItems, item]);
+      if (selectedItems.length + 1 === displayData.length) {
+        setSelectAll(true);
+      }
+    }
+  };
+  {{/selection}}
+  
+  {{#row_click}}
+  const handleRowClick = (item: T) => {
+    if (onRowClick) {
+      onRowClick(item);
+    }
+  };
+  {{/row_click}}
+  
+  {{#filtering}}
+  const handleFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFilterValue(e.target.value);
+  };
+  {{/filtering}}
+  
+  return (
+    <div className={`{{table_name_kebab}}-container ${className}`}>
+      {{#filtering}}
+      <div className="table-filter">
+        <input
+          type="text"
+          placeholder="Filter..."
+          value={filterValue}
+          onChange={handleFilterChange}
+          className="filter-input"
+        />
+      </div>
+      {{/filtering}}
+      
+      <div className="table-responsive">
+        <table className="table">
+          <thead>
+            <tr>
+              {{#selection}}
+              {selectable && (
+                <th className="selection-cell">
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={handleSelectAll}
+                  />
+                </th>
+              )}
+              {{/selection}}
+              
+              {columns.map(column => (
+                <th 
+                  key={column.key.toString()} 
+                  style={{ width: column.width }}
+                  className={`
+                    ${column.sortable ? 'sortable' : ''}
+                    {{#sorting}}
+                    ${sortConfig?.key === column.key 
+                      ? sortConfig.direction === 'asc' 
+                        ? 'sort-asc' 
+                        : 'sort-desc' 
+                      : ''}
+                    {{/sorting}}
+                  `}
+                  {{#sorting}}
+                  onClick={() => column.sortable && requestSort(column.key as keyof T)}
+                  {{/sorting}}
+                >
+                  {column.header}
+                  {{#sorting}}
+                  {column.sortable && (
+                    <span className="sort-indicator">
+                      {sortConfig?.key === column.key 
+                        ? sortConfig.direction === 'asc' 
+                          ? ' ↑' 
+                          : ' ↓' 
+                        : ' ⇅'}
+                    </span>
+                  )}
+                  {{/sorting}}
+                </th>
+              ))}
+              
+              {{#actions}}
+              {actions.length > 0 && <th className="actions-cell">Actions</th>}
+              {{/actions}}
+            </tr>
+          </thead>
+          
+          <tbody>
+            {{#loading}}
+            {loading ? (
+              <tr>
+                <td colSpan={columns.length {{#selection}}+ (selectable ? 1 : 0){{/selection}} {{#actions}}+ (actions.length > 0 ? 1 : 0){{/actions}}} className="loading-cell">
+                  <div className="loading-indicator">Loading...</div>
+                </td>
+              </tr>
+            ) : displayData.length === 0 ? (
+            {{/loading}}
+            {{^loading}}
+            {displayData.length === 0 ? (
+            {{/loading}}
+              <tr>
+                <td colSpan={columns.length {{#selection}}+ (selectable ? 1 : 0){{/selection}} {{#actions}}+ (actions.length > 0 ? 1 : 0){{/actions}}} className="empty-cell">
+                  {{#empty_state}}
+                  <div className="empty-state">
+                    <span className={`empty-state-icon icon-${emptyStateIcon}`}></span>
+                    <p>{emptyStateMessage}</p>
+                  </div>
+                  {{/empty_state}}
+                  {{^empty_state}}
+                  No data available
+                  {{/empty_state}}
+                </td>
+              </tr>
+            ) : (
+              displayData.map(item => (
+                <tr 
+                  key={item.id.toString()}
+                  {{#row_click}}
+                  onClick={() => handleRowClick(item)}
+                  className={onRowClick ? 'clickable-row' : ''}
+                  {{/row_click}}
+                >
+                  {{#selection}}
+                  {selectable && (
+                    <td className="selection-cell" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.some(selectedItem => selectedItem.id === item.id)}
+                        onChange={() => handleSelectItem(item)}
+                      />
+                    </td>
+                  )}
+                  {{/selection}}
+                  
+                  {columns.map(column => (
+                    <td key={`${item.id}-${column.key.toString()}`}>
+                      {column.render 
+                        ? column.render(item)
+                        : item[column.key as keyof T] as React.ReactNode}
+                    </td>
+                  ))}
+                  
+                  {{#actions}}
+                  {actions.length > 0 && (
+                    <td className="actions-cell" onClick={e => e.stopPropagation()}>
+                      {actions
+                        .filter(action => !action.isVisible || action.isVisible(item))
+                        .map(action => (
+                          <button
+                            key={action.name}
+                            className={`action-button ${action.name}`}
+                            onClick={() => action.onClick(item)}
+                            disabled={action.isDisabled ? action.isDisabled(item) : false}
+                            title={action.label}
+                          >
+                            {action.icon ? (
+                              <span className={`icon-${action.icon}`}></span>
+                            ) : (
+                              action.label
+                            )}
+                          </button>
+                        ))}
+                    </td>
+                  )}
+                  {{/actions}}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      
+      {{#pagination}}
+      <div className="pagination">
+        <button
+          className="pagination-button"
+          onClick={() => goToPage(1)}
+          disabled={!canPrevPage}
+        >
+          &laquo;
+        </button>
+        <button
+          className="pagination-button"
+          onClick={prevPage}
+          disabled={!canPrevPage}
+        >
+          &lsaquo;
+        </button>
+        
+        <span className="pagination-info">
+          Page {currentPage} of {totalPages}
+        </span>
+        
+        <button
+          className="pagination-button"
+          onClick={nextPage}
+          disabled={!canNextPage}
+        >
+          &rsaquo;
+        </button>
+        <button
+          className="pagination-button"
+          onClick={() => goToPage(totalPages)}
+          disabled={!canNextPage}
+        >
+          &raquo;
+        </button>
+      </div>
+      {{/pagination}}
+    </div>
+  );
+};
+
+export default {{table_name}};
+{{/typescript}}
+
+{{^typescript}}
+import React, { useState, useEffect } from 'react';
+{{#pagination}}
+import { usePagination } from '../hooks/usePagination';
+{{/pagination}}
+{{#sorting}}
+import { useSorting } from '../hooks/useSorting';
+{{/sorting}}
+{{#filtering}}
+import { useFiltering } from '../hooks/useFiltering';
+{{/filtering}}
+
+const {{table_name}} = ({
+  data,
+  columns,
+  {{#pagination}}
+  pageSize = 10,
+  {{/pagination}}
+  {{#selection}}
+  selectable = false,
+  onSelectionChange,
+  {{/selection}}
+  {{#actions}}
+  actions = [],
+  {{/actions}}
+  {{#row_click}}
+  onRowClick,
+  {{/row_click}}
+  {{#loading}}
+  loading = false,
+  {{/loading}}
+  {{#empty_state}}
+  emptyStateMessage = 'No data available',
+  emptyStateIcon = 'info-circle',
+  {{/empty_state}}
+  className = '',
+}) => {
+  {{#selection}}
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [selectAll, setSelectAll] = useState(false);
+  {{/selection}}
+  
+  {{#pagination}}
+  const {
+    currentPage,
+    totalPages,
+    paginatedData,
+    goToPage,
+    nextPage,
+    prevPage,
+    canNextPage,
+    canPrevPage
+  } = usePagination(data, pageSize);
+  {{/pagination}}
+  
+  {{#sorting}}
+  const {
+    sortedData,
+    sortConfig,
+    requestSort
+  } = useSorting({{#pagination}}paginatedData{{/pagination}}{{^pagination}}data{{/pagination}});
+  {{/sorting}}
+  
+  {{#filtering}}
+  const [filterValue, setFilterValue] = useState('');
+  const { filteredData } = useFiltering(
+    {{#sorting}}sortedData{{/sorting}}
+    {{^sorting}}{{#pagination}}paginatedData{{/pagination}}{{^pagination}}data{{/pagination}}{{/sorting}},
+    filterValue,
+    columns.filter(col => col.filterable).map(col => col.key)
+  );
+  {{/filtering}}
+  
+  // Determine which data to display based on enabled features
+  const displayData = 
+    {{#filtering}}filteredData{{/filtering}}
+    {{^filtering}}{{#sorting}}sortedData{{/sorting}}{{/filtering}}
+    {{^filtering}}{{^sorting}}{{#pagination}}paginatedData{{/pagination}}{{/sorting}}{{/filtering}}
+    {{^filtering}}{{^sorting}}{{^pagination}}data{{/pagination}}{{/sorting}}{{/filtering}};
+  
+  {{#selection}}
+  // Handle selection changes
+  useEffect(() => {
+    if (onSelectionChange) {
+      onSelectionChange(selectedItems);
+    }
+  }, [selectedItems, onSelectionChange]);
+  
+  const handleSelectAll = () => {
+    if (selectAll) {
+      setSelectedItems([]);
+    } else {
+      setSelectedItems([...displayData]);
+    }
+    setSelectAll(!selectAll);
+  };
+  
+  const handleSelectItem = (item) => {
+    const isSelected = selectedItems.some(selectedItem => 
+      selectedItem.id === item.id
+    );
+    
+    if (isSelected) {
+      setSelectedItems(selectedItems.filter(selectedItem => 
+        selectedItem.id !== item.id
+      ));
+      setSelectAll(false);
+    } else {
+      setSelectedItems([...selectedItems, item]);
+      if (selectedItems.length + 1 === displayData.length) {
+        setSelectAll(true);
+      }
+    }
+  };
+  {{/selection}}
+  
+  {{#row_click}}
+  const handleRowClick = (item) => {
+    if (onRowClick) {
+      onRowClick(item);
+    }
+  };
+  {{/row_click}}
+  
+  {{#filtering}}
+  const handleFilterChange = (e) => {
+    setFilterValue(e.target.value);
+  };
+  {{/filtering}}
+  
+  return (
+    <div className={`{{table_name_kebab}}-container ${className}`}>
+      {{#filtering}}
+      <div className="table-filter">
+        <input
+          type="text"
+          placeholder="Filter..."
+          value={filterValue}
+          onChange={handleFilterChange}
+          className="filter-input"
+        />
+      </div>
+      {{/filtering}}
+      
+      <div className="table-responsive">
+        <table className="table">
+          <thead>
+            <tr>
+              {{#selection}}
+              {selectable && (
+                <th className="selection-cell">
+                  <input
+                    type="checkbox"
+                    checked={selectAll}
+                    onChange={handleSelectAll}
+                  />
+                </th>
+              )}
+              {{/selection}}
+              
+              {columns.map(column => (
+                <th 
+                  key={column.key.toString()} 
+                  style={{ width: column.width }}
+                  className={`
+                    ${column.sortable ? 'sortable' : ''}
+                    {{#sorting}}
+                    ${sortConfig?.key === column.key 
+                      ? sortConfig.direction === 'asc' 
+                        ? 'sort-asc' 
+                        : 'sort-desc' 
+                      : ''}
+                    {{/sorting}}
+                  `}
+                  {{#sorting}}
+                  onClick={() => column.sortable && requestSort(column.key)}
+                  {{/sorting}}
+                >
+                  {column.header}
+                  {{#sorting}}
+                  {column.sortable && (
+                    <span className="sort-indicator">
+                      {sortConfig?.key === column.key 
+                        ? sortConfig.direction === 'asc' 
+                          ? ' ↑' 
+                          : ' ↓' 
+                        : ' ⇅'}
+                    </span>
+                  )}
+                  {{/sorting}}
+                </th>
+              ))}
+              
+              {{#actions}}
+              {actions.length > 0 && <th className="actions-cell">Actions</th>}
+              {{/actions}}
+            </tr>
+          </thead>
+          
+          <tbody>
+            {{#loading}}
+            {loading ? (
+              <tr>
+                <td colSpan={columns.length {{#selection}}+ (selectable ? 1 : 0){{/selection}} {{#actions}}+ (actions.length > 0 ? 1 : 0){{/actions}}} className="loading-cell">
+                  <div className="loading-indicator">Loading...</div>
+                </td>
+              </tr>
+            ) : displayData.length === 0 ? (
+            {{/loading}}
+            {{^loading}}
+            {displayData.length === 0 ? (
+            {{/loading}}
+              <tr>
+                <td colSpan={columns.length {{#selection}}+ (selectable ? 1 : 0){{/selection}} {{#actions}}+ (actions.length > 0 ? 1 : 0){{/actions}}} className="empty-cell">
+                  {{#empty_state}}
+                  <div className="empty-state">
+                    <span className={`empty-state-icon icon-${emptyStateIcon}`}></span>
+                    <p>{emptyStateMessage}</p>
+                  </div>
+                  {{/empty_state}}
+                  {{^empty_state}}
+                  No data available
+                  {{/empty_state}}
+                </td>
+              </tr>
+            ) : (
+              displayData.map(item => (
+                <tr 
+                  key={item.id.toString()}
+                  {{#row_click}}
+                  onClick={() => handleRowClick(item)}
+                  className={onRowClick ? 'clickable-row' : ''}
+                  {{/row_click}}
+                >
+                  {{#selection}}
+                  {selectable && (
+                    <td className="selection-cell" onClick={e => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selectedItems.some(selectedItem => selectedItem.id === item.id)}
+                        onChange={() => handleSelectItem(item)}
+                      />
+                    </td>
+                  )}
+                  {{/selection}}
+                  
+                  {columns.map(column => (
+                    <td key={`${item.id}-${column.key.toString()}`}>
+                      {column.render 
+                        ? column.render(item)
+                        : item[column.key]}
+                    </td>
+                  ))}
+                  
+                  {{#actions}}
+                  {actions.length > 0 && (
+                    <td className="actions-cell" onClick={e => e.stopPropagation()}>
+                      {actions
+                        .filter(action => !action.isVisible || action.isVisible(item))
+                        .map(action => (
+                          <button
+                            key={action.name}
+                            className={`action-button ${action.name}`}
+                            onClick={() => action.onClick(item)}
+                            disabled={action.isDisabled ? action.isDisabled(item) : false}
+                            title={action.label}
+                          >
+                            {action.icon ? (
+                              <span className={`icon-${action.icon}`}></span>
+                            ) : (
+                              action.label
+                            )}
+                          </button>
+                        ))}
+                    </td>
+                  )}
+                  {{/actions}}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+      
+      {{#pagination}}
+      <div className="pagination">
+        <button
+          className="pagination-button"
+          onClick={() => goToPage(1)}
+          disabled={!canPrevPage}
+        >
+          &laquo;
+        </button>
+        <button
+          className="pagination-button"
+          onClick={prevPage}
+          disabled={!canPrevPage}
+        >
+          &lsaquo;
+        </button>
+        
+        <span className="pagination-info">
+          Page {currentPage} of {totalPages}
+        </span>
+        
+        <button
+          className="pagination-button"
+          onClick={nextPage}
+          disabled={!canNextPage}
+        >
+          &rsaquo;
+        </button>
+        <button
+          className="pagination-button"
+          onClick={() => goToPage(totalPages)}
+          disabled={!canNextPage}
+        >
+          &raquo;
+        </button>
+      </div>
+      {{/pagination}}
+    </div>
+  );
+};
+
+export default {{table_name}};
+{{/typescript}}
