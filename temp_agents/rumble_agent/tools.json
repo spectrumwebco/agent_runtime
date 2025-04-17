@@ -1,0 +1,168 @@
+{
+  "tools": [
+    {
+      "name": "scaffold_init_project",
+      "description": "Initialize a new project with the specified framework",
+      "module": "scaffolding",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "project_name": {
+            "type": "string",
+            "description": "Name of the project"
+          },
+          "framework": {
+            "type": "string",
+            "description": "Framework to use (e.g., react, vue, django, flask, etc.)"
+          },
+          "project_dir": {
+            "type": "string",
+            "description": "Directory where the project should be created"
+          },
+          "options": {
+            "type": "object",
+            "description": "Additional options for project initialization"
+          }
+        },
+        "required": ["project_name", "framework", "project_dir"]
+      }
+    },
+    {
+      "name": "scaffold_add_feature",
+      "description": "Add a specific feature to an existing project",
+      "module": "scaffolding",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "project_dir": {
+            "type": "string",
+            "description": "Directory of the project"
+          },
+          "feature_name": {
+            "type": "string",
+            "description": "Name of the feature to add"
+          },
+          "feature_type": {
+            "type": "string",
+            "description": "Type of feature (e.g., component, page, api, etc.)"
+          },
+          "options": {
+            "type": "object",
+            "description": "Additional options for feature creation"
+          }
+        },
+        "required": ["project_dir", "feature_name", "feature_type"]
+      }
+    },
+    {
+      "name": "generate_component",
+      "description": "Create UI components based on specifications",
+      "module": "code_generation",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "project_dir": {
+            "type": "string",
+            "description": "Directory of the project"
+          },
+          "component_name": {
+            "type": "string",
+            "description": "Name of the component to generate"
+          },
+          "component_type": {
+            "type": "string",
+            "description": "Type of component (e.g., page, form, card, etc.)"
+          },
+          "framework": {
+            "type": "string",
+            "description": "Framework to use (e.g., react, vue, angular, etc.)"
+          },
+          "props": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "Properties of the component"
+          },
+          "state": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "State variables of the component"
+          }
+        },
+        "required": ["project_dir", "component_name", "component_type", "framework"]
+      }
+    },
+    {
+      "name": "setup_test_framework",
+      "description": "Configure testing libraries and frameworks",
+      "module": "testing",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "project_dir": {
+            "type": "string",
+            "description": "Directory of the project"
+          },
+          "framework": {
+            "type": "string",
+            "description": "Framework to use (e.g., jest, pytest, etc.)"
+          },
+          "project_type": {
+            "type": "string",
+            "description": "Type of project (e.g., frontend, backend, fullstack, etc.)"
+          }
+        },
+        "required": ["project_dir", "framework", "project_type"]
+      }
+    },
+    {
+      "name": "configure_build_process",
+      "description": "Configure production build process",
+      "module": "deployment",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "project_dir": {
+            "type": "string",
+            "description": "Directory of the project"
+          },
+          "project_type": {
+            "type": "string",
+            "description": "Type of project (e.g., frontend, backend, fullstack, etc.)"
+          },
+          "build_tool": {
+            "type": "string",
+            "description": "Build tool to use (e.g., webpack, vite, etc.)"
+          }
+        },
+        "required": ["project_dir", "project_type"]
+      }
+    },
+    {
+      "name": "setup_ci_cd",
+      "description": "Create CI/CD pipeline configurations",
+      "module": "deployment",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "project_dir": {
+            "type": "string",
+            "description": "Directory of the project"
+          },
+          "repository_type": {
+            "type": "string",
+            "description": "Type of repository (e.g., github, gitlab, etc.)"
+          },
+          "ci_cd_platform": {
+            "type": "string",
+            "description": "CI/CD platform to use (e.g., github-actions, gitlab-ci, etc.)"
+          }
+        },
+        "required": ["project_dir", "repository_type", "ci_cd_platform"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,778 @@
+{{#typescript}}
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+{{#supertest}}
+import request from 'supertest';
+{{/supertest}}
+{{#express}}
+import { app } from '../src/app';
+{{/express}}
+{{#fastapi}}
+import { TestClient } from 'fastapi.testclient';
+import { app } from '../src/app';
+{{/fastapi}}
+{{#flask}}
+import { app } from '../src/app';
+{{/flask}}
+{{#database}}
+import { setupTestDatabase, teardownTestDatabase } from '../utils/test-db-setup';
+{{/database}}
+{{#auth}}
+import { generateTestToken } from '../utils/test-auth-utils';
+{{/auth}}
+
+/**
+ * Integration test for {{feature_name}}
+ * 
+ * This test verifies the integration between multiple components:
+ * {{#components}}
+ * - {{.}}
+ * {{/components}}
+ */
+describe('{{feature_name}} Integration', () => {
+  {{#setup}}
+  {{#fastapi}}
+  const client = new TestClient(app);
+  {{/fastapi}}
+  {{#flask}}
+  const client = app.test_client();
+  {{/flask}}
+  {{#auth}}
+  let authToken;
+  {{/auth}}
+  
+  beforeAll(async () => {
+    {{#database}}
+    // Set up test database with initial data
+    await setupTestDatabase();
+    {{/database}}
+    {{#auth}}
+    // Generate authentication token for testing
+    authToken = generateTestToken({ userId: '1', role: 'user' });
+    {{/auth}}
+    {{#custom_setup}}
+    // Custom setup for this integration test
+    {{custom_setup_code}}
+    {{/custom_setup}}
+  });
+  
+  afterAll(async () => {
+    {{#database}}
+    // Clean up test database
+    await teardownTestDatabase();
+    {{/database}}
+    {{#custom_teardown}}
+    // Custom teardown for this integration test
+    {{custom_teardown_code}}
+    {{/custom_teardown}}
+  });
+  {{/setup}}
+  
+  {{#test_workflow}}
+  describe('{{workflow_name}} Workflow', () => {
+    it('should complete the entire workflow successfully', async () => {
+      {{#supertest}}
+      {{#express}}
+      // Step 1: Create a new resource
+      const createResponse = await request(app)
+        .post('/api/{{resource}}')
+        .send({
+          name: 'Test Resource',
+          description: 'This is a test resource'
+        })
+        {{#auth}}
+        .set('Authorization', `Bearer ${authToken}`)
+        {{/auth}}
+        .expect('Content-Type', /json/)
+        .expect(201);
+      
+      const resourceId = createResponse.body.id;
+      expect(resourceId).toBeDefined();
+      
+      // Step 2: Retrieve the created resource
+      const getResponse = await request(app)
+        .get(`/api/{{resource}}/${resourceId}`)
+        {{#auth}}
+        .set('Authorization', `Bearer ${authToken}`)
+        {{/auth}}
+        .expect('Content-Type', /json/)
+        .expect(200);
+      
+      expect(getResponse.body).toHaveProperty('id', resourceId);
+      expect(getResponse.body).toHaveProperty('name', 'Test Resource');
+      
+      // Step 3: Update the resource
+      const updateResponse = await request(app)
+        .put(`/api/{{resource}}/${resourceId}`)
+        .send({
+          name: 'Updated Resource',
+          description: 'This is an updated test resource'
+        })
+        {{#auth}}
+        .set('Authorization', `Bearer ${authToken}`)
+        {{/auth}}
+        .expect('Content-Type', /json/)
+        .expect(200);
+      
+      expect(updateResponse.body).toHaveProperty('id', resourceId);
+      expect(updateResponse.body).toHaveProperty('name', 'Updated Resource');
+      
+      // Step 4: Delete the resource
+      const deleteResponse = await request(app)
+        .delete(`/api/{{resource}}/${resourceId}`)
+        {{#auth}}
+        .set('Authorization', `Bearer ${authToken}`)
+        {{/auth}}
+        .expect('Content-Type', /json/)
+        .expect(200);
+      
+      expect(deleteResponse.body).toHaveProperty('id', resourceId);
+      
+      // Step 5: Verify the resource is deleted
+      await request(app)
+        .get(`/api/{{resource}}/${resourceId}`)
+        {{#auth}}
+        .set('Authorization', `Bearer ${authToken}`)
+        {{/auth}}
+        .expect('Content-Type', /json/)
+        .expect(404);
+      {{/express}}
+      {{#fastapi}}
+      // Step 1: Create a new resource
+      const createResponse = await client.post('/api/{{resource}}', {
+        json: {
+          name: 'Test Resource',
+          description: 'This is a test resource'
+        },
+        {{#auth}}
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+        {{/auth}}
+      });
+      
+      expect(createResponse.status_code).toBe(201);
+      const resourceId = createResponse.json().id;
+      expect(resourceId).toBeDefined();
+      
+      // Step 2: Retrieve the created resource
+      const getResponse = await client.get(`/api/{{resource}}/${resourceId}`, {
+        {{#auth}}
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+        {{/auth}}
+      });
+      
+      expect(getResponse.status_code).toBe(200);
+      expect(getResponse.json()).toHaveProperty('id', resourceId);
+      expect(getResponse.json()).toHaveProperty('name', 'Test Resource');
+      
+      // Step 3: Update the resource
+      const updateResponse = await client.put(`/api/{{resource}}/${resourceId}`, {
+        json: {
+          name: 'Updated Resource',
+          description: 'This is an updated test resource'
+        },
+        {{#auth}}
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+        {{/auth}}
+      });
+      
+      expect(updateResponse.status_code).toBe(200);
+      expect(updateResponse.json()).toHaveProperty('id', resourceId);
+      expect(updateResponse.json()).toHaveProperty('name', 'Updated Resource');
+      
+      // Step 4: Delete the resource
+      const deleteResponse = await client.delete(`/api/{{resource}}/${resourceId}`, {
+        {{#auth}}
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+        {{/auth}}
+      });
+      
+      expect(deleteResponse.status_code).toBe(200);
+      expect(deleteResponse.json()).toHaveProperty('id', resourceId);
+      
+      // Step 5: Verify the resource is deleted
+      const verifyResponse = await client.get(`/api/{{resource}}/${resourceId}`, {
+        {{#auth}}
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+        {{/auth}}
+      });
+      
+      expect(verifyResponse.status_code).toBe(404);
+      {{/fastapi}}
+      {{#flask}}
+      // Step 1: Create a new resource
+      const createResponse = await client.post('/api/{{resource}}', {
+        json: {
+          name: 'Test Resource',
+          description: 'This is a test resource'
+        },
+        {{#auth}}
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+        {{/auth}}
+      });
+      
+      expect(createResponse.status_code).toBe(201);
+      const responseData = JSON.parse(createResponse.data);
+      const resourceId = responseData.id;
+      expect(resourceId).toBeDefined();
+      
+      // Step 2: Retrieve the created resource
+      const getResponse = await client.get(`/api/{{resource}}/${resourceId}`, {
+        {{#auth}}
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+        {{/auth}}
+      });
+      
+      expect(getResponse.status_code).toBe(200);
+      const getData = JSON.parse(getResponse.data);
+      expect(getData).toHaveProperty('id', resourceId);
+      expect(getData).toHaveProperty('name', 'Test Resource');
+      
+      // Step 3: Update the resource
+      const updateResponse = await client.put(`/api/{{resource}}/${resourceId}`, {
+        json: {
+          name: 'Updated Resource',
+          description: 'This is an updated test resource'
+        },
+        {{#auth}}
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+        {{/auth}}
+      });
+      
+      expect(updateResponse.status_code).toBe(200);
+      const updateData = JSON.parse(updateResponse.data);
+      expect(updateData).toHaveProperty('id', resourceId);
+      expect(updateData).toHaveProperty('name', 'Updated Resource');
+      
+      // Step 4: Delete the resource
+      const deleteResponse = await client.delete(`/api/{{resource}}/${resourceId}`, {
+        {{#auth}}
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+        {{/auth}}
+      });
+      
+      expect(deleteResponse.status_code).toBe(200);
+      const deleteData = JSON.parse(deleteResponse.data);
+      expect(deleteData).toHaveProperty('id', resourceId);
+      
+      // Step 5: Verify the resource is deleted
+      const verifyResponse = await client.get(`/api/{{resource}}/${resourceId}`, {
+        {{#auth}}
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+        {{/auth}}
+      });
+      
+      expect(verifyResponse.status_code).toBe(404);
+      {{/flask}}
+      {{/supertest}}
+    });
+    
+    {{#test_error_cases}}
+    it('should handle error cases gracefully', async () => {
+      {{#supertest}}
+      {{#express}}
+      // Test invalid input
+      const invalidResponse = await request(app)
+        .post('/api/{{resource}}')
+        .send({
+          // Missing required fields
+        })
+        {{#auth}}
+        .set('Authorization', `Bearer ${authToken}`)
+        {{/auth}}
+        .expect('Content-Type', /json/)
+        .expect(400);
+      
+      expect(invalidResponse.body).toHaveProperty('error');
+      
+      // Test non-existent resource
+      await request(app)
+        .get('/api/{{resource}}/non-existent-id')
+        {{#auth}}
+        .set('Authorization', `Bearer ${authToken}`)
+        {{/auth}}
+        .expect('Content-Type', /json/)
+        .expect(404);
+      
+      // Test unauthorized access
+      {{#auth}}
+      await request(app)
+        .get('/api/{{resource}}')
+        // No auth token
+        .expect('Content-Type', /json/)
+        .expect(401);
+      {{/auth}}
+      {{/express}}
+      {{#fastapi}}
+      // Test invalid input
+      const invalidResponse = await client.post('/api/{{resource}}', {
+        json: {
+          // Missing required fields
+        },
+        {{#auth}}
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+        {{/auth}}
+      });
+      
+      expect(invalidResponse.status_code).toBe(422);
+      
+      // Test non-existent resource
+      const notFoundResponse = await client.get('/api/{{resource}}/non-existent-id', {
+        {{#auth}}
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+        {{/auth}}
+      });
+      
+      expect(notFoundResponse.status_code).toBe(404);
+      
+      // Test unauthorized access
+      {{#auth}}
+      const unauthorizedResponse = await client.get('/api/{{resource}}');
+      
+      expect(unauthorizedResponse.status_code).toBe(401);
+      {{/auth}}
+      {{/fastapi}}
+      {{#flask}}
+      // Test invalid input
+      const invalidResponse = await client.post('/api/{{resource}}', {
+        json: {
+          // Missing required fields
+        },
+        {{#auth}}
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+        {{/auth}}
+      });
+      
+      expect(invalidResponse.status_code).toBe(400);
+      
+      // Test non-existent resource
+      const notFoundResponse = await client.get('/api/{{resource}}/non-existent-id', {
+        {{#auth}}
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+        {{/auth}}
+      });
+      
+      expect(notFoundResponse.status_code).toBe(404);
+      
+      // Test unauthorized access
+      {{#auth}}
+      const unauthorizedResponse = await client.get('/api/{{resource}}');
+      
+      expect(unauthorizedResponse.status_code).toBe(401);
+      {{/auth}}
+      {{/flask}}
+      {{/supertest}}
+    });
+    {{/test_error_cases}}
+  });
+  {{/test_workflow}}
+  
+  {{#test_dependencies}}
+  describe('{{dependency_name}} Integration', () => {
+    it('should correctly integrate with {{dependency_name}}', async () => {
+      {{#supertest}}
+      {{#express}}
+      // Test integration with {{dependency_name}}
+      const response = await request(app)
+        .post('/api/{{integration_endpoint}}')
+        .send({
+          data: 'Test integration data'
+        })
+        {{#auth}}
+        .set('Authorization', `Bearer ${authToken}`)
+        {{/auth}}
+        .expect('Content-Type', /json/)
+        .expect(200);
+      
+      expect(response.body).toHaveProperty('status', 'success');
+      expect(response.body).toHaveProperty('integration', '{{dependency_name}}');
+      {{/express}}
+      {{#fastapi}}
+      // Test integration with {{dependency_name}}
+      const response = await client.post('/api/{{integration_endpoint}}', {
+        json: {
+          data: 'Test integration data'
+        },
+        {{#auth}}
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+        {{/auth}}
+      });
+      
+      expect(response.status_code).toBe(200);
+      expect(response.json()).toHaveProperty('status', 'success');
+      expect(response.json()).toHaveProperty('integration', '{{dependency_name}}');
+      {{/fastapi}}
+      {{#flask}}
+      // Test integration with {{dependency_name}}
+      const response = await client.post('/api/{{integration_endpoint}}', {
+        json: {
+          data: 'Test integration data'
+        },
+        {{#auth}}
+        headers: {
+          Authorization: `Bearer ${authToken}`
+        }
+        {{/auth}}
+      });
+      
+      expect(response.status_code).toBe(200);
+      const data = JSON.parse(response.data);
+      expect(data).toHaveProperty('status', 'success');
+      expect(data).toHaveProperty('integration', '{{dependency_name}}');
+      {{/flask}}
+      {{/supertest}}
+    });
+  });
+  {{/test_dependencies}}
+  
+  {{#test_performance}}
+  describe('Performance Tests', () => {
+    it('should handle multiple requests efficiently', async () => {
+      {{#supertest}}
+      {{#express}}
+      // Create an array of promises for concurrent requests
+      const requests = Array(10).fill().map((_, i) => 
+        request(app)
+          .get('/api/{{resource}}')
+          {{#auth}}
+          .set('Authorization', `Bearer ${authToken}`)
+          {{/auth}}
+          .expect('Content-Type', /json/)
+          .expect(200)
+      );
+      
+      // Execute all requests concurrently
+      const startTime = Date.now();
+      const responses = await Promise.all(requests);
+      const endTime = Date.now();
+      
+      // Verify all responses are successful
+      responses.forEach(response => {
+        expect(response.body).toBeInstanceOf(Array);
+      });
+      
+      // Check that the total time is reasonable
+      const totalTime = endTime - startTime;
+      expect(totalTime).toBeLessThan({{performance_threshold}});
+      {{/express}}
+      {{#fastapi}}
+      // Create an array of promises for concurrent requests
+      const requests = Array(10).fill().map((_, i) => 
+        client.get('/api/{{resource}}', {
+          {{#auth}}
+          headers: {
+            Authorization: `Bearer ${authToken}`
+          }
+          {{/auth}}
+        })
+      );
+      
+      // Execute all requests concurrently
+      const startTime = Date.now();
+      const responses = await Promise.all(requests);
+      const endTime = Date.now();
+      
+      // Verify all responses are successful
+      responses.forEach(response => {
+        expect(response.status_code).toBe(200);
+        expect(Array.isArray(response.json())).toBe(true);
+      });
+      
+      // Check that the total time is reasonable
+      const totalTime = endTime - startTime;
+      expect(totalTime).toBeLessThan({{performance_threshold}});
+      {{/fastapi}}
+      {{#flask}}
+      // Create an array of promises for concurrent requests
+      const requests = Array(10).fill().map((_, i) => 
+        client.get('/api/{{resource}}', {
+          {{#auth}}
+          headers: {
+            Authorization: `Bearer ${authToken}`
+          }
+          {{/auth}}
+        })
+      );
+      
+      // Execute all requests concurrently
+      const startTime = Date.now();
+      const responses = await Promise.all(requests);
+      const endTime = Date.now();
+      
+      // Verify all responses are successful
+      responses.forEach(response => {
+        expect(response.status_code).toBe(200);
+        const data = JSON.parse(response.data);
+        expect(Array.isArray(data)).toBe(true);
+      });
+      
+      // Check that the total time is reasonable
+      const totalTime = endTime - startTime;
+      expect(totalTime).toBeLessThan({{performance_threshold}});
+      {{/flask}}
+      {{/supertest}}
+    });
+  });
+  {{/test_performance}}
+});
+{{/typescript}}
+
+{{^typescript}}
+const { describe, it, expect, beforeAll, afterAll } = require('@jest/globals');
+{{#supertest}}
+const request = require('supertest');
+{{/supertest}}
+{{#express}}
+const { app } = require('../src/app');
+{{/express}}
+{{#database}}
+const { setupTestDatabase, teardownTestDatabase } = require('../utils/test-db-setup');
+{{/database}}
+{{#auth}}
+const { generateTestToken } = require('../utils/test-auth-utils');
+{{/auth}}
+
+/**
+ * Integration test for {{feature_name}}
+ * 
+ * This test verifies the integration between multiple components:
+ * {{#components}}
+ * - {{.}}
+ * {{/components}}
+ */
+describe('{{feature_name}} Integration', () => {
+  {{#setup}}
+  {{#auth}}
+  let authToken;
+  {{/auth}}
+  
+  beforeAll(async () => {
+    {{#database}}
+    // Set up test database with initial data
+    await setupTestDatabase();
+    {{/database}}
+    {{#auth}}
+    // Generate authentication token for testing
+    authToken = generateTestToken({ userId: '1', role: 'user' });
+    {{/auth}}
+    {{#custom_setup}}
+    // Custom setup for this integration test
+    {{custom_setup_code}}
+    {{/custom_setup}}
+  });
+  
+  afterAll(async () => {
+    {{#database}}
+    // Clean up test database
+    await teardownTestDatabase();
+    {{/database}}
+    {{#custom_teardown}}
+    // Custom teardown for this integration test
+    {{custom_teardown_code}}
+    {{/custom_teardown}}
+  });
+  {{/setup}}
+  
+  {{#test_workflow}}
+  describe('{{workflow_name}} Workflow', () => {
+    it('should complete the entire workflow successfully', async () => {
+      {{#supertest}}
+      {{#express}}
+      // Step 1: Create a new resource
+      const createResponse = await request(app)
+        .post('/api/{{resource}}')
+        .send({
+          name: 'Test Resource',
+          description: 'This is a test resource'
+        })
+        {{#auth}}
+        .set('Authorization', `Bearer ${authToken}`)
+        {{/auth}}
+        .expect('Content-Type', /json/)
+        .expect(201);
+      
+      const resourceId = createResponse.body.id;
+      expect(resourceId).toBeDefined();
+      
+      // Step 2: Retrieve the created resource
+      const getResponse = await request(app)
+        .get(`/api/{{resource}}/${resourceId}`)
+        {{#auth}}
+        .set('Authorization', `Bearer ${authToken}`)
+        {{/auth}}
+        .expect('Content-Type', /json/)
+        .expect(200);
+      
+      expect(getResponse.body).toHaveProperty('id', resourceId);
+      expect(getResponse.body).toHaveProperty('name', 'Test Resource');
+      
+      // Step 3: Update the resource
+      const updateResponse = await request(app)
+        .put(`/api/{{resource}}/${resourceId}`)
+        .send({
+          name: 'Updated Resource',
+          description: 'This is an updated test resource'
+        })
+        {{#auth}}
+        .set('Authorization', `Bearer ${authToken}`)
+        {{/auth}}
+        .expect('Content-Type', /json/)
+        .expect(200);
+      
+      expect(updateResponse.body).toHaveProperty('id', resourceId);
+      expect(updateResponse.body).toHaveProperty('name', 'Updated Resource');
+      
+      // Step 4: Delete the resource
+      const deleteResponse = await request(app)
+        .delete(`/api/{{resource}}/${resourceId}`)
+        {{#auth}}
+        .set('Authorization', `Bearer ${authToken}`)
+        {{/auth}}
+        .expect('Content-Type', /json/)
+        .expect(200);
+      
+      expect(deleteResponse.body).toHaveProperty('id', resourceId);
+      
+      // Step 5: Verify the resource is deleted
+      await request(app)
+        .get(`/api/{{resource}}/${resourceId}`)
+        {{#auth}}
+        .set('Authorization', `Bearer ${authToken}`)
+        {{/auth}}
+        .expect('Content-Type', /json/)
+        .expect(404);
+      {{/express}}
+      {{/supertest}}
+    });
+    
+    {{#test_error_cases}}
+    it('should handle error cases gracefully', async () => {
+      {{#supertest}}
+      {{#express}}
+      // Test invalid input
+      const invalidResponse = await request(app)
+        .post('/api/{{resource}}')
+        .send({
+          // Missing required fields
+        })
+        {{#auth}}
+        .set('Authorization', `Bearer ${authToken}`)
+        {{/auth}}
+        .expect('Content-Type', /json/)
+        .expect(400);
+      
+      expect(invalidResponse.body).toHaveProperty('error');
+      
+      // Test non-existent resource
+      await request(app)
+        .get('/api/{{resource}}/non-existent-id')
+        {{#auth}}
+        .set('Authorization', `Bearer ${authToken}`)
+        {{/auth}}
+        .expect('Content-Type', /json/)
+        .expect(404);
+      
+      // Test unauthorized access
+      {{#auth}}
+      await request(app)
+        .get('/api/{{resource}}')
+        // No auth token
+        .expect('Content-Type', /json/)
+        .expect(401);
+      {{/auth}}
+      {{/express}}
+      {{/supertest}}
+    });
+    {{/test_error_cases}}
+  });
+  {{/test_workflow}}
+  
+  {{#test_dependencies}}
+  describe('{{dependency_name}} Integration', () => {
+    it('should correctly integrate with {{dependency_name}}', async () => {
+      {{#supertest}}
+      {{#express}}
+      // Test integration with {{dependency_name}}
+      const response = await request(app)
+        .post('/api/{{integration_endpoint}}')
+        .send({
+          data: 'Test integration data'
+        })
+        {{#auth}}
+        .set('Authorization', `Bearer ${authToken}`)
+        {{/auth}}
+        .expect('Content-Type', /json/)
+        .expect(200);
+      
+      expect(response.body).toHaveProperty('status', 'success');
+      expect(response.body).toHaveProperty('integration', '{{dependency_name}}');
+      {{/express}}
+      {{/supertest}}
+    });
+  });
+  {{/test_dependencies}}
+  
+  {{#test_performance}}
+  describe('Performance Tests', () => {
+    it('should handle multiple requests efficiently', async () => {
+      {{#supertest}}
+      {{#express}}
+      // Create an array of promises for concurrent requests
+      const requests = Array(10).fill().map((_, i) => 
+        request(app)
+          .get('/api/{{resource}}')
+          {{#auth}}
+          .set('Authorization', `Bearer ${authToken}`)
+          {{/auth}}
+          .expect('Content-Type', /json/)
+          .expect(200)
+      );
+      
+      // Execute all requests concurrently
+      const startTime = Date.now();
+      const responses = await Promise.all(requests);
+      const endTime = Date.now();
+      
+      // Verify all responses are successful
+      responses.forEach(response => {
+        expect(response.body).toBeInstanceOf(Array);
+      });
+      
+      // Check that the total time is reasonable
+      const totalTime = endTime - startTime;
+      expect(totalTime).toBeLessThan({{performance_threshold}});
+      {{/express}}
+      {{/supertest}}
+    });
+  });
+  {{/test_performance}}
+});
+{{/typescript}}

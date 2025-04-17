@@ -1,0 +1,675 @@
+{{#typescript}}
+{{#mongoose}}
+import mongoose, { Document, Schema } from 'mongoose';
+
+export interface I{{entity_name}} extends Document {
+  name: string;
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  {{#if_has_owner}}
+  owner: mongoose.Types.ObjectId;
+  {{/if_has_owner}}
+  {{#if_has_status}}
+  status: 'active' | 'inactive' | 'pending';
+  {{/if_has_status}}
+  {{#if_has_tags}}
+  tags: string[];
+  {{/if_has_tags}}
+  {{#if_has_metadata}}
+  metadata: Record<string, any>;
+  {{/if_has_metadata}}
+  // Add more fields as needed
+}
+
+const {{entity_name}}Schema = new Schema<I{{entity_name}}>(
+  {
+    name: {
+      type: String,
+      required: [true, 'Name is required'],
+      trim: true,
+      maxlength: [100, 'Name cannot be more than 100 characters']
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Description cannot be more than 500 characters']
+    },
+    {{#if_has_owner}}
+    owner: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'Owner is required']
+    },
+    {{/if_has_owner}}
+    {{#if_has_status}}
+    status: {
+      type: String,
+      enum: {
+        values: ['active', 'inactive', 'pending'],
+        message: '{VALUE} is not a valid status'
+      },
+      default: 'active'
+    },
+    {{/if_has_status}}
+    {{#if_has_tags}}
+    tags: [{
+      type: String,
+      trim: true
+    }],
+    {{/if_has_tags}}
+    {{#if_has_metadata}}
+    metadata: {
+      type: Schema.Types.Mixed,
+      default: {}
+    },
+    {{/if_has_metadata}}
+    // Add more fields as needed
+  },
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
+);
+
+// Indexes
+{{entity_name}}Schema.index({ name: 1 });
+{{#if_has_owner}}
+{{entity_name}}Schema.index({ owner: 1 });
+{{/if_has_owner}}
+{{#if_has_status}}
+{{entity_name}}Schema.index({ status: 1 });
+{{/if_has_status}}
+{{#if_has_tags}}
+{{entity_name}}Schema.index({ tags: 1 });
+{{/if_has_tags}}
+
+// Virtuals
+{{entity_name}}Schema.virtual('nameAndId').get(function() {
+  return `${this.name} (${this._id})`;
+});
+
+// Methods
+{{entity_name}}Schema.methods.isActive = function(): boolean {
+  return this.status === 'active';
+};
+
+// Statics
+{{entity_name}}Schema.statics.findActive = function() {
+  return this.find({ status: 'active' });
+};
+
+// Middleware
+{{entity_name}}Schema.pre('save', function(next) {
+  // Custom logic before saving
+  next();
+});
+
+{{entity_name}}Schema.post('save', function(doc) {
+  // Custom logic after saving
+  console.log(`${doc.name} has been saved`);
+});
+
+// Create and export model
+const {{entity_name}}Model = mongoose.model<I{{entity_name}}>('{{entity_name}}', {{entity_name}}Schema);
+
+export default {{entity_name}}Model;
+{{/mongoose}}
+
+{{#sequelize}}
+import { Model, DataTypes, Optional, Sequelize } from 'sequelize';
+
+// Define attributes interface
+interface {{entity_name}}Attributes {
+  id: number;
+  name: string;
+  description?: string;
+  createdAt: Date;
+  updatedAt: Date;
+  {{#if_has_owner}}
+  ownerId: number;
+  {{/if_has_owner}}
+  {{#if_has_status}}
+  status: 'active' | 'inactive' | 'pending';
+  {{/if_has_status}}
+  {{#if_has_tags}}
+  tags?: string[];
+  {{/if_has_tags}}
+  {{#if_has_metadata}}
+  metadata?: object;
+  {{/if_has_metadata}}
+  // Add more fields as needed
+}
+
+// Define creation attributes interface (optional fields for creation)
+interface {{entity_name}}CreationAttributes extends Optional<{{entity_name}}Attributes, 'id' | 'createdAt' | 'updatedAt' | 'description'{{#if_has_tags}} | 'tags'{{/if_has_tags}}{{#if_has_metadata}} | 'metadata'{{/if_has_metadata}}> {}
+
+// Define the model class
+class {{entity_name}} extends Model<{{entity_name}}Attributes, {{entity_name}}CreationAttributes> implements {{entity_name}}Attributes {
+  public id!: number;
+  public name!: string;
+  public description!: string;
+  public createdAt!: Date;
+  public updatedAt!: Date;
+  {{#if_has_owner}}
+  public ownerId!: number;
+  {{/if_has_owner}}
+  {{#if_has_status}}
+  public status!: 'active' | 'inactive' | 'pending';
+  {{/if_has_status}}
+  {{#if_has_tags}}
+  public tags!: string[];
+  {{/if_has_tags}}
+  {{#if_has_metadata}}
+  public metadata!: object;
+  {{/if_has_metadata}}
+  
+  // Instance methods
+  public isActive(): boolean {
+    return this.status === 'active';
+  }
+  
+  // Add more instance methods as needed
+}
+
+// Initialize model
+export const initialize{{entity_name}} = (sequelize: Sequelize): typeof {{entity_name}} => {
+  {{entity_name}}.init(
+    {
+      id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+      },
+      name: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+        validate: {
+          notEmpty: true,
+          len: [1, 100],
+        },
+      },
+      description: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      {{#if_has_owner}}
+      ownerId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'Users',
+          key: 'id',
+        },
+      },
+      {{/if_has_owner}}
+      {{#if_has_status}}
+      status: {
+        type: DataTypes.ENUM('active', 'inactive', 'pending'),
+        allowNull: false,
+        defaultValue: 'active',
+      },
+      {{/if_has_status}}
+      {{#if_has_tags}}
+      tags: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
+        defaultValue: [],
+      },
+      {{/if_has_tags}}
+      {{#if_has_metadata}}
+      metadata: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: {},
+      },
+      {{/if_has_metadata}}
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+    },
+    {
+      sequelize,
+      tableName: '{{entity_name_plural}}',
+      modelName: '{{entity_name}}',
+      indexes: [
+        {
+          name: '{{entity_name_plural}}_name_idx',
+          fields: ['name'],
+        },
+        {{#if_has_owner}}
+        {
+          name: '{{entity_name_plural}}_owner_idx',
+          fields: ['ownerId'],
+        },
+        {{/if_has_owner}}
+        {{#if_has_status}}
+        {
+          name: '{{entity_name_plural}}_status_idx',
+          fields: ['status'],
+        },
+        {{/if_has_status}}
+      ],
+      hooks: {
+        beforeCreate: (instance) => {
+          // Custom logic before creating
+        },
+        afterCreate: (instance) => {
+          // Custom logic after creating
+          console.log(`${instance.name} has been created`);
+        },
+      },
+    }
+  );
+  
+  return {{entity_name}};
+};
+
+// Define associations
+export const associate{{entity_name}} = (models: any): void => {
+  {{#if_has_owner}}
+  {{entity_name}}.belongsTo(models.User, {
+    foreignKey: 'ownerId',
+    as: 'owner',
+  });
+  {{/if_has_owner}}
+  
+  // Add more associations as needed
+};
+
+export default {{entity_name}};
+{{/sequelize}}
+
+{{#typeorm}}
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+  Index,
+  BeforeInsert,
+  BeforeUpdate,
+  AfterInsert,
+} from 'typeorm';
+{{#if_has_owner}}
+import { User } from './User';
+{{/if_has_owner}}
+
+@Entity('{{entity_name_plural}}')
+export class {{entity_name}} {
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @Column({ length: 100 })
+  @Index()
+  name: string;
+
+  @Column({ type: 'text', nullable: true })
+  description?: string;
+
+  @CreateDateColumn()
+  createdAt: Date;
+
+  @UpdateDateColumn()
+  updatedAt: Date;
+
+  {{#if_has_owner}}
+  @Column()
+  ownerId: number;
+
+  @ManyToOne(() => User, user => user.{{entity_name_camel_plural}})
+  @JoinColumn({ name: 'ownerId' })
+  @Index()
+  owner: User;
+  {{/if_has_owner}}
+
+  {{#if_has_status}}
+  @Column({
+    type: 'enum',
+    enum: ['active', 'inactive', 'pending'],
+    default: 'active'
+  })
+  @Index()
+  status: 'active' | 'inactive' | 'pending';
+  {{/if_has_status}}
+
+  {{#if_has_tags}}
+  @Column('simple-array', { nullable: true })
+  tags?: string[];
+  {{/if_has_tags}}
+
+  {{#if_has_metadata}}
+  @Column('jsonb', { nullable: true, default: {} })
+  metadata?: Record<string, any>;
+  {{/if_has_metadata}}
+
+  // Lifecycle hooks
+  @BeforeInsert()
+  @BeforeUpdate()
+  validateName() {
+    if (this.name && this.name.length > 100) {
+      this.name = this.name.substring(0, 100);
+    }
+  }
+
+  @AfterInsert()
+  logInsert() {
+    console.log(`${this.name} has been inserted with ID: ${this.id}`);
+  }
+
+  // Instance methods
+  isActive(): boolean {
+    return this.status === 'active';
+  }
+
+  // Add more methods as needed
+}
+{{/typeorm}}
+
+{{#prisma}}
+// This is a Prisma schema template for {{entity_name}}
+// You should place this in your schema.prisma file
+
+model {{entity_name}} {
+  id          Int      @id @default(autoincrement())
+  name        String   @db.VarChar(100)
+  description String?  @db.Text
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  {{#if_has_owner}}
+  ownerId     Int
+  owner       User     @relation(fields: [ownerId], references: [id])
+  {{/if_has_owner}}
+
+  {{#if_has_status}}
+  status      String   @default("active")
+  {{/if_has_status}}
+
+  {{#if_has_tags}}
+  tags        String[]
+  {{/if_has_tags}}
+
+  {{#if_has_metadata}}
+  metadata    Json?    @default("{}")
+  {{/if_has_metadata}}
+
+  // Add more fields as needed
+
+  @@index([name])
+  {{#if_has_owner}}
+  @@index([ownerId])
+  {{/if_has_owner}}
+  {{#if_has_status}}
+  @@index([status])
+  {{/if_has_status}}
+}
+
+// TypeScript type definitions for Prisma Client
+// Place this in a separate .ts file
+
+import { Prisma } from '@prisma/client';
+
+// Input type for creating a new {{entity_name}}
+export type {{entity_name}}CreateInput = Prisma.{{entity_name}}CreateInput;
+
+// Input type for updating an existing {{entity_name}}
+export type {{entity_name}}UpdateInput = Prisma.{{entity_name}}UpdateInput;
+
+// Input type for filtering {{entity_name}} queries
+export type {{entity_name}}WhereInput = Prisma.{{entity_name}}WhereInput;
+
+// Input type for ordering {{entity_name}} queries
+export type {{entity_name}}OrderByInput = Prisma.{{entity_name}}OrderByWithRelationInput;
+
+// Select type for {{entity_name}} queries
+export type {{entity_name}}Select = Prisma.{{entity_name}}Select;
+
+// Include type for {{entity_name}} queries with relations
+export type {{entity_name}}Include = Prisma.{{entity_name}}Include;
+{{/prisma}}
+{{/typescript}}
+
+{{^typescript}}
+{{#mongoose}}
+const mongoose = require('mongoose');
+const { Schema } = mongoose;
+
+const {{entity_name}}Schema = new Schema(
+  {
+    name: {
+      type: String,
+      required: [true, 'Name is required'],
+      trim: true,
+      maxlength: [100, 'Name cannot be more than 100 characters']
+    },
+    description: {
+      type: String,
+      trim: true,
+      maxlength: [500, 'Description cannot be more than 500 characters']
+    },
+    {{#if_has_owner}}
+    owner: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'Owner is required']
+    },
+    {{/if_has_owner}}
+    {{#if_has_status}}
+    status: {
+      type: String,
+      enum: {
+        values: ['active', 'inactive', 'pending'],
+        message: '{VALUE} is not a valid status'
+      },
+      default: 'active'
+    },
+    {{/if_has_status}}
+    {{#if_has_tags}}
+    tags: [{
+      type: String,
+      trim: true
+    }],
+    {{/if_has_tags}}
+    {{#if_has_metadata}}
+    metadata: {
+      type: Schema.Types.Mixed,
+      default: {}
+    },
+    {{/if_has_metadata}}
+    // Add more fields as needed
+  },
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+  }
+);
+
+// Indexes
+{{entity_name}}Schema.index({ name: 1 });
+{{#if_has_owner}}
+{{entity_name}}Schema.index({ owner: 1 });
+{{/if_has_owner}}
+{{#if_has_status}}
+{{entity_name}}Schema.index({ status: 1 });
+{{/if_has_status}}
+{{#if_has_tags}}
+{{entity_name}}Schema.index({ tags: 1 });
+{{/if_has_tags}}
+
+// Virtuals
+{{entity_name}}Schema.virtual('nameAndId').get(function() {
+  return `${this.name} (${this._id})`;
+});
+
+// Methods
+{{entity_name}}Schema.methods.isActive = function() {
+  return this.status === 'active';
+};
+
+// Statics
+{{entity_name}}Schema.statics.findActive = function() {
+  return this.find({ status: 'active' });
+};
+
+// Middleware
+{{entity_name}}Schema.pre('save', function(next) {
+  // Custom logic before saving
+  next();
+});
+
+{{entity_name}}Schema.post('save', function(doc) {
+  // Custom logic after saving
+  console.log(`${doc.name} has been saved`);
+});
+
+// Create and export model
+const {{entity_name}} = mongoose.model('{{entity_name}}', {{entity_name}}Schema);
+
+module.exports = {{entity_name}};
+{{/mongoose}}
+
+{{#sequelize}}
+const { Model, DataTypes } = require('sequelize');
+
+// Define the model class
+class {{entity_name}} extends Model {
+  // Instance methods
+  isActive() {
+    return this.status === 'active';
+  }
+  
+  // Add more instance methods as needed
+}
+
+// Initialize model
+const initialize{{entity_name}} = (sequelize) => {
+  {{entity_name}}.init(
+    {
+      id: {
+        type: DataTypes.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+      },
+      name: {
+        type: DataTypes.STRING(100),
+        allowNull: false,
+        validate: {
+          notEmpty: true,
+          len: [1, 100],
+        },
+      },
+      description: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      {{#if_has_owner}}
+      ownerId: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        references: {
+          model: 'Users',
+          key: 'id',
+        },
+      },
+      {{/if_has_owner}}
+      {{#if_has_status}}
+      status: {
+        type: DataTypes.ENUM('active', 'inactive', 'pending'),
+        allowNull: false,
+        defaultValue: 'active',
+      },
+      {{/if_has_status}}
+      {{#if_has_tags}}
+      tags: {
+        type: DataTypes.ARRAY(DataTypes.STRING),
+        allowNull: true,
+        defaultValue: [],
+      },
+      {{/if_has_tags}}
+      {{#if_has_metadata}}
+      metadata: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: {},
+      },
+      {{/if_has_metadata}}
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+        defaultValue: DataTypes.NOW,
+      },
+    },
+    {
+      sequelize,
+      tableName: '{{entity_name_plural}}',
+      modelName: '{{entity_name}}',
+      indexes: [
+        {
+          name: '{{entity_name_plural}}_name_idx',
+          fields: ['name'],
+        },
+        {{#if_has_owner}}
+        {
+          name: '{{entity_name_plural}}_owner_idx',
+          fields: ['ownerId'],
+        },
+        {{/if_has_owner}}
+        {{#if_has_status}}
+        {
+          name: '{{entity_name_plural}}_status_idx',
+          fields: ['status'],
+        },
+        {{/if_has_status}}
+      ],
+      hooks: {
+        beforeCreate: (instance) => {
+          // Custom logic before creating
+        },
+        afterCreate: (instance) => {
+          // Custom logic after creating
+          console.log(`${instance.name} has been created`);
+        },
+      },
+    }
+  );
+  
+  return {{entity_name}};
+};
+
+// Define associations
+const associate{{entity_name}} = (models) => {
+  {{#if_has_owner}}
+  {{entity_name}}.belongsTo(models.User, {
+    foreignKey: 'ownerId',
+    as: 'owner',
+  });
+  {{/if_has_owner}}
+  
+  // Add more associations as needed
+};
+
+module.exports = {
+  {{entity_name}},
+  initialize{{entity_name}},
+  associate{{entity_name}}
+};
+{{/sequelize}}
+{{/typescript}}

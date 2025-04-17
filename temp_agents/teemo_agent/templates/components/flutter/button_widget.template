@@ -1,0 +1,200 @@
+import 'package:flutter/material.dart';
+
+// Teemo UI Button Widget Template for Flutter
+// This template provides a customizable button widget with various styles and states
+
+enum TeemoButtonVariant {
+  primary,
+  secondary,
+  success,
+  danger,
+  warning,
+  info,
+  emerald,
+  outline,
+  ghost,
+}
+
+enum TeemoButtonSize {
+  small,
+  medium,
+  large,
+}
+
+class TeemoButton extends StatelessWidget {
+  final String text;
+  final VoidCallback? onPressed;
+  final TeemoButtonVariant variant;
+  final TeemoButtonSize size;
+  final bool isLoading;
+  final Widget? icon;
+  final bool iconRight;
+
+  const TeemoButton({
+    Key? key,
+    required this.text,
+    this.onPressed,
+    this.variant = TeemoButtonVariant.primary,
+    this.size = TeemoButtonSize.medium,
+    this.isLoading = false,
+    this.icon,
+    this.iconRight = false,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: isLoading ? null : onPressed,
+      style: _getButtonStyle(),
+      child: _buildButtonContent(),
+    );
+  }
+
+  Widget _buildButtonContent() {
+    if (isLoading) {
+      return SizedBox(
+        width: _getLoaderSize(),
+        height: _getLoaderSize(),
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(_getLoaderColor()),
+        ),
+      );
+    }
+
+    if (icon == null) {
+      return Text(text, style: _getTextStyle());
+    }
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: iconRight
+          ? [
+              Text(text, style: _getTextStyle()),
+              SizedBox(width: 8),
+              icon!,
+            ]
+          : [
+              icon!,
+              SizedBox(width: 8),
+              Text(text, style: _getTextStyle()),
+            ],
+    );
+  }
+
+  ButtonStyle _getButtonStyle() {
+    return ButtonStyle(
+      backgroundColor: MaterialStateProperty.resolveWith<Color>((states) {
+        if (states.contains(MaterialState.disabled)) {
+          return _getBackgroundColor().withOpacity(0.6);
+        }
+        return _getBackgroundColor();
+      }),
+      foregroundColor: MaterialStateProperty.resolveWith<Color>((states) {
+        if (states.contains(MaterialState.disabled)) {
+          return _getTextColor().withOpacity(0.6);
+        }
+        return _getTextColor();
+      }),
+      padding: MaterialStateProperty.all<EdgeInsetsGeometry>(_getPadding()),
+      shape: MaterialStateProperty.all<RoundedRectangleBorder>(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+          side: _getBorderSide(),
+        ),
+      ),
+    );
+  }
+
+  Color _getBackgroundColor() {
+    switch (variant) {
+      case TeemoButtonVariant.primary:
+        return Color(0xFF3B82F6); // blue-500
+      case TeemoButtonVariant.secondary:
+        return Color(0xFF6B7280); // gray-500
+      case TeemoButtonVariant.success:
+        return Color(0xFF10B981); // green-500
+      case TeemoButtonVariant.danger:
+        return Color(0xFFEF4444); // red-500
+      case TeemoButtonVariant.warning:
+        return Color(0xFFF59E0B); // amber-500
+      case TeemoButtonVariant.info:
+        return Color(0xFF3B82F6); // blue-500
+      case TeemoButtonVariant.emerald:
+        return Color(0xFF10B981); // emerald-500
+      case TeemoButtonVariant.outline:
+      case TeemoButtonVariant.ghost:
+        return Colors.transparent;
+    }
+  }
+
+  Color _getTextColor() {
+    switch (variant) {
+      case TeemoButtonVariant.outline:
+      case TeemoButtonVariant.ghost:
+        return Color(0xFF374151); // gray-700
+      default:
+        return Colors.white;
+    }
+  }
+
+  BorderSide _getBorderSide() {
+    if (variant == TeemoButtonVariant.outline) {
+      return BorderSide(color: Color(0xFFD1D5DB)); // gray-300
+    }
+    return BorderSide.none;
+  }
+
+  EdgeInsetsGeometry _getPadding() {
+    switch (size) {
+      case TeemoButtonSize.small:
+        return EdgeInsets.symmetric(horizontal: 12, vertical: 6);
+      case TeemoButtonSize.medium:
+        return EdgeInsets.symmetric(horizontal: 16, vertical: 8);
+      case TeemoButtonSize.large:
+        return EdgeInsets.symmetric(horizontal: 24, vertical: 12);
+    }
+  }
+
+  TextStyle _getTextStyle() {
+    double fontSize;
+    switch (size) {
+      case TeemoButtonSize.small:
+        fontSize = 14;
+        break;
+      case TeemoButtonSize.medium:
+        fontSize = 16;
+        break;
+      case TeemoButtonSize.large:
+        fontSize = 18;
+        break;
+    }
+
+    return TextStyle(
+      fontSize: fontSize,
+      fontWeight: FontWeight.w500,
+      color: _getTextColor(),
+    );
+  }
+
+  double _getLoaderSize() {
+    switch (size) {
+      case TeemoButtonSize.small:
+        return 16;
+      case TeemoButtonSize.medium:
+        return 20;
+      case TeemoButtonSize.large:
+        return 24;
+    }
+  }
+
+  Color _getLoaderColor() {
+    switch (variant) {
+      case TeemoButtonVariant.outline:
+      case TeemoButtonVariant.ghost:
+        return Color(0xFF374151); // gray-700
+      default:
+        return Colors.white;
+    }
+  }
+}

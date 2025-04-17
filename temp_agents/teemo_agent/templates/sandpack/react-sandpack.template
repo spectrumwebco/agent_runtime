@@ -1,0 +1,201 @@
+import React, { useState, useEffect } from 'react';
+import {
+  SandpackProvider,
+  SandpackLayout,
+  SandpackCodeEditor,
+  SandpackPreview,
+  SandpackConsole,
+  useSandpack,
+  SandpackStack,
+  SandpackFileExplorer,
+} from '@codesandbox/sandpack-react';
+import { nightOwl } from '@codesandbox/sandpack-themes';
+
+// Teemo UI Sandpack Editor Component Template
+// This template provides a customizable code editor with preview and console
+
+const BUNDLER_URL = process.env.NEXT_PUBLIC_SANDPACK_BUNDLER_URL || 'https://sandpack-bundler.pages.dev';
+
+const defaultFiles = {
+  '/App.js': `import React, { useState } from 'react';
+
+export default function App() {
+  const [count, setCount] = useState(0);
+  
+  return (
+    <div style={{ fontFamily: 'system-ui, sans-serif', padding: '2rem' }}>
+      <h1>Teemo React Sandbox</h1>
+      <p>Current count: {count}</p>
+      <button 
+        onClick={() => setCount(count + 1)}
+        style={{
+          backgroundColor: '#10b981', // emerald-500
+          color: 'white',
+          padding: '0.5rem 1rem',
+          borderRadius: '0.375rem',
+          border: 'none',
+          cursor: 'pointer'
+        }}
+      >
+        Increment
+      </button>
+    </div>
+  );
+}`,
+  '/index.js': `import React, { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import App from "./App";
+
+const root = createRoot(document.getElementById("root"));
+root.render(
+  <StrictMode>
+    <App />
+  </StrictMode>
+);`,
+  '/styles.css': `body {
+  margin: 0;
+  padding: 0;
+  background-color: #f9fafb;
+}`,
+};
+
+const SandpackEditorWithTabs = ({ files = defaultFiles, options = {} }) => {
+  const [activeTab, setActiveTab] = useState('editor');
+  const { sandpack } = useSandpack();
+  const { lazyAnchorRef } = sandpack;
+
+  useEffect(() => {
+    // Setup any additional configuration here
+  }, []);
+
+  return (
+    <div className="sandpack-container">
+      <div className="sandpack-tabs">
+        <button
+          className={`sandpack-tab ${activeTab === 'editor' ? 'active' : ''}`}
+          onClick={() => setActiveTab('editor')}
+        >
+          Editor
+        </button>
+        <button
+          className={`sandpack-tab ${activeTab === 'preview' ? 'active' : ''}`}
+          onClick={() => setActiveTab('preview')}
+        >
+          Preview
+        </button>
+        <button
+          className={`sandpack-tab ${activeTab === 'console' ? 'active' : ''}`}
+          onClick={() => setActiveTab('console')}
+        >
+          Console
+        </button>
+        <button
+          className={`sandpack-tab ${activeTab === 'files' ? 'active' : ''}`}
+          onClick={() => setActiveTab('files')}
+        >
+          Files
+        </button>
+      </div>
+
+      <div className="sandpack-content">
+        {activeTab === 'editor' && (
+          <SandpackCodeEditor
+            showLineNumbers={true}
+            showInlineErrors={true}
+            wrapContent={true}
+            closableTabs={true}
+            {...options.editorOptions}
+          />
+        )}
+        {activeTab === 'preview' && (
+          <SandpackPreview
+            showNavigator={true}
+            showRefreshButton={true}
+            ref={lazyAnchorRef}
+            {...options.previewOptions}
+          />
+        )}
+        {activeTab === 'console' && (
+          <SandpackConsole {...options.consoleOptions} />
+        )}
+        {activeTab === 'files' && (
+          <SandpackStack>
+            <SandpackFileExplorer />
+          </SandpackStack>
+        )}
+      </div>
+
+      <style jsx>{`
+        .sandpack-container {
+          display: flex;
+          flex-direction: column;
+          height: 100%;
+          border-radius: 8px;
+          overflow: hidden;
+          border: 1px solid #2d3748;
+        }
+        
+        .sandpack-tabs {
+          display: flex;
+          background-color: #1a202c;
+          border-bottom: 1px solid #2d3748;
+        }
+        
+        .sandpack-tab {
+          padding: 8px 16px;
+          background: none;
+          border: none;
+          color: #a0aec0;
+          cursor: pointer;
+          font-size: 14px;
+          transition: all 0.2s;
+        }
+        
+        .sandpack-tab:hover {
+          color: #f7fafc;
+        }
+        
+        .sandpack-tab.active {
+          color: #10b981; /* emerald-500 */
+          border-bottom: 2px solid #10b981;
+        }
+        
+        .sandpack-content {
+          flex: 1;
+          overflow: hidden;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export const TeemoSandpackEditor = ({ 
+  files = defaultFiles, 
+  template = 'react', 
+  theme = nightOwl,
+  options = {},
+  customSetup = {}
+}) => {
+  return (
+    <SandpackProvider
+      template={template}
+      theme={theme}
+      files={files}
+      customSetup={{
+        dependencies: {
+          "react": "^18.2.0",
+          "react-dom": "^18.2.0",
+          ...customSetup.dependencies
+        },
+        ...customSetup
+      }}
+      bundlerURL={BUNDLER_URL}
+    >
+      <SandpackLayout>
+        <SandpackEditorWithTabs files={files} options={options} />
+      </SandpackLayout>
+    </SandpackProvider>
+  );
+};
+
+export default TeemoSandpackEditor;

@@ -1,0 +1,36 @@
+import { useState } from 'react'
+import './App.css'
+
+function App() {
+  const [count, setCount] = useState<number>(0)
+
+  return (
+    <div className="app-container">
+      <header className="app-header">
+        <h1>{{project_name}}</h1>
+        <p>Welcome to your new React TypeScript application</p>
+      </header>
+      
+      <main className="app-main">
+        <div className="card">
+          <button onClick={() => setCount((count) => count + 1)}>
+            count is {count}
+          </button>
+          <p>
+            Edit <code>src/App.tsx</code> and save to test HMR
+          </p>
+        </div>
+        
+        <p className="read-the-docs">
+          Click on the logo to learn more about React with TypeScript
+        </p>
+      </main>
+      
+      <footer className="app-footer">
+        <p>Created with Rumble</p>
+      </footer>
+    </div>
+  )
+}
+
+export default App

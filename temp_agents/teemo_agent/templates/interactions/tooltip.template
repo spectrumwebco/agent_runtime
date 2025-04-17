@@ -1,0 +1,233 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// Teemo UI Tooltip Interaction Template
+// This template provides a customizable tooltip component
+
+type TooltipPosition = 'top' | 'right' | 'bottom' | 'left';
+
+interface TooltipProps {
+  content: React.ReactNode;
+  position?: TooltipPosition;
+  delay?: number;
+  children: React.ReactElement;
+  className?: string;
+  style?: React.CSSProperties;
+  offset?: number;
+  showArrow?: boolean;
+  maxWidth?: number;
+}
+
+export const TeemoTooltip: React.FC<TooltipProps> = ({
+  content,
+  position = 'top',
+  delay = 300,
+  children,
+  className = '',
+  style = {},
+  offset = 8,
+  showArrow = true,
+  maxWidth = 250,
+}) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleMouseEnter = () => {
+    timeoutRef.current = setTimeout(() => {
+      setIsVisible(true);
+    }, delay);
+  };
+
+  const handleMouseLeave = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    setIsVisible(false);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isVisible && triggerRef.current && tooltipRef.current) {
+      const triggerRect = triggerRef.current.getBoundingClientRect();
+      const tooltipRect = tooltipRef.current.getBoundingClientRect();
+      
+      let x = 0;
+      let y = 0;
+      
+      switch (position) {
+        case 'top':
+          x = triggerRect.left + triggerRect.width / 2 - tooltipRect.width / 2;
+          y = triggerRect.top - tooltipRect.height - offset;
+          break;
+        case 'right':
+          x = triggerRect.right + offset;
+          y = triggerRect.top + triggerRect.height / 2 - tooltipRect.height / 2;
+          break;
+        case 'bottom':
+          x = triggerRect.left + triggerRect.width / 2 - tooltipRect.width / 2;
+          y = triggerRect.bottom + offset;
+          break;
+        case 'left':
+          x = triggerRect.left - tooltipRect.width - offset;
+          y = triggerRect.top + triggerRect.height / 2 - tooltipRect.height / 2;
+          break;
+      }
+      
+      // Adjust position to keep tooltip within viewport
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      
+      // Prevent tooltip from going off the left edge
+      if (x < 10) {
+        x = 10;
+      }
+      
+      // Prevent tooltip from going off the right edge
+      if (x + tooltipRect.width > viewportWidth - 10) {
+        x = viewportWidth - tooltipRect.width - 10;
+      }
+      
+      // Prevent tooltip from going off the top edge
+      if (y < 10) {
+        y = 10;
+      }
+      
+      // Prevent tooltip from going off the bottom edge
+      if (y + tooltipRect.height > viewportHeight - 10) {
+        y = viewportHeight - tooltipRect.height - 10;
+      }
+      
+      setTooltipPosition({ x, y });
+    }
+  }, [isVisible, position, offset]);
+
+  const getArrowStyle = () => {
+    const arrowSize = 6;
+    
+    switch (position) {
+      case 'top':
+        return {
+          bottom: -arrowSize,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          borderLeft: `${arrowSize}px solid transparent`,
+          borderRight: `${arrowSize}px solid transparent`,
+          borderTop: `${arrowSize}px solid #1f2937`,
+        };
+      case 'right':
+        return {
+          left: -arrowSize,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          borderTop: `${arrowSize}px solid transparent`,
+          borderBottom: `${arrowSize}px solid transparent`,
+          borderRight: `${arrowSize}px solid #1f2937`,
+        };
+      case 'bottom':
+        return {
+          top: -arrowSize,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          borderLeft: `${arrowSize}px solid transparent`,
+          borderRight: `${arrowSize}px solid transparent`,
+          borderBottom: `${arrowSize}px solid #1f2937`,
+        };
+      case 'left':
+        return {
+          right: -arrowSize,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          borderTop: `${arrowSize}px solid transparent`,
+          borderBottom: `${arrowSize}px solid transparent`,
+          borderLeft: `${arrowSize}px solid #1f2937`,
+        };
+    }
+  };
+
+  const tooltipVariants = {
+    hidden: {
+      opacity: 0,
+      scale: 0.9,
+      transition: {
+        duration: 0.15,
+      },
+    },
+    visible: {
+      opacity: 1,
+      scale: 1,
+      transition: {
+        duration: 0.15,
+      },
+    },
+  };
+
+  // Clone the child element to add mouse event handlers
+  const childWithProps = React.cloneElement(children, {
+    ref: triggerRef,
+    onMouseEnter: handleMouseEnter,
+    onMouseLeave: handleMouseLeave,
+  });
+
+  return (
+    <>
+      {childWithProps}
+      <AnimatePresence>
+        {isVisible && (
+          <motion.div
+            ref={tooltipRef}
+            className={`teemo-tooltip ${className}`}
+            style={{
+              position: 'fixed',
+              top: tooltipPosition.y,
+              left: tooltipPosition.x,
+              zIndex: 9999,
+              maxWidth,
+              ...style,
+            }}
+            initial="hidden"
+            animate="visible"
+            exit="hidden"
+            variants={tooltipVariants}
+          >
+            <div
+              className="teemo-tooltip-content"
+              style={{
+                backgroundColor: '#1f2937',
+                color: '#f3f4f6',
+                padding: '0.5rem 0.75rem',
+                borderRadius: '0.375rem',
+                fontSize: '0.875rem',
+                boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)',
+              }}
+            >
+              {content}
+            </div>
+            {showArrow && (
+              <div
+                className="teemo-tooltip-arrow"
+                style={{
+                  position: 'absolute',
+                  width: 0,
+                  height: 0,
+                  ...getArrowStyle(),
+                }}
+              />
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
+};
+
+export default TeemoTooltip;

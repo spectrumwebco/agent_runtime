@@ -1,0 +1,876 @@
+# Java and Spring Framework
+
+## Overview
+
+Java is a general-purpose, class-based, object-oriented programming language that is designed to have as few implementation dependencies as possible. It is a computing platform for application development. Java is fast, secure, and reliable, making it one of the most popular programming languages for developing a wide range of applications.
+
+Spring Framework is an application framework and inversion of control container for the Java platform. The framework's core features can be used by any Java application, but there are extensions for building web applications on top of the Java EE (Enterprise Edition) platform. Spring's architecture is modular, allowing you to pick and choose which components to use while providing a cohesive framework for J2EE application development.
+
+### Core Concepts
+
+1. **Object-Oriented Programming**: Java is built around the concept of objects, which can contain data and code.
+2. **Platform Independence**: Java code can run on any device that has a Java Virtual Machine (JVM).
+3. **Dependency Injection**: Spring's core feature that allows objects to be injected at runtime rather than at compile time.
+4. **Aspect-Oriented Programming**: Spring supports AOP to separate cross-cutting concerns.
+5. **MVC Architecture**: Spring MVC is a web framework built on the Servlet API.
+6. **Data Access**: Spring provides consistent data access abstractions across different data access technologies.
+7. **Transaction Management**: Spring offers a consistent transaction management interface across different transaction APIs.
+
+### Cross-Platform Capabilities
+
+Java and Spring can be used to build applications across multiple platforms:
+
+1. **Web**: Using Spring MVC or Spring WebFlux for browser-based applications
+2. **Desktop**: Using JavaFX or Swing for desktop applications
+3. **Mobile**: Using frameworks like Spring for Android
+4. **Microservices**: Using Spring Boot for building microservices
+5. **Cloud**: Using Spring Cloud for cloud-native applications
+
+## Spring Component Structure
+
+### Spring MVC Controller
+
+```java
+package com.example.demo.controller;
+
+import com.example.demo.model.User;
+import com.example.demo.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/users")
+public class UserController {
+
+    private final UserService userService;
+
+    @Autowired
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @GetMapping
+    public ResponseEntity<List<User>> getAllUsers() {
+        List<User> users = userService.findAllUsers();
+        return ResponseEntity.ok(users);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<User> getUserById(@PathVariable Long id) {
+        return userService.findUserById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @PostMapping
+    public ResponseEntity<User> createUser(@RequestBody User user) {
+        User createdUser = userService.saveUser(user);
+        return ResponseEntity.ok(createdUser);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User user) {
+        return userService.findUserById(id)
+                .map(existingUser -> {
+                    existingUser.setName(user.getName());
+                    existingUser.setEmail(user.getEmail());
+                    existingUser.setRole(user.getRole());
+                    User updatedUser = userService.saveUser(existingUser);
+                    return ResponseEntity.ok(updatedUser);
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+        return userService.findUserById(id)
+                .map(user -> {
+                    userService.deleteUser(id);
+                    return ResponseEntity.ok().<Void>build();
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+}
+```
+
+### Spring Service
+
+```java
+package com.example.demo.service;
+
+import com.example.demo.model.User;
+import com.example.demo.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.Optional;
+
+@Service
+public class UserService {
+
+    private final UserRepository userRepository;
+
+    @Autowired
+    public UserService(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
+    public List<User> findAllUsers() {
+        return userRepository.findAll();
+    }
+
+    public Optional<User> findUserById(Long id) {
+        return userRepository.findById(id);
+    }
+
+    public User saveUser(User user) {
+        return userRepository.save(user);
+    }
+
+    public void deleteUser(Long id) {
+        userRepository.deleteById(id);
+    }
+}
+```
+
+### Spring Repository
+
+```java
+package com.example.demo.repository;
+
+import com.example.demo.model.User;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface UserRepository extends JpaRepository<User, Long> {
+    // Spring Data JPA provides CRUD operations out of the box
+    // Custom queries can be added here
+}
+```
+
+### Spring Entity
+
+```java
+package com.example.demo.model;
+
+import javax.persistence.*;
+
+@Entity
+@Table(name = "users")
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(nullable = false)
+    private String name;
+
+    @Column(nullable = false, unique = true)
+    private String email;
+
+    @Column
+    private String role;
+
+    // Default constructor required by JPA
+    public User() {
+    }
+
+    public User(String name, String email, String role) {
+        this.name = name;
+        this.email = email;
+        this.role = role;
+    }
+
+    // Getters and setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", email='" + email + '\'' +
+                ", role='" + role + '\'' +
+                '}';
+    }
+}
+```
+
+## Spring Boot Application
+
+```java
+package com.example.demo;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class DemoApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(DemoApplication.class, args);
+    }
+}
+```
+
+## Dependency Management
+
+### Maven
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.7.0</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>com.example</groupId>
+    <artifactId>demo</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>demo</name>
+    <description>Demo project for Spring Boot</description>
+    <properties>
+        <java.version>17</java.version>
+    </properties>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>
+```
+
+### Gradle
+
+```groovy
+plugins {
+    id 'org.springframework.boot' version '2.7.0'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id 'java'
+}
+
+group = 'com.example'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '17'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    runtimeOnly 'com.h2database:h2'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+test {
+    useJUnitPlatform()
+}
+```
+
+## Configuration
+
+### Application Properties
+
+```properties
+# Server configuration
+server.port=8080
+
+# Database configuration
+spring.datasource.url=jdbc:h2:mem:testdb
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=password
+spring.jpa.database-platform=org.hibernate.dialect.H2Dialect
+spring.h2.console.enabled=true
+
+# JPA configuration
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.show-sql=true
+
+# Logging configuration
+logging.level.org.springframework=INFO
+logging.level.com.example=DEBUG
+```
+
+### YAML Configuration
+
+```yaml
+server:
+  port: 8080
+
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password: password
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+  h2:
+    console:
+      enabled: true
+
+logging:
+  level:
+    org.springframework: INFO
+    com.example: DEBUG
+```
+
+## Spring Security
+
+```java
+package com.example.demo.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.web.SecurityFilterChain;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .authorizeRequests()
+                .antMatchers("/", "/home").permitAll()
+                .antMatchers("/api/**").authenticated()
+                .and()
+            .formLogin()
+                .loginPage("/login")
+                .permitAll()
+                .and()
+            .logout()
+                .permitAll();
+        
+        return http.build();
+    }
+
+    @Bean
+    public UserDetailsService userDetailsService() {
+        UserDetails user =
+             User.withDefaultPasswordEncoder()
+                .username("user")
+                .password("password")
+                .roles("USER")
+                .build();
+
+        return new InMemoryUserDetailsManager(user);
+    }
+}
+```
+
+## Testing
+
+### Unit Testing with JUnit and Mockito
+
+```java
+package com.example.demo.service;
+
+import com.example.demo.model.User;
+import com.example.demo.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.*;
+
+class UserServiceTest {
+
+    @Mock
+    private UserRepository userRepository;
+
+    @InjectMocks
+    private UserService userService;
+
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
+
+    @Test
+    void findAllUsers_ShouldReturnAllUsers() {
+        // Arrange
+        User user1 = new User("John Doe", "john@example.com", "USER");
+        User user2 = new User("Jane Smith", "jane@example.com", "ADMIN");
+        List<User> expectedUsers = Arrays.asList(user1, user2);
+        
+        when(userRepository.findAll()).thenReturn(expectedUsers);
+
+        // Act
+        List<User> actualUsers = userService.findAllUsers();
+
+        // Assert
+        assertEquals(expectedUsers, actualUsers);
+        verify(userRepository, times(1)).findAll();
+    }
+
+    @Test
+    void findUserById_WhenUserExists_ShouldReturnUser() {
+        // Arrange
+        Long userId = 1L;
+        User expectedUser = new User("John Doe", "john@example.com", "USER");
+        expectedUser.setId(userId);
+        
+        when(userRepository.findById(userId)).thenReturn(Optional.of(expectedUser));
+
+        // Act
+        Optional<User> actualUser = userService.findUserById(userId);
+
+        // Assert
+        assertTrue(actualUser.isPresent());
+        assertEquals(expectedUser, actualUser.get());
+        verify(userRepository, times(1)).findById(userId);
+    }
+
+    @Test
+    void saveUser_ShouldReturnSavedUser() {
+        // Arrange
+        User userToSave = new User("John Doe", "john@example.com", "USER");
+        User savedUser = new User("John Doe", "john@example.com", "USER");
+        savedUser.setId(1L);
+        
+        when(userRepository.save(userToSave)).thenReturn(savedUser);
+
+        // Act
+        User actualUser = userService.saveUser(userToSave);
+
+        // Assert
+        assertEquals(savedUser, actualUser);
+        verify(userRepository, times(1)).save(userToSave);
+    }
+
+    @Test
+    void deleteUser_ShouldCallRepositoryDeleteById() {
+        // Arrange
+        Long userId = 1L;
+
+        // Act
+        userService.deleteUser(userId);
+
+        // Assert
+        verify(userRepository, times(1)).deleteById(userId);
+    }
+}
+```
+
+### Integration Testing with Spring Boot Test
+
+```java
+package com.example.demo.controller;
+
+import com.example.demo.model.User;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.web.servlet.MockMvc;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+class UserControllerIntegrationTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    @Test
+    void getAllUsers_ShouldReturnUsers() throws Exception {
+        mockMvc.perform(get("/api/users"))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+    }
+
+    @Test
+    void createUser_ShouldReturnCreatedUser() throws Exception {
+        User user = new User("Test User", "test@example.com", "USER");
+        
+        mockMvc.perform(post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(user)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Test User"))
+                .andExpect(jsonPath("$.email").value("test@example.com"))
+                .andExpect(jsonPath("$.role").value("USER"));
+    }
+
+    @Test
+    void getUserById_WhenUserExists_ShouldReturnUser() throws Exception {
+        // First create a user
+        User user = new User("Test User", "test@example.com", "USER");
+        
+        String response = mockMvc.perform(post("/api/users")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(user)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        
+        User createdUser = objectMapper.readValue(response, User.class);
+        
+        // Then get the user by ID
+        mockMvc.perform(get("/api/users/{id}", createdUser.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Test User"))
+                .andExpect(jsonPath("$.email").value("test@example.com"))
+                .andExpect(jsonPath("$.role").value("USER"));
+    }
+}
+```
+
+## Frontend Integration
+
+### Thymeleaf Templates
+
+```html
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>User List</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>User List</h1>
+        
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="user : ${users}">
+                    <td th:text="${user.id}"></td>
+                    <td th:text="${user.name}"></td>
+                    <td th:text="${user.email}"></td>
+                    <td th:text="${user.role}"></td>
+                    <td>
+                        <a th:href="@{/users/{id}(id=${user.id})}" class="btn btn-info btn-sm">View</a>
+                        <a th:href="@{/users/{id}/edit(id=${user.id})}" class="btn btn-primary btn-sm">Edit</a>
+                        <form th:action="@{/users/{id}/delete(id=${user.id})}" method="post" style="display: inline;">
+                            <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <a href="/users/new" class="btn btn-success">Add New User</a>
+    </div>
+</body>
+</html>
+```
+
+### RESTful API with Spring MVC
+
+```java
+package com.example.demo.controller;
+
+import com.example.demo.model.User;
+import com.example.demo.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+
+import javax.validation.Valid;
+import java.util.List;
+
+@Controller
+@RequestMapping("/users")
+public class UserViewController {
+
+    private final UserService userService;
+
+    @Autowired
+    public UserViewController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @GetMapping
+    public String listUsers(Model model) {
+        List<User> users = userService.findAllUsers();
+        model.addAttribute("users", users);
+        return "users/list";
+    }
+
+    @GetMapping("/{id}")
+    public String viewUser(@PathVariable Long id, Model model) {
+        userService.findUserById(id).ifPresent(user -> model.addAttribute("user", user));
+        return "users/view";
+    }
+
+    @GetMapping("/new")
+    public String newUserForm(Model model) {
+        model.addAttribute("user", new User());
+        return "users/form";
+    }
+
+    @PostMapping
+    public String createUser(@Valid @ModelAttribute User user, BindingResult result) {
+        if (result.hasErrors()) {
+            return "users/form";
+        }
+        userService.saveUser(user);
+        return "redirect:/users";
+    }
+
+    @GetMapping("/{id}/edit")
+    public String editUserForm(@PathVariable Long id, Model model) {
+        userService.findUserById(id).ifPresent(user -> model.addAttribute("user", user));
+        return "users/form";
+    }
+
+    @PostMapping("/{id}")
+    public String updateUser(@PathVariable Long id, @Valid @ModelAttribute User user, BindingResult result) {
+        if (result.hasErrors()) {
+            return "users/form";
+        }
+        user.setId(id);
+        userService.saveUser(user);
+        return "redirect:/users";
+    }
+
+    @PostMapping("/{id}/delete")
+    public String deleteUser(@PathVariable Long id) {
+        userService.deleteUser(id);
+        return "redirect:/users";
+    }
+}
+```
+
+## Spring Boot Actuator
+
+```java
+// application.properties
+management.endpoints.web.exposure.include=health,info,metrics,prometheus
+management.endpoint.health.show-details=always
+```
+
+## Cross-Platform Development
+
+### Spring Boot with JavaFX
+
+```java
+package com.example.demo;
+
+import javafx.application.Application;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
+import javafx.stage.Stage;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.ConfigurableApplicationContext;
+
+@SpringBootApplication
+public class JavaFxApplication extends Application {
+
+    private ConfigurableApplicationContext springContext;
+    private Parent rootNode;
+
+    public static void main(String[] args) {
+        Application.launch(args);
+    }
+
+    @Override
+    public void init() throws Exception {
+        springContext = SpringApplication.run(JavaFxApplication.class);
+        FXMLLoader fxmlLoader = new FXMLLoader(getClass().getResource("/fxml/main.fxml"));
+        fxmlLoader.setControllerFactory(springContext::getBean);
+        rootNode = fxmlLoader.load();
+    }
+
+    @Override
+    public void start(Stage stage) {
+        stage.setScene(new Scene(rootNode, 800, 600));
+        stage.setTitle("Spring Boot with JavaFX");
+        stage.show();
+    }
+
+    @Override
+    public void stop() {
+        springContext.close();
+    }
+}
+```
+
+### Spring Boot with Android
+
+```java
+// build.gradle (Android app)
+dependencies {
+    implementation 'org.springframework.android:spring-android-rest-template:2.0.0.M3'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.13.0'
+    // Other Android dependencies
+}
+```
+
+```java
+// Android Activity
+public class MainActivity extends AppCompatActivity {
+
+    private RestTemplate restTemplate;
+    private static final String BASE_URL = "https://api.example.com";
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        // Initialize RestTemplate
+        restTemplate = new RestTemplate();
+        restTemplate.getMessageConverters().add(new MappingJackson2HttpMessageConverter());
+
+        // Fetch users
+        new FetchUsersTask().execute();
+    }
+
+    private class FetchUsersTask extends AsyncTask<Void, Void, List<User>> {
+        @Override
+        protected List<User> doInBackground(Void... params) {
+            try {
+                ResponseEntity<List<User>> response = restTemplate.exchange(
+                        BASE_URL + "/api/users",
+                        HttpMethod.GET,
+                        null,
+                        new ParameterizedTypeReference<List<User>>() {}
+                );
+                return response.getBody();
+            } catch (Exception e) {
+                Log.e("MainActivity", "Error fetching users", e);
+                return null;
+            }
+        }
+
+        @Override
+        protected void onPostExecute(List<User> users) {
+            if (users != null) {
+                // Update UI with users
+                updateUserList(users);
+            } else {
+                // Show error
+                Toast.makeText(MainActivity.this, "Error fetching users", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+    private void updateUserList(List<User> users) {
+        // Update RecyclerView or ListView with users
+    }
+}
+```
+
+## Best Practices
+
+1. **Use Spring Boot**: For rapid application development
+2. **Implement Layered Architecture**: Controller, Service, Repository
+3. **Use Dependency Injection**: For loose coupling and testability
+4. **Implement Proper Exception Handling**: For better error responses
+5. **Use Spring Data JPA**: For database operations
+6. **Implement Proper Validation**: For input validation
+7. **Use Spring Security**: For authentication and authorization
+8. **Implement Proper Logging**: For debugging and monitoring
+9. **Use Spring Boot Actuator**: For application monitoring
+10. **Follow RESTful API Design**: For consistent API design

@@ -1,0 +1,159 @@
+import 'package:flutter/material.dart';
+
+// Teemo UI Card Widget Template for Flutter
+// This template provides a customizable card widget with header, content, and footer sections
+
+enum TeemoCardVariant {
+  defaultCard,
+  outlined,
+  elevated,
+  flat,
+}
+
+class TeemoCard extends StatelessWidget {
+  final Widget? header;
+  final Widget content;
+  final Widget? footer;
+  final TeemoCardVariant variant;
+  final double borderRadius;
+  final EdgeInsetsGeometry contentPadding;
+  final EdgeInsetsGeometry headerPadding;
+  final EdgeInsetsGeometry footerPadding;
+  final Color? backgroundColor;
+  final Color? borderColor;
+
+  const TeemoCard({
+    Key? key,
+    this.header,
+    required this.content,
+    this.footer,
+    this.variant = TeemoCardVariant.defaultCard,
+    this.borderRadius = 8.0,
+    this.contentPadding = const EdgeInsets.all(16.0),
+    this.headerPadding = const EdgeInsets.all(16.0),
+    this.footerPadding = const EdgeInsets.all(16.0),
+    this.backgroundColor,
+    this.borderColor,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    
+    // Default colors based on theme
+    final defaultBackgroundColor = isDarkMode ? Color(0xFF1F2937) : Colors.white;
+    final defaultBorderColor = isDarkMode ? Color(0xFF374151) : Color(0xFFE5E7EB);
+    
+    // Apply variant-specific styling
+    BoxDecoration decoration;
+    switch (variant) {
+      case TeemoCardVariant.defaultCard:
+        decoration = BoxDecoration(
+          color: backgroundColor ?? defaultBackgroundColor,
+          borderRadius: BorderRadius.circular(borderRadius),
+          border: Border.all(
+            color: borderColor ?? defaultBorderColor,
+            width: 1.0,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 3,
+              offset: Offset(0, 1),
+            ),
+          ],
+        );
+        break;
+      case TeemoCardVariant.outlined:
+        decoration = BoxDecoration(
+          color: backgroundColor ?? defaultBackgroundColor,
+          borderRadius: BorderRadius.circular(borderRadius),
+          border: Border.all(
+            color: borderColor ?? defaultBorderColor,
+            width: 1.0,
+          ),
+        );
+        break;
+      case TeemoCardVariant.elevated:
+        decoration = BoxDecoration(
+          color: backgroundColor ?? defaultBackgroundColor,
+          borderRadius: BorderRadius.circular(borderRadius),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 6,
+              offset: Offset(0, 4),
+            ),
+            BoxShadow(
+              color: Colors.black.withOpacity(0.06),
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
+        );
+        break;
+      case TeemoCardVariant.flat:
+        decoration = BoxDecoration(
+          color: backgroundColor ?? defaultBackgroundColor,
+          borderRadius: BorderRadius.circular(borderRadius),
+        );
+        break;
+    }
+
+    return Container(
+      decoration: decoration,
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (header != null) _buildHeader(defaultBorderColor),
+          _buildContent(),
+          if (footer != null) _buildFooter(defaultBorderColor),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeader(Color defaultBorderColor) {
+    return Container(
+      padding: headerPadding,
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(
+            color: borderColor ?? defaultBorderColor,
+            width: 1.0,
+          ),
+        ),
+      ),
+      child: DefaultTextStyle(
+        style: TextStyle(
+          fontWeight: FontWeight.w500,
+        ),
+        child: header!,
+      ),
+    );
+  }
+
+  Widget _buildContent() {
+    return Padding(
+      padding: contentPadding,
+      child: content,
+    );
+  }
+
+  Widget _buildFooter(Color defaultBorderColor) {
+    return Container(
+      padding: footerPadding,
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(
+            color: borderColor ?? defaultBorderColor,
+            width: 1.0,
+          ),
+        ),
+      ),
+      child: footer!,
+    );
+  }
+}

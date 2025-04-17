@@ -1,0 +1,617 @@
+{
+  "annotations": {
+    "list": [
+      {{#annotations}}
+      {
+        "builtIn": {{#built_in}}{{.}}{{/built_in}}{{^built_in}}0{{/built_in}},
+        "datasource": "{{#datasource}}{{.}}{{/datasource}}{{^datasource}}-- Grafana --{{/datasource}}",
+        "enable": {{#enable}}{{.}}{{/enable}}{{^enable}}true{{/enable}},
+        "hide": {{#hide}}{{.}}{{/hide}}{{^hide}}false{{/hide}},
+        "iconColor": "{{#icon_color}}{{.}}{{/icon_color}}{{^icon_color}}rgba(0, 211, 255, 1){{/icon_color}}",
+        "name": "{{#name}}{{.}}{{/name}}{{^name}}Annotations & Alerts{{/name}}",
+        "type": "{{#type}}{{.}}{{/type}}{{^type}}dashboard{{/type}}"
+      }{{^last}},{{/last}}
+      {{/annotations}}
+      {{^annotations}}
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+      {{/annotations}}
+    ]
+  },
+  "editable": {{#editable}}{{.}}{{/editable}}{{^editable}}true{{/editable}},
+  "gnetId": {{#gnet_id}}{{.}}{{/gnet_id}}{{^gnet_id}}null{{/gnet_id}},
+  "graphTooltip": {{#graph_tooltip}}{{.}}{{/graph_tooltip}}{{^graph_tooltip}}0{{/graph_tooltip}},
+  "id": {{#id}}{{.}}{{/id}}{{^id}}null{{/id}},
+  "links": {{#links}}{{.}}{{/links}}{{^links}}[]{{/links}},
+  "panels": [
+    {{#panels}}
+    {
+      "aliasColors": {},
+      "bars": {{#bars}}{{.}}{{/bars}}{{^bars}}false{{/bars}},
+      "dashLength": {{#dash_length}}{{.}}{{/dash_length}}{{^dash_length}}10{{/dash_length}},
+      "dashes": {{#dashes}}{{.}}{{/dashes}}{{^dashes}}false{{/dashes}},
+      "datasource": "{{#datasource}}{{.}}{{/datasource}}{{^datasource}}Prometheus{{/datasource}}",
+      "fill": {{#fill}}{{.}}{{/fill}}{{^fill}}1{{/fill}},
+      "fillGradient": {{#fill_gradient}}{{.}}{{/fill_gradient}}{{^fill_gradient}}0{{/fill_gradient}},
+      "gridPos": {
+        "h": {{#height}}{{.}}{{/height}}{{^height}}9{{/height}},
+        "w": {{#width}}{{.}}{{/width}}{{^width}}12{{/width}},
+        "x": {{#x}}{{.}}{{/x}}{{^x}}0{{/x}},
+        "y": {{#y}}{{.}}{{/y}}{{^y}}0{{/y}}
+      },
+      "hiddenSeries": {{#hidden_series}}{{.}}{{/hidden_series}}{{^hidden_series}}false{{/hidden_series}},
+      "id": {{#id}}{{.}}{{/id}}{{^id}}1{{/id}},
+      "legend": {
+        "avg": {{#legend_avg}}{{.}}{{/legend_avg}}{{^legend_avg}}false{{/legend_avg}},
+        "current": {{#legend_current}}{{.}}{{/legend_current}}{{^legend_current}}false{{/legend_current}},
+        "max": {{#legend_max}}{{.}}{{/legend_max}}{{^legend_max}}false{{/legend_max}},
+        "min": {{#legend_min}}{{.}}{{/legend_min}}{{^legend_min}}false{{/legend_min}},
+        "show": {{#legend_show}}{{.}}{{/legend_show}}{{^legend_show}}true{{/legend_show}},
+        "total": {{#legend_total}}{{.}}{{/legend_total}}{{^legend_total}}false{{/legend_total}},
+        "values": {{#legend_values}}{{.}}{{/legend_values}}{{^legend_values}}false{{/legend_values}}
+      },
+      "lines": {{#lines}}{{.}}{{/lines}}{{^lines}}true{{/lines}},
+      "linewidth": {{#linewidth}}{{.}}{{/linewidth}}{{^linewidth}}1{{/linewidth}},
+      "nullPointMode": "{{#null_point_mode}}{{.}}{{/null_point_mode}}{{^null_point_mode}}null{{/null_point_mode}}",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": {{#percentage}}{{.}}{{/percentage}}{{^percentage}}false{{/percentage}},
+      "pointradius": {{#pointradius}}{{.}}{{/pointradius}}{{^pointradius}}2{{/pointradius}},
+      "points": {{#points}}{{.}}{{/points}}{{^points}}false{{/points}},
+      "renderer": "{{#renderer}}{{.}}{{/renderer}}{{^renderer}}flot{{/renderer}}",
+      "seriesOverrides": [],
+      "spaceLength": {{#space_length}}{{.}}{{/space_length}}{{^space_length}}10{{/space_length}},
+      "stack": {{#stack}}{{.}}{{/stack}}{{^stack}}false{{/stack}},
+      "steppedLine": {{#stepped_line}}{{.}}{{/stepped_line}}{{^stepped_line}}false{{/stepped_line}},
+      "targets": [
+        {{#targets}}
+        {
+          "expr": "{{expr}}",
+          "interval": "{{#interval}}{{.}}{{/interval}}{{^interval}}{{/interval}}",
+          "legendFormat": "{{#legend_format}}{{.}}{{/legend_format}}{{^legend_format}}{{/legend_format}}",
+          "refId": "{{#ref_id}}{{.}}{{/ref_id}}{{^ref_id}}A{{/ref_id}}"
+        }{{^last}},{{/last}}
+        {{/targets}}
+        {{^targets}}
+        {
+          "expr": "rate(http_requests_total{job=\"{{project_name}}\"}[5m])",
+          "interval": "",
+          "legendFormat": "{{'{{'}}method{{'}}'}} - {{'{{'}}path{{'}}'}}",
+          "refId": "A"
+        }
+        {{/targets}}
+      ],
+      "thresholds": [],
+      "timeFrom": {{#time_from}}{{.}}{{/time_from}}{{^time_from}}null{{/time_from}},
+      "timeRegions": [],
+      "timeShift": {{#time_shift}}{{.}}{{/time_shift}}{{^time_shift}}null{{/time_shift}},
+      "title": "{{#title}}{{.}}{{/title}}{{^title}}HTTP Request Rate{{/title}}",
+      "tooltip": {
+        "shared": {{#tooltip_shared}}{{.}}{{/tooltip_shared}}{{^tooltip_shared}}true{{/tooltip_shared}},
+        "sort": {{#tooltip_sort}}{{.}}{{/tooltip_sort}}{{^tooltip_sort}}0{{/tooltip_sort}},
+        "value_type": "{{#tooltip_value_type}}{{.}}{{/tooltip_value_type}}{{^tooltip_value_type}}individual{{/tooltip_value_type}}"
+      },
+      "type": "{{#type}}{{.}}{{/type}}{{^type}}graph{{/type}}",
+      "xaxis": {
+        "buckets": {{#xaxis_buckets}}{{.}}{{/xaxis_buckets}}{{^xaxis_buckets}}null{{/xaxis_buckets}},
+        "mode": "{{#xaxis_mode}}{{.}}{{/xaxis_mode}}{{^xaxis_mode}}time{{/xaxis_mode}}",
+        "name": {{#xaxis_name}}{{.}}{{/xaxis_name}}{{^xaxis_name}}null{{/xaxis_name}},
+        "show": {{#xaxis_show}}{{.}}{{/xaxis_show}}{{^xaxis_show}}true{{/xaxis_show}},
+        "values": {{#xaxis_values}}{{.}}{{/xaxis_values}}{{^xaxis_values}}[]{{/xaxis_values}}
+      },
+      "yaxes": [
+        {
+          "format": "{{#y1_format}}{{.}}{{/y1_format}}{{^y1_format}}short{{/y1_format}}",
+          "label": {{#y1_label}}{{.}}{{/y1_label}}{{^y1_label}}null{{/y1_label}},
+          "logBase": {{#y1_log_base}}{{.}}{{/y1_log_base}}{{^y1_log_base}}1{{/y1_log_base}},
+          "max": {{#y1_max}}{{.}}{{/y1_max}}{{^y1_max}}null{{/y1_max}},
+          "min": {{#y1_min}}{{.}}{{/y1_min}}{{^y1_min}}null{{/y1_min}},
+          "show": {{#y1_show}}{{.}}{{/y1_show}}{{^y1_show}}true{{/y1_show}}
+        },
+        {
+          "format": "{{#y2_format}}{{.}}{{/y2_format}}{{^y2_format}}short{{/y2_format}}",
+          "label": {{#y2_label}}{{.}}{{/y2_label}}{{^y2_label}}null{{/y2_label}},
+          "logBase": {{#y2_log_base}}{{.}}{{/y2_log_base}}{{^y2_log_base}}1{{/y2_log_base}},
+          "max": {{#y2_max}}{{.}}{{/y2_max}}{{^y2_max}}null{{/y2_max}},
+          "min": {{#y2_min}}{{.}}{{/y2_min}}{{^y2_min}}null{{/y2_min}},
+          "show": {{#y2_show}}{{.}}{{/y2_show}}{{^y2_show}}true{{/y2_show}}
+        }
+      ],
+      "yaxis": {
+        "align": {{#yaxis_align}}{{.}}{{/yaxis_align}}{{^yaxis_align}}false{{/yaxis_align}},
+        "alignLevel": {{#yaxis_align_level}}{{.}}{{/yaxis_align_level}}{{^yaxis_align_level}}null{{/yaxis_align_level}}
+      }
+    }{{^last}},{{/last}}
+    {{/panels}}
+    {{^panels}}
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "hiddenSeries": false,
+      "id": 1,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(http_requests_total{job=\"{{project_name}}\"}[5m])",
+          "interval": "",
+          "legendFormat": "{{'{{'}}method{{'}}'}} - {{'{{'}}path{{'}}'}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "HTTP Request Rate",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "hiddenSeries": false,
+      "id": 2,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(http_request_duration_seconds_sum{job=\"{{project_name}}\"}[5m]) / rate(http_request_duration_seconds_count{job=\"{{project_name}}\"}[5m])",
+          "interval": "",
+          "legendFormat": "{{'{{'}}method{{'}}'}} - {{'{{'}}path{{'}}'}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "HTTP Request Duration",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "s",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "hiddenSeries": false,
+      "id": 3,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(http_requests_total{job=\"{{project_name}}\", status_code=~\"5..\"}[5m])",
+          "interval": "",
+          "legendFormat": "{{'{{'}}method{{'}}'}} - {{'{{'}}path{{'}}'}}",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "HTTP 5xx Error Rate",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "hiddenSeries": false,
+      "id": 4,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "process_resident_memory_bytes{job=\"{{project_name}}\"}",
+          "interval": "",
+          "legendFormat": "Memory",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Memory Usage",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "hiddenSeries": false,
+      "id": 5,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 1,
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "rate(process_cpu_seconds_total{job=\"{{project_name}}\"}[5m])",
+          "interval": "",
+          "legendFormat": "CPU",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "CPU Usage",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "percentunit",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    }
+    {{/panels}}
+  ],
+  "refresh": "{{#refresh}}{{.}}{{/refresh}}{{^refresh}}5s{{/refresh}}",
+  "schemaVersion": {{#schema_version}}{{.}}{{/schema_version}}{{^schema_version}}22{{/schema_version}},
+  "style": "{{#style}}{{.}}{{/style}}{{^style}}dark{{/style}}",
+  "tags": {{#tags}}{{.}}{{/tags}}{{^tags}}["{{project_name}}"]{{/tags}},
+  "templating": {
+    "list": {{#templating_list}}{{.}}{{/templating_list}}{{^templating_list}}[]{{/templating_list}}
+  },
+  "time": {
+    "from": "{{#time_from}}{{.}}{{/time_from}}{{^time_from}}now-6h{{/time_from}}",
+    "to": "{{#time_to}}{{.}}{{/time_to}}{{^time_to}}now{{/time_to}}"
+  },
+  "timepicker": {
+    "refresh_intervals": {{#refresh_intervals}}{{.}}{{/refresh_intervals}}{{^refresh_intervals}}[
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ]{{/refresh_intervals}},
+    "time_options": {{#time_options}}{{.}}{{/time_options}}{{^time_options}}[
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]{{/time_options}}
+  },
+  "timezone": "{{#timezone}}{{.}}{{/timezone}}{{^timezone}}browser{{/timezone}}",
+  "title": "{{#dashboard_title}}{{.}}{{/dashboard_title}}{{^dashboard_title}}{{project_name}} Dashboard{{/dashboard_title}}",
+  "uid": "{{#uid}}{{.}}{{/uid}}{{^uid}}{{project_name}}-dashboard{{/uid}}",
+  "version": {{#version}}{{.}}{{/version}}{{^version}}1{{/version}}
+}

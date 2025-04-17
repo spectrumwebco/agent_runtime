@@ -1,0 +1,537 @@
+{{#typescript}}
+import React, { useEffect, useRef } from 'react';
+{{#chart_library}}
+{{#chart_js}}
+import { Chart, registerables } from 'chart.js';
+Chart.register(...registerables);
+{{/chart_js}}
+{{#d3}}
+import * as d3 from 'd3';
+{{/d3}}
+{{#recharts}}
+import {
+  ResponsiveContainer,
+  {{#chart_type}}
+  {{#line}}LineChart, Line,{{/line}}
+  {{#bar}}BarChart, Bar,{{/bar}}
+  {{#pie}}PieChart, Pie, Cell,{{/pie}}
+  {{#area}}AreaChart, Area,{{/area}}
+  {{/chart_type}}
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend
+} from 'recharts';
+{{/recharts}}
+{{/chart_library}}
+
+interface {{chart_name}}Props {
+  data: any[];
+  {{#chart_library}}
+  {{#chart_js}}
+  type: 'line' | 'bar' | 'pie' | 'doughnut' | 'radar' | 'polarArea' | 'bubble' | 'scatter';
+  options?: any;
+  {{/chart_js}}
+  {{/chart_library}}
+  width?: number | string;
+  height?: number | string;
+  title?: string;
+  className?: string;
+  {{#features}}
+  {{#responsive}}responsive?: boolean;{{/responsive}}
+  {{#legend}}showLegend?: boolean;{{/legend}}
+  {{#tooltip}}showTooltip?: boolean;{{/tooltip}}
+  {{#animation}}animation?: boolean;{{/animation}}
+  {{/features}}
+}
+
+const {{chart_name}} = ({
+  data,
+  {{#chart_library}}
+  {{#chart_js}}
+  type,
+  options = {},
+  {{/chart_js}}
+  {{/chart_library}}
+  width = '100%',
+  height = 400,
+  title,
+  className = '',
+  {{#features}}
+  {{#responsive}}responsive = true,{{/responsive}}
+  {{#legend}}showLegend = true,{{/legend}}
+  {{#tooltip}}showTooltip = true,{{/tooltip}}
+  {{#animation}}animation = true,{{/animation}}
+  {{/features}}
+}: {{chart_name}}Props) => {
+  {{#chart_library}}
+  {{#chart_js}}
+  const chartRef = useRef<HTMLCanvasElement>(null);
+  const chartInstance = useRef<Chart | null>(null);
+
+  useEffect(() => {
+    if (chartRef.current) {
+      if (chartInstance.current) {
+        chartInstance.current.destroy();
+      }
+
+      const ctx = chartRef.current.getContext('2d');
+      if (ctx) {
+        const config = {
+          type,
+          data,
+          options: {
+            responsive: {{#features}}{{#responsive}}responsive{{/responsive}}{{^responsive}}true{{/responsive}}{{/features}},
+            maintainAspectRatio: false,
+            ...options
+          }
+        };
+        chartInstance.current = new Chart(ctx, config);
+      }
+    }
+
+    return () => {
+      if (chartInstance.current) {
+        chartInstance.current.destroy();
+      }
+    };
+  }, [data, options, type]);
+
+  return (
+    <div className={`${className} chart-container`} style={{ width, height }}>
+      {title && <h3 className="chart-title">{title}</h3>}
+      <canvas ref={chartRef} />
+    </div>
+  );
+  {{/chart_js}}
+  
+  {{#d3}}
+  const svgRef = useRef<SVGSVGElement>(null);
+
+  useEffect(() => {
+    if (!svgRef.current || !data.length) return;
+    
+    // D3 chart implementation
+    const svg = d3.select(svgRef.current);
+    svg.selectAll('*').remove();
+    
+    // Chart rendering logic based on chart type
+    {{#chart_type}}
+    {{#line}}
+    // Line chart implementation
+    {{/line}}
+    {{#bar}}
+    // Bar chart implementation
+    {{/bar}}
+    {{#pie}}
+    // Pie chart implementation
+    {{/pie}}
+    {{/chart_type}}
+    
+    // Add features
+    {{#features}}
+    {{#tooltip}}
+    // Add tooltip if enabled
+    if (showTooltip) {
+      // Tooltip implementation
+    }
+    {{/tooltip}}
+    {{#legend}}
+    // Add legend if enabled
+    if (showLegend) {
+      // Legend implementation
+    }
+    {{/legend}}
+    {{/features}}
+  }, [data, width, height]);
+
+  return (
+    <div className={`${className} chart-container`} style={{ width, height }}>
+      {title && <h3 className="chart-title">{title}</h3>}
+      <svg ref={svgRef}></svg>
+    </div>
+  );
+  {{/d3}}
+  
+  {{#recharts}}
+  return (
+    <div className={`${className} chart-container`} style={{ width, height }}>
+      {title && <h3 className="chart-title">{title}</h3>}
+      
+      <ResponsiveContainer width="100%" height="100%">
+        {{#chart_type}}
+        {{#line}}
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          {{#features}}
+          {{#tooltip}}
+          {showTooltip && <Tooltip />}
+          {{/tooltip}}
+          {{#legend}}
+          {showLegend && <Legend />}
+          {{/legend}}
+          {{/features}}
+          <Line 
+            type="monotone" 
+            dataKey="value" 
+            stroke="#8884d8" 
+            {{#features}}
+            {{#animation}}
+            isAnimationActive={animation}
+            {{/animation}}
+            {{/features}}
+          />
+        </LineChart>
+        {{/line}}
+        
+        {{#bar}}
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          {{#features}}
+          {{#tooltip}}
+          {showTooltip && <Tooltip />}
+          {{/tooltip}}
+          {{#legend}}
+          {showLegend && <Legend />}
+          {{/legend}}
+          {{/features}}
+          <Bar 
+            dataKey="value" 
+            fill="#8884d8" 
+            {{#features}}
+            {{#animation}}
+            isAnimationActive={animation}
+            {{/animation}}
+            {{/features}}
+          />
+        </BarChart>
+        {{/bar}}
+        
+        {{#pie}}
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            outerRadius={80}
+            fill="#8884d8"
+            label
+            {{#features}}
+            {{#animation}}
+            isAnimationActive={animation}
+            {{/animation}}
+            {{/features}}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={`#${Math.floor(Math.random()*16777215).toString(16)}`} />
+            ))}
+          </Pie>
+          {{#features}}
+          {{#tooltip}}
+          {showTooltip && <Tooltip />}
+          {{/tooltip}}
+          {{#legend}}
+          {showLegend && <Legend />}
+          {{/legend}}
+          {{/features}}
+        </PieChart>
+        {{/pie}}
+        
+        {{#area}}
+        <AreaChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          {{#features}}
+          {{#tooltip}}
+          {showTooltip && <Tooltip />}
+          {{/tooltip}}
+          {{#legend}}
+          {showLegend && <Legend />}
+          {{/legend}}
+          {{/features}}
+          <Area 
+            type="monotone" 
+            dataKey="value" 
+            fill="#8884d8" 
+            stroke="#8884d8" 
+            {{#features}}
+            {{#animation}}
+            isAnimationActive={animation}
+            {{/animation}}
+            {{/features}}
+          />
+        </AreaChart>
+        {{/area}}
+        {{/chart_type}}
+      </ResponsiveContainer>
+    </div>
+  );
+  {{/recharts}}
+  {{/chart_library}}
+};
+
+export default {{chart_name}};
+{{/typescript}}
+
+{{^typescript}}
+import React, { useEffect, useRef } from 'react';
+{{#chart_library}}
+{{#chart_js}}
+import { Chart, registerables } from 'chart.js';
+Chart.register(...registerables);
+{{/chart_js}}
+{{#d3}}
+import * as d3 from 'd3';
+{{/d3}}
+{{#recharts}}
+import {
+  ResponsiveContainer,
+  {{#chart_type}}
+  {{#line}}LineChart, Line,{{/line}}
+  {{#bar}}BarChart, Bar,{{/bar}}
+  {{#pie}}PieChart, Pie, Cell,{{/pie}}
+  {{#area}}AreaChart, Area,{{/area}}
+  {{/chart_type}}
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend
+} from 'recharts';
+{{/recharts}}
+{{/chart_library}}
+
+const {{chart_name}} = ({
+  data,
+  {{#chart_library}}
+  {{#chart_js}}
+  type,
+  options = {},
+  {{/chart_js}}
+  {{/chart_library}}
+  width = '100%',
+  height = 400,
+  title,
+  className = '',
+  {{#features}}
+  {{#responsive}}responsive = true,{{/responsive}}
+  {{#legend}}showLegend = true,{{/legend}}
+  {{#tooltip}}showTooltip = true,{{/tooltip}}
+  {{#animation}}animation = true,{{/animation}}
+  {{/features}}
+}) => {
+  {{#chart_library}}
+  {{#chart_js}}
+  const chartRef = useRef(null);
+  const chartInstance = useRef(null);
+
+  useEffect(() => {
+    if (chartRef.current) {
+      if (chartInstance.current) {
+        chartInstance.current.destroy();
+      }
+
+      const ctx = chartRef.current.getContext('2d');
+      if (ctx) {
+        const config = {
+          type,
+          data,
+          options: {
+            responsive: {{#features}}{{#responsive}}responsive{{/responsive}}{{^responsive}}true{{/responsive}}{{/features}},
+            maintainAspectRatio: false,
+            ...options
+          }
+        };
+        chartInstance.current = new Chart(ctx, config);
+      }
+    }
+
+    return () => {
+      if (chartInstance.current) {
+        chartInstance.current.destroy();
+      }
+    };
+  }, [data, options, type]);
+
+  return (
+    <div className={`${className} chart-container`} style={{ width, height }}>
+      {title && <h3 className="chart-title">{title}</h3>}
+      <canvas ref={chartRef} />
+    </div>
+  );
+  {{/chart_js}}
+  
+  {{#d3}}
+  const svgRef = useRef(null);
+
+  useEffect(() => {
+    if (!svgRef.current || !data.length) return;
+    
+    // D3 chart implementation
+    const svg = d3.select(svgRef.current);
+    svg.selectAll('*').remove();
+    
+    // Chart rendering logic based on chart type
+    {{#chart_type}}
+    {{#line}}
+    // Line chart implementation
+    {{/line}}
+    {{#bar}}
+    // Bar chart implementation
+    {{/bar}}
+    {{#pie}}
+    // Pie chart implementation
+    {{/pie}}
+    {{/chart_type}}
+    
+    // Add features
+    {{#features}}
+    {{#tooltip}}
+    // Add tooltip if enabled
+    if (showTooltip) {
+      // Tooltip implementation
+    }
+    {{/tooltip}}
+    {{#legend}}
+    // Add legend if enabled
+    if (showLegend) {
+      // Legend implementation
+    }
+    {{/legend}}
+    {{/features}}
+  }, [data, width, height]);
+
+  return (
+    <div className={`${className} chart-container`} style={{ width, height }}>
+      {title && <h3 className="chart-title">{title}</h3>}
+      <svg ref={svgRef}></svg>
+    </div>
+  );
+  {{/d3}}
+  
+  {{#recharts}}
+  return (
+    <div className={`${className} chart-container`} style={{ width, height }}>
+      {title && <h3 className="chart-title">{title}</h3>}
+      
+      <ResponsiveContainer width="100%" height="100%">
+        {{#chart_type}}
+        {{#line}}
+        <LineChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          {{#features}}
+          {{#tooltip}}
+          {showTooltip && <Tooltip />}
+          {{/tooltip}}
+          {{#legend}}
+          {showLegend && <Legend />}
+          {{/legend}}
+          {{/features}}
+          <Line 
+            type="monotone" 
+            dataKey="value" 
+            stroke="#8884d8" 
+            {{#features}}
+            {{#animation}}
+            isAnimationActive={animation}
+            {{/animation}}
+            {{/features}}
+          />
+        </LineChart>
+        {{/line}}
+        
+        {{#bar}}
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          {{#features}}
+          {{#tooltip}}
+          {showTooltip && <Tooltip />}
+          {{/tooltip}}
+          {{#legend}}
+          {showLegend && <Legend />}
+          {{/legend}}
+          {{/features}}
+          <Bar 
+            dataKey="value" 
+            fill="#8884d8" 
+            {{#features}}
+            {{#animation}}
+            isAnimationActive={animation}
+            {{/animation}}
+            {{/features}}
+          />
+        </BarChart>
+        {{/bar}}
+        
+        {{#pie}}
+        <PieChart>
+          <Pie
+            data={data}
+            dataKey="value"
+            nameKey="name"
+            cx="50%"
+            cy="50%"
+            outerRadius={80}
+            fill="#8884d8"
+            label
+            {{#features}}
+            {{#animation}}
+            isAnimationActive={animation}
+            {{/animation}}
+            {{/features}}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={`#${Math.floor(Math.random()*16777215).toString(16)}`} />
+            ))}
+          </Pie>
+          {{#features}}
+          {{#tooltip}}
+          {showTooltip && <Tooltip />}
+          {{/tooltip}}
+          {{#legend}}
+          {showLegend && <Legend />}
+          {{/legend}}
+          {{/features}}
+        </PieChart>
+        {{/pie}}
+        
+        {{#area}}
+        <AreaChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis />
+          {{#features}}
+          {{#tooltip}}
+          {showTooltip && <Tooltip />}
+          {{/tooltip}}
+          {{#legend}}
+          {showLegend && <Legend />}
+          {{/legend}}
+          {{/features}}
+          <Area 
+            type="monotone" 
+            dataKey="value" 
+            fill="#8884d8" 
+            stroke="#8884d8" 
+            {{#features}}
+            {{#animation}}
+            isAnimationActive={animation}
+            {{/animation}}
+            {{/features}}
+          />
+        </AreaChart>
+        {{/area}}
+        {{/chart_type}}
+      </ResponsiveContainer>
+    </div>
+  );
+  {{/recharts}}
+  {{/chart_library}}
+};
+
+export default {{chart_name}};
+{{/typescript}}

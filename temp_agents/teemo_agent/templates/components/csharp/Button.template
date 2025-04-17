@@ -1,0 +1,297 @@
+using Microsoft.Maui.Controls;
+using System;
+using System.Windows.Input;
+
+namespace Teemo.UI.Controls
+{
+    // Teemo UI Button Control Template for .NET MAUI
+    // This template provides a customizable button control with various styles and states
+    
+    public enum TeemoButtonVariant
+    {
+        Primary,
+        Secondary,
+        Success,
+        Danger,
+        Warning,
+        Info,
+        Emerald,
+        Outline,
+        Ghost
+    }
+
+    public enum TeemoButtonSize
+    {
+        Small,
+        Medium,
+        Large
+    }
+
+    public class TeemoButton : ContentView
+    {
+        #region Bindable Properties
+
+        public static readonly BindableProperty TextProperty = BindableProperty.Create(
+            nameof(Text),
+            typeof(string),
+            typeof(TeemoButton),
+            string.Empty,
+            propertyChanged: OnButtonPropertyChanged);
+
+        public static readonly BindableProperty CommandProperty = BindableProperty.Create(
+            nameof(Command),
+            typeof(ICommand),
+            typeof(TeemoButton),
+            null,
+            propertyChanged: OnButtonPropertyChanged);
+
+        public static readonly BindableProperty CommandParameterProperty = BindableProperty.Create(
+            nameof(CommandParameter),
+            typeof(object),
+            typeof(TeemoButton),
+            null,
+            propertyChanged: OnButtonPropertyChanged);
+
+        public static readonly BindableProperty VariantProperty = BindableProperty.Create(
+            nameof(Variant),
+            typeof(TeemoButtonVariant),
+            typeof(TeemoButton),
+            TeemoButtonVariant.Primary,
+            propertyChanged: OnButtonPropertyChanged);
+
+        public static readonly BindableProperty SizeProperty = BindableProperty.Create(
+            nameof(Size),
+            typeof(TeemoButtonSize),
+            typeof(TeemoButton),
+            TeemoButtonSize.Medium,
+            propertyChanged: OnButtonPropertyChanged);
+
+        public static readonly BindableProperty IsLoadingProperty = BindableProperty.Create(
+            nameof(IsLoading),
+            typeof(bool),
+            typeof(TeemoButton),
+            false,
+            propertyChanged: OnButtonPropertyChanged);
+
+        public static readonly BindableProperty IconProperty = BindableProperty.Create(
+            nameof(Icon),
+            typeof(string),
+            typeof(TeemoButton),
+            null,
+            propertyChanged: OnButtonPropertyChanged);
+
+        public static readonly BindableProperty IconRightProperty = BindableProperty.Create(
+            nameof(IconRight),
+            typeof(bool),
+            typeof(TeemoButton),
+            false,
+            propertyChanged: OnButtonPropertyChanged);
+
+        #endregion
+
+        #region Properties
+
+        public string Text
+        {
+            get => (string)GetValue(TextProperty);
+            set => SetValue(TextProperty, value);
+        }
+
+        public ICommand Command
+        {
+            get => (ICommand)GetValue(CommandProperty);
+            set => SetValue(CommandProperty, value);
+        }
+
+        public object CommandParameter
+        {
+            get => GetValue(CommandParameterProperty);
+            set => SetValue(CommandParameterProperty, value);
+        }
+
+        public TeemoButtonVariant Variant
+        {
+            get => (TeemoButtonVariant)GetValue(VariantProperty);
+            set => SetValue(VariantProperty, value);
+        }
+
+        public TeemoButtonSize Size
+        {
+            get => (TeemoButtonSize)GetValue(SizeProperty);
+            set => SetValue(SizeProperty, value);
+        }
+
+        public bool IsLoading
+        {
+            get => (bool)GetValue(IsLoadingProperty);
+            set => SetValue(IsLoadingProperty, value);
+        }
+
+        public string Icon
+        {
+            get => (string)GetValue(IconProperty);
+            set => SetValue(IconProperty, value);
+        }
+
+        public bool IconRight
+        {
+            get => (bool)GetValue(IconRightProperty);
+            set => SetValue(IconRightProperty, value);
+        }
+
+        #endregion
+
+        private Button _button;
+        private ActivityIndicator _activityIndicator;
+        private Label _textLabel;
+        private Image _iconImage;
+        private StackLayout _contentLayout;
+
+        public TeemoButton()
+        {
+            Initialize();
+        }
+
+        private void Initialize()
+        {
+            _button = new Button();
+            _activityIndicator = new ActivityIndicator { IsRunning = true, Color = Colors.White };
+            _textLabel = new Label { HorizontalOptions = LayoutOptions.Center, VerticalOptions = LayoutOptions.Center };
+            _iconImage = new Image { WidthRequest = 16, HeightRequest = 16 };
+            _contentLayout = new StackLayout
+            {
+                Orientation = StackOrientation.Horizontal,
+                HorizontalOptions = LayoutOptions.Center,
+                VerticalOptions = LayoutOptions.Center,
+                Spacing = 8
+            };
+
+            _button.Clicked += OnButtonClicked;
+
+            UpdateVisualState();
+            Content = _button;
+        }
+
+        private void OnButtonClicked(object sender, EventArgs e)
+        {
+            if (IsLoading)
+                return;
+
+            if (Command != null && Command.CanExecute(CommandParameter))
+            {
+                Command.Execute(CommandParameter);
+            }
+        }
+
+        private static void OnButtonPropertyChanged(BindableObject bindable, object oldValue, object newValue)
+        {
+            if (bindable is TeemoButton button)
+            {
+                button.UpdateVisualState();
+            }
+        }
+
+        private void UpdateVisualState()
+        {
+            // Clear existing content
+            _contentLayout.Children.Clear();
+            
+            // Set button properties based on variant and size
+            _button.BackgroundColor = GetBackgroundColor();
+            _button.TextColor = GetTextColor();
+            _button.BorderColor = GetBorderColor();
+            _button.BorderWidth = Variant == TeemoButtonVariant.Outline ? 1 : 0;
+            _button.CornerRadius = 8;
+            
+            // Set padding based on size
+            switch (Size)
+            {
+                case TeemoButtonSize.Small:
+                    _button.Padding = new Thickness(12, 6);
+                    _textLabel.FontSize = 14;
+                    break;
+                case TeemoButtonSize.Medium:
+                    _button.Padding = new Thickness(16, 8);
+                    _textLabel.FontSize = 16;
+                    break;
+                case TeemoButtonSize.Large:
+                    _button.Padding = new Thickness(24, 12);
+                    _textLabel.FontSize = 18;
+                    break;
+            }
+            
+            // Set text color
+            _textLabel.TextColor = GetTextColor();
+            _textLabel.Text = Text;
+            
+            // Set icon if provided
+            if (!string.IsNullOrEmpty(Icon))
+            {
+                _iconImage.Source = Icon;
+                _iconImage.TintColor = GetTextColor();
+            }
+            
+            // Build content based on loading state and icon position
+            if (IsLoading)
+            {
+                _activityIndicator.Color = GetTextColor();
+                _contentLayout.Children.Add(_activityIndicator);
+            }
+            else
+            {
+                if (!string.IsNullOrEmpty(Icon) && !IconRight)
+                {
+                    _contentLayout.Children.Add(_iconImage);
+                }
+                
+                _contentLayout.Children.Add(_textLabel);
+                
+                if (!string.IsNullOrEmpty(Icon) && IconRight)
+                {
+                    _contentLayout.Children.Add(_iconImage);
+                }
+            }
+            
+            // Set button content and state
+            _button.Content = _contentLayout;
+            _button.IsEnabled = !IsLoading;
+            _button.Opacity = IsLoading ? 0.7 : 1.0;
+        }
+
+        private Color GetBackgroundColor()
+        {
+            return Variant switch
+            {
+                TeemoButtonVariant.Primary => Color.FromHex("#3B82F6"),   // blue-500
+                TeemoButtonVariant.Secondary => Color.FromHex("#6B7280"), // gray-500
+                TeemoButtonVariant.Success => Color.FromHex("#10B981"),   // green-500
+                TeemoButtonVariant.Danger => Color.FromHex("#EF4444"),    // red-500
+                TeemoButtonVariant.Warning => Color.FromHex("#F59E0B"),   // amber-500
+                TeemoButtonVariant.Info => Color.FromHex("#3B82F6"),      // blue-500
+                TeemoButtonVariant.Emerald => Color.FromHex("#10B981"),   // emerald-500
+                TeemoButtonVariant.Outline => Colors.Transparent,
+                TeemoButtonVariant.Ghost => Colors.Transparent,
+                _ => Color.FromHex("#3B82F6"),
+            };
+        }
+
+        private Color GetTextColor()
+        {
+            return Variant switch
+            {
+                TeemoButtonVariant.Outline => Color.FromHex("#374151"), // gray-700
+                TeemoButtonVariant.Ghost => Color.FromHex("#374151"),   // gray-700
+                _ => Colors.White,
+            };
+        }
+
+        private Color GetBorderColor()
+        {
+            return Variant switch
+            {
+                TeemoButtonVariant.Outline => Color.FromHex("#D1D5DB"), // gray-300
+                _ => Colors.Transparent,
+            };
+        }
+    }
+}

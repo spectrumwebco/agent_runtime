@@ -1,0 +1,89 @@
+<template>
+  <div class="teemo-card" :class="[`teemo-card--${variant}`]">
+    <div v-if="$slots.header" class="teemo-card__header">
+      <slot name="header"></slot>
+    </div>
+    <div class="teemo-card__content">
+      <slot></slot>
+    </div>
+    <div v-if="$slots.footer" class="teemo-card__footer">
+      <slot name="footer"></slot>
+    </div>
+  </div>
+</template>
+
+<script>
+// Teemo UI Card Component Template for Vue
+// This template provides a customizable card component with header, content, and footer sections
+
+export default {
+  name: 'TeemoCard',
+  props: {
+    variant: {
+      type: String,
+      default: 'default',
+      validator: (value) => ['default', 'outlined', 'elevated', 'flat'].includes(value)
+    }
+  }
+}
+</script>
+
+<style scoped>
+.teemo-card {
+  border-radius: 0.5rem;
+  overflow: hidden;
+  background-color: white;
+  color: #374151;
+}
+
+.teemo-card--default {
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.teemo-card--outlined {
+  border: 1px solid #e5e7eb;
+}
+
+.teemo-card--elevated {
+  border: none;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.teemo-card--flat {
+  border: none;
+}
+
+.teemo-card__header {
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  font-weight: 500;
+}
+
+.teemo-card__content {
+  padding: 1rem;
+}
+
+.teemo-card__footer {
+  padding: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* Dark mode styles */
+@media (prefers-color-scheme: dark) {
+  .teemo-card {
+    background-color: #1f2937;
+    color: #f3f4f6;
+  }
+  
+  .teemo-card--default,
+  .teemo-card--outlined {
+    border-color: #374151;
+  }
+  
+  .teemo-card__header,
+  .teemo-card__footer {
+    border-color: #374151;
+  }
+}
+</style>

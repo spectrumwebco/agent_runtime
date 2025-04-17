@@ -1,0 +1,1128 @@
+# React Technology
+
+## Overview
+
+React is a JavaScript library for building user interfaces, particularly single-page applications. It's used for handling the view layer in web and mobile applications. React allows you to design simple views for each state in your application, and will efficiently update and render the right components when your data changes.
+
+### Core Concepts
+
+1. **Component-Based Architecture**: React applications are built using components - isolated pieces of code that return HTML via a render function.
+2. **Virtual DOM**: React creates an in-memory data structure, compares it to the previous one, and only updates the real DOM where necessary.
+3. **Unidirectional Data Flow**: Data flows down from parent components to children through props.
+4. **JSX**: A syntax extension that allows you to write HTML-like code in JavaScript.
+5. **Hooks**: Functions that let you use state and other React features without writing a class.
+
+### Cross-Platform Capabilities
+
+React can be used to build applications across multiple platforms:
+
+1. **Web**: Using React for browser-based applications
+2. **Desktop**: Using Electron with React for desktop applications
+3. **Mobile**: Using React Native or Lynx-React for mobile applications
+
+## Component Structure
+
+### Functional Components
+
+```jsx
+import React, { useState, useEffect } from 'react';
+
+function UserProfile({ userId }) {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchUser() {
+      setLoading(true);
+      try {
+        const response = await fetch(`/api/users/${userId}`);
+        const data = await response.json();
+        setUser(data);
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchUser();
+  }, [userId]);
+
+  if (loading) return <div>Loading...</div>;
+  if (!user) return <div>User not found</div>;
+
+  return (
+    <div className="user-profile">
+      <h1>{user.name}</h1>
+      <p>Email: {user.email}</p>
+      <p>Role: {user.role}</p>
+    </div>
+  );
+}
+
+export default UserProfile;
+```
+
+### Class Components (Legacy)
+
+```jsx
+import React, { Component } from 'react';
+
+class UserProfile extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      user: null,
+      loading: true
+    };
+  }
+
+  componentDidMount() {
+    this.fetchUser();
+  }
+
+  componentDidUpdate(prevProps) {
+    if (prevProps.userId !== this.props.userId) {
+      this.fetchUser();
+    }
+  }
+
+  async fetchUser() {
+    this.setState({ loading: true });
+    try {
+      const response = await fetch(`/api/users/${this.props.userId}`);
+      const data = await response.json();
+      this.setState({ user: data });
+    } catch (error) {
+      console.error('Error fetching user:', error);
+    } finally {
+      this.setState({ loading: false });
+    }
+  }
+
+  render() {
+    const { user, loading } = this.state;
+
+    if (loading) return <div>Loading...</div>;
+    if (!user) return <div>User not found</div>;
+
+    return (
+      <div className="user-profile">
+        <h1>{user.name}</h1>
+        <p>Email: {user.email}</p>
+        <p>Role: {user.role}</p>
+      </div>
+    );
+  }
+}
+
+export default UserProfile;
+```
+
+## State Management
+
+### Local State with Hooks
+
+```jsx
+import { useState } from 'react';
+
+function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={() => setCount(count + 1)}>Increment</button>
+      <button onClick={() => setCount(count - 1)}>Decrement</button>
+    </div>
+  );
+}
+```
+
+### Context API for Global State
+
+```jsx
+// ThemeContext.js
+import { createContext, useState, useContext } from 'react';
+
+const ThemeContext = createContext();
+
+export function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState('light');
+
+  const toggleTheme = () => {
+    setTheme(prevTheme => prevTheme === 'light' ? 'dark' : 'light');
+  };
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      {children}
+    </ThemeContext.Provider>
+  );
+}
+
+export function useTheme() {
+  return useContext(ThemeContext);
+}
+
+// App.js
+import { ThemeProvider } from './ThemeContext';
+import ThemedButton from './ThemedButton';
+
+function App() {
+  return (
+    <ThemeProvider>
+      <div className="app">
+        <ThemedButton />
+      </div>
+    </ThemeProvider>
+  );
+}
+
+// ThemedButton.js
+import { useTheme } from './ThemeContext';
+
+function ThemedButton() {
+  const { theme, toggleTheme } = useTheme();
+
+  return (
+    <button 
+      onClick={toggleTheme}
+      style={{ 
+        backgroundColor: theme === 'light' ? '#fff' : '#333',
+        color: theme === 'light' ? '#333' : '#fff'
+      }}
+    >
+      Toggle Theme
+    </button>
+  );
+}
+```
+
+### External State Management Libraries
+
+1. **Redux**: For complex state management with predictable state containers
+2. **MobX**: For simple, scalable state management
+3. **Recoil**: For atomic state management
+4. **Zustand**: For lightweight state management with hooks
+
+## Routing
+
+### React Router
+
+```jsx
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+
+function App() {
+  return (
+    <BrowserRouter>
+      <nav>
+        <Link to="/">Home</Link>
+        <Link to="/about">About</Link>
+        <Link to="/users">Users</Link>
+      </nav>
+
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/users" element={<Users />} />
+        <Route path="/users/:userId" element={<UserDetail />} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+```
+
+## Styling Approaches
+
+### CSS Modules
+
+```jsx
+// Button.module.css
+.button {
+  padding: 10px 15px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.primary {
+  background-color: #0070f3;
+  color: white;
+}
+
+.secondary {
+  background-color: #f5f5f5;
+  color: #333;
+}
+
+// Button.jsx
+import styles from './Button.module.css';
+
+function Button({ variant = 'primary', children, ...props }) {
+  return (
+    <button 
+      className={`${styles.button} ${styles[variant]}`} 
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+```
+
+### Styled Components
+
+```jsx
+import styled from 'styled-components';
+
+const Button = styled.button`
+  padding: 10px 15px;
+  border-radius: 4px;
+  font-weight: bold;
+  background-color: ${props => props.variant === 'primary' ? '#0070f3' : '#f5f5f5'};
+  color: ${props => props.variant === 'primary' ? 'white' : '#333'};
+`;
+
+function MyButton({ variant, children, ...props }) {
+  return (
+    <Button variant={variant} {...props}>
+      {children}
+    </Button>
+  );
+}
+```
+
+### Tailwind CSS
+
+```jsx
+function Button({ variant = 'primary', children, ...props }) {
+  const variantClasses = {
+    primary: 'bg-blue-600 text-white hover:bg-blue-700',
+    secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+  };
+
+  return (
+    <button 
+      className={`px-4 py-2 rounded font-bold ${variantClasses[variant]}`}
+      {...props}
+    >
+      {children}
+    </button>
+  );
+}
+```
+
+## Forms and Validation
+
+### Controlled Components
+
+```jsx
+import { useState } from 'react';
+
+function LoginForm() {
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
+  const [errors, setErrors] = useState({});
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const validate = () => {
+    const newErrors = {};
+    
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      newErrors.email = 'Email is invalid';
+    }
+    
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 6) {
+      newErrors.password = 'Password must be at least 6 characters';
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    if (validate()) {
+      // Submit form data
+      console.log('Form submitted:', formData);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <div>
+        <label htmlFor="email">Email</label>
+        <input
+          type="email"
+          id="email"
+          name="email"
+          value={formData.email}
+          onChange={handleChange}
+        />
+        {errors.email && <p className="error">{errors.email}</p>}
+      </div>
+      
+      <div>
+        <label htmlFor="password">Password</label>
+        <input
+          type="password"
+          id="password"
+          name="password"
+          value={formData.password}
+          onChange={handleChange}
+        />
+        {errors.password && <p className="error">{errors.password}</p>}
+      </div>
+      
+      <button type="submit">Login</button>
+    </form>
+  );
+}
+```
+
+### Form Libraries
+
+1. **Formik**: For building forms with validation
+2. **React Hook Form**: For performant, flexible and extensible forms
+3. **Final Form**: For high performance subscription-based forms
+
+## API Integration
+
+### Fetch API
+
+```jsx
+import { useState, useEffect } from 'react';
+
+function UserList() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function fetchUsers() {
+      try {
+        const response = await fetch('https://api.example.com/users');
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        setUsers(data);
+      } catch (e) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchUsers();
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+
+  return (
+    <ul>
+      {users.map(user => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### Axios
+
+```jsx
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+
+function UserList() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await axios.get('https://api.example.com/users');
+        setUsers(response.data);
+      } catch (e) {
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, []);
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
+
+  return (
+    <ul>
+      {users.map(user => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+### React Query
+
+```jsx
+import { useQuery } from 'react-query';
+import axios from 'axios';
+
+const fetchUsers = async () => {
+  const response = await axios.get('https://api.example.com/users');
+  return response.data;
+};
+
+function UserList() {
+  const { data: users, isLoading, error } = useQuery('users', fetchUsers);
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+
+  return (
+    <ul>
+      {users.map(user => (
+        <li key={user.id}>{user.name}</li>
+      ))}
+    </ul>
+  );
+}
+```
+
+## Testing
+
+### Jest and React Testing Library
+
+```jsx
+// Button.test.jsx
+import { render, screen, fireEvent } from '@testing-library/react';
+import Button from './Button';
+
+describe('Button component', () => {
+  test('renders button with correct text', () => {
+    render(<Button>Click me</Button>);
+    const buttonElement = screen.getByText(/click me/i);
+    expect(buttonElement).toBeInTheDocument();
+  });
+
+  test('calls onClick handler when clicked', () => {
+    const handleClick = jest.fn();
+    render(<Button onClick={handleClick}>Click me</Button>);
+    const buttonElement = screen.getByText(/click me/i);
+    
+    fireEvent.click(buttonElement);
+    
+    expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+
+  test('applies correct styles for primary variant', () => {
+    render(<Button variant="primary">Primary</Button>);
+    const buttonElement = screen.getByText(/primary/i);
+    
+    expect(buttonElement).toHaveClass('primary');
+  });
+});
+```
+
+## Performance Optimization
+
+### React.memo
+
+```jsx
+import { memo } from 'react';
+
+function ExpensiveComponent({ data }) {
+  // Complex rendering logic
+  return (
+    <div>
+      {/* Render data */}
+    </div>
+  );
+}
+
+export default memo(ExpensiveComponent);
+```
+
+### useMemo and useCallback
+
+```jsx
+import { useState, useMemo, useCallback } from 'react';
+
+function DataProcessor({ items }) {
+  const [filter, setFilter] = useState('');
+
+  // Memoize expensive calculation
+  const filteredItems = useMemo(() => {
+    console.log('Filtering items...');
+    return items.filter(item => 
+      item.name.toLowerCase().includes(filter.toLowerCase())
+    );
+  }, [items, filter]);
+
+  // Memoize callback function
+  const handleItemClick = useCallback((id) => {
+    console.log(`Item clicked: ${id}`);
+  }, []);
+
+  return (
+    <div>
+      <input 
+        type="text" 
+        value={filter} 
+        onChange={e => setFilter(e.target.value)} 
+        placeholder="Filter items..." 
+      />
+      <ul>
+        {filteredItems.map(item => (
+          <li key={item.id} onClick={() => handleItemClick(item.id)}>
+            {item.name}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+### Code Splitting
+
+```jsx
+import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+
+// Lazy load components
+const Home = lazy(() => import('./pages/Home'));
+const About = lazy(() => import('./pages/About'));
+const Users = lazy(() => import('./pages/Users'));
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Suspense fallback={<div>Loading...</div>}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/users" element={<Users />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
+  );
+}
+```
+
+## Accessibility
+
+### ARIA Attributes
+
+```jsx
+function Dropdown({ label, options, selectedOption, onChange }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const toggleDropdown = () => setIsOpen(!isOpen);
+
+  const handleOptionClick = (option) => {
+    onChange(option);
+    setIsOpen(false);
+  };
+
+  return (
+    <div 
+      className="dropdown" 
+      ref={dropdownRef}
+      aria-expanded={isOpen}
+      aria-haspopup="listbox"
+      aria-labelledby="dropdown-label"
+    >
+      <span id="dropdown-label" className="sr-only">{label}</span>
+      <button 
+        onClick={toggleDropdown}
+        aria-expanded={isOpen}
+      >
+        {selectedOption || 'Select an option'}
+      </button>
+      
+      {isOpen && (
+        <ul 
+          role="listbox"
+          aria-labelledby="dropdown-label"
+        >
+          {options.map(option => (
+            <li 
+              key={option.value}
+              role="option"
+              aria-selected={option.value === selectedOption?.value}
+              onClick={() => handleOptionClick(option)}
+            >
+              {option.label}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+```
+
+### Focus Management
+
+```jsx
+import { useRef, useEffect } from 'react';
+
+function Modal({ isOpen, onClose, title, children }) {
+  const modalRef = useRef(null);
+  const previousFocusRef = useRef(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      // Store the element that had focus before opening the modal
+      previousFocusRef.current = document.activeElement;
+      
+      // Focus the modal when it opens
+      modalRef.current?.focus();
+      
+      // Trap focus inside the modal
+      const focusableElements = modalRef.current?.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      
+      const firstElement = focusableElements?.[0];
+      const lastElement = focusableElements?.[focusableElements.length - 1];
+      
+      const handleTabKey = (e) => {
+        if (e.key === 'Tab') {
+          if (e.shiftKey && document.activeElement === firstElement) {
+            e.preventDefault();
+            lastElement?.focus();
+          } else if (!e.shiftKey && document.activeElement === lastElement) {
+            e.preventDefault();
+            firstElement?.focus();
+          }
+        }
+      };
+      
+      document.addEventListener('keydown', handleTabKey);
+      
+      return () => {
+        document.removeEventListener('keydown', handleTabKey);
+      };
+    }
+  }, [isOpen]);
+
+  // Restore focus when modal closes
+  useEffect(() => {
+    if (!isOpen && previousFocusRef.current) {
+      previousFocusRef.current.focus();
+    }
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div 
+        className="modal"
+        ref={modalRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        tabIndex={-1}
+        onClick={e => e.stopPropagation()}
+      >
+        <header>
+          <h2 id="modal-title">{title}</h2>
+          <button 
+            onClick={onClose}
+            aria-label="Close modal"
+          >
+            &times;
+          </button>
+        </header>
+        <div className="modal-content">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+## Cross-Platform Development
+
+### React Native
+
+```jsx
+import React, { useState } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+
+function LoginScreen({ navigation }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleLogin = () => {
+    // Perform login logic
+    navigation.navigate('Home');
+  };
+
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>Login</Text>
+      
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        value={email}
+        onChangeText={setEmail}
+        keyboardType="email-address"
+        autoCapitalize="none"
+      />
+      
+      <TextInput
+        style={styles.input}
+        placeholder="Password"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry
+      />
+      
+      <TouchableOpacity 
+        style={styles.button}
+        onPress={handleLogin}
+      >
+        <Text style={styles.buttonText}>Login</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    padding: 20,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  input: {
+    height: 50,
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 5,
+    marginBottom: 15,
+    paddingHorizontal: 10,
+  },
+  button: {
+    backgroundColor: '#0070f3',
+    height: 50,
+    borderRadius: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  buttonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+});
+
+export default LoginScreen;
+```
+
+### Electron with React
+
+```jsx
+// main.js (Electron main process)
+const { app, BrowserWindow } = require('electron');
+const path = require('path');
+const isDev = require('electron-is-dev');
+
+let mainWindow;
+
+function createWindow() {
+  mainWindow = new BrowserWindow({
+    width: 800,
+    height: 600,
+    webPreferences: {
+      nodeIntegration: true,
+      contextIsolation: false,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+
+  mainWindow.loadURL(
+    isDev
+      ? 'http://localhost:3000'
+      : `file://${path.join(__dirname, '../build/index.html')}`
+  );
+
+  if (isDev) {
+    mainWindow.webContents.openDevTools();
+  }
+
+  mainWindow.on('closed', () => {
+    mainWindow = null;
+  });
+}
+
+app.on('ready', createWindow);
+
+app.on('window-all-closed', () => {
+  if (process.platform !== 'darwin') {
+    app.quit();
+  }
+});
+
+app.on('activate', () => {
+  if (mainWindow === null) {
+    createWindow();
+  }
+});
+
+// preload.js
+const { contextBridge, ipcRenderer } = require('electron');
+
+contextBridge.exposeInMainWorld('electron', {
+  ipcRenderer: {
+    send: (channel, data) => {
+      ipcRenderer.send(channel, data);
+    },
+    on: (channel, func) => {
+      ipcRenderer.on(channel, (event, ...args) => func(...args));
+    }
+  }
+});
+
+// App.jsx (React component)
+import { useState, useEffect } from 'react';
+
+function App() {
+  const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    // Listen for messages from the main process
+    window.electron.ipcRenderer.on('message-from-main', (message) => {
+      setMessage(message);
+    });
+
+    // Send a message to the main process
+    window.electron.ipcRenderer.send('message-to-main', 'Hello from React!');
+  }, []);
+
+  return (
+    <div className="app">
+      <h1>Electron + React App</h1>
+      {message && <p>Message from main process: {message}</p>}
+      <button onClick={() => window.electron.ipcRenderer.send('open-dialog')}>
+        Open Dialog
+      </button>
+    </div>
+  );
+}
+```
+
+### Lynx-React for Mobile
+
+```jsx
+import React from 'react';
+import { View, Text, Button } from 'lynx-react';
+
+function Counter() {
+  const [count, setCount] = React.useState(0);
+
+  return (
+    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <Text style={{ fontSize: 24, marginBottom: 20 }}>Count: {count}</Text>
+      <Button 
+        title="Increment" 
+        onPress={() => setCount(count + 1)} 
+        style={{ marginBottom: 10 }}
+      />
+      <Button 
+        title="Decrement" 
+        onPress={() => setCount(count - 1)} 
+      />
+    </View>
+  );
+}
+
+export default Counter;
+```
+
+## Best Practices
+
+1. **Component Composition**: Break UI into small, reusable components
+2. **Custom Hooks**: Extract reusable logic into custom hooks
+3. **Prop Drilling**: Avoid excessive prop drilling by using Context or state management
+4. **Error Boundaries**: Use error boundaries to catch and handle errors
+5. **Code Splitting**: Split code to reduce bundle size and improve load times
+6. **Memoization**: Use React.memo, useMemo, and useCallback to optimize performance
+7. **Accessibility**: Ensure components are accessible with proper ARIA attributes
+8. **Testing**: Write tests for components and hooks
+9. **TypeScript**: Use TypeScript for type safety
+10. **ESLint and Prettier**: Use linting and formatting tools for code quality
+
+## Next.js Integration
+
+Next.js is a React framework that provides additional features like server-side rendering, static site generation, API routes, and more.
+
+### App Router
+
+```jsx
+// app/page.jsx
+export default function Home() {
+  return (
+    <main>
+      <h1>Welcome to Next.js</h1>
+      <p>This is a server component.</p>
+    </main>
+  );
+}
+
+// app/users/[id]/page.jsx
+export default function UserPage({ params }) {
+  return (
+    <div>
+      <h1>User Profile</h1>
+      <p>User ID: {params.id}</p>
+    </div>
+  );
+}
+```
+
+### Server Components
+
+```jsx
+// app/users/page.jsx
+async function getUsers() {
+  const res = await fetch('https://api.example.com/users');
+  return res.json();
+}
+
+export default async function UsersPage() {
+  const users = await getUsers();
+
+  return (
+    <div>
+      <h1>Users</h1>
+      <ul>
+        {users.map(user => (
+          <li key={user.id}>{user.name}</li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+```
+
+### Client Components
+
+```jsx
+'use client';
+
+import { useState } from 'react';
+
+export default function Counter() {
+  const [count, setCount] = useState(0);
+
+  return (
+    <div>
+      <p>Count: {count}</p>
+      <button onClick={() => setCount(count + 1)}>Increment</button>
+    </div>
+  );
+}
+```
+
+### API Routes
+
+```jsx
+// app/api/users/route.js
+import { NextResponse } from 'next/server';
+
+export async function GET() {
+  const users = [
+    { id: 1, name: 'John Doe' },
+    { id: 2, name: 'Jane Smith' }
+  ];
+
+  return NextResponse.json(users);
+}
+
+export async function POST(request) {
+  const data = await request.json();
+  
+  // Process data...
+  
+  return NextResponse.json({ success: true });
+}
+```
+
+### Server Actions
+
+```jsx
+// app/actions.js
+'use server';
+
+import { revalidatePath } from 'next/cache';
+
+export async function createUser(formData) {
+  const name = formData.get('name');
+  const email = formData.get('email');
+
+  // Save user to database...
+
+  revalidatePath('/users');
+  
+  return { success: true };
+}
+
+// app/users/new/page.jsx
+import { createUser } from '@/app/actions';
+
+export default function NewUserPage() {
+  return (
+    <div>
+      <h1>Create New User</h1>
+      <form action={createUser}>
+        <div>
+          <label htmlFor="name">Name</label>
+          <input type="text" id="name" name="name" required />
+        </div>
+        <div>
+          <label htmlFor="email">Email</label>
+          <input type="email" id="email" name="email" required />
+        </div>
+        <button type="submit">Create User</button>
+      </form>
+    </div>
+  );
+}
+```

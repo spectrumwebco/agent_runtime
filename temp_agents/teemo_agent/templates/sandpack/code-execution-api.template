@@ -1,0 +1,188 @@
+import React, { useState } from 'react';
+
+// Teemo UI Code Execution API Component Template
+// This template provides a component for executing code using the LibreChat Code Interpreter API
+
+const supportedLanguages = [
+  'python',
+  'javascript',
+  'typescript',
+  'cpp',
+  'csharp',
+  'go',
+  'rust',
+  'php'
+];
+
+export const CodeExecutionPanel = () => {
+  const [code, setCode] = useState('');
+  const [language, setLanguage] = useState('python');
+  const [output, setOutput] = useState('');
+  const [isExecuting, setIsExecuting] = useState(false);
+  const [error, setError] = useState('');
+
+  const executeCode = async () => {
+    setIsExecuting(true);
+    setOutput('');
+    setError('');
+    
+    try {
+      const response = await fetch('/api/execute-code', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          code,
+          language,
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        setOutput(data.output || 'Execution completed successfully.');
+      } else {
+        setError(data.error || 'An error occurred during execution.');
+      }
+    } catch (err) {
+      setError(`Failed to execute code: ${err.message}`);
+    } finally {
+      setIsExecuting(false);
+    }
+  };
+
+  return (
+    <div className="code-execution-panel">
+      <div className="language-selector">
+        <label htmlFor="language-select">Language:</label>
+        <select
+          id="language-select"
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          className="language-select"
+        >
+          {supportedLanguages.map((lang) => (
+            <option key={lang} value={lang}>
+              {lang.charAt(0).toUpperCase() + lang.slice(1)}
+            </option>
+          ))}
+        </select>
+      </div>
+      
+      <div className="code-editor">
+        <textarea
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder={`Enter your ${language} code here...`}
+          className="code-textarea"
+          rows={10}
+        />
+      </div>
+      
+      <div className="execution-controls">
+        <button
+          onClick={executeCode}
+          disabled={isExecuting || !code.trim()}
+          className="execute-button"
+        >
+          {isExecuting ? 'Executing...' : 'Execute Code'}
+        </button>
+      </div>
+      
+      {error && (
+        <div className="error-output">
+          <h3>Error:</h3>
+          <pre>{error}</pre>
+        </div>
+      )}
+      
+      {output && (
+        <div className="code-output">
+          <h3>Output:</h3>
+          <pre>{output}</pre>
+        </div>
+      )}
+      
+      <style jsx>{`
+        .code-execution-panel {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+          padding: 16px;
+          background-color: #1a202c;
+          border-radius: 8px;
+          color: #e2e8f0;
+        }
+        
+        .language-selector {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        
+        .language-select {
+          padding: 8px;
+          border-radius: 4px;
+          background-color: #2d3748;
+          color: #e2e8f0;
+          border: 1px solid #4a5568;
+        }
+        
+        .code-textarea {
+          width: 100%;
+          padding: 12px;
+          border-radius: 4px;
+          background-color: #2d3748;
+          color: #e2e8f0;
+          font-family: monospace;
+          border: 1px solid #4a5568;
+          resize: vertical;
+        }
+        
+        .execute-button {
+          padding: 8px 16px;
+          background-color: #10b981; /* emerald-500 */
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          font-weight: 500;
+          transition: background-color 0.2s;
+        }
+        
+        .execute-button:hover {
+          background-color: #059669; /* emerald-600 */
+        }
+        
+        .execute-button:disabled {
+          background-color: #6b7280;
+          cursor: not-allowed;
+        }
+        
+        .code-output, .error-output {
+          padding: 12px;
+          border-radius: 4px;
+          background-color: #2d3748;
+          overflow: auto;
+        }
+        
+        .error-output {
+          border-left: 4px solid #ef4444; /* red-500 */
+        }
+        
+        .code-output {
+          border-left: 4px solid #10b981; /* emerald-500 */
+        }
+        
+        pre {
+          margin: 0;
+          white-space: pre-wrap;
+          font-family: monospace;
+        }
+      `}</style>
+    </div>
+  );
+};
+
+export default CodeExecutionPanel;

@@ -1,0 +1,17 @@
+import { defineConfig } from 'vite'
+import vue from '@vitejs/plugin-vue'
+{{#typescript}}
+import path from 'path'
+{{/typescript}}
+
+// https://vitejs.dev/config/
+export default defineConfig({
+  plugins: [vue()],
+  {{#typescript}}
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
+  {{/typescript}}
+})

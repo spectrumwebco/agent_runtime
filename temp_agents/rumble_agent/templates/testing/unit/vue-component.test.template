@@ -1,0 +1,811 @@
+{{#typescript}}
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { mount, shallowMount, VueWrapper } from '@vue/test-utils';
+{{#vue_router}}
+import { createRouter, createWebHistory } from 'vue-router';
+{{/vue_router}}
+{{#vuex}}
+import { createStore } from 'vuex';
+{{/vuex}}
+{{#pinia}}
+import { createPinia, setActivePinia } from 'pinia';
+{{/pinia}}
+{{#fetch_mock}}
+import { setupFetchMock } from '../utils/fetchMock';
+{{/fetch_mock}}
+import {{component_name}} from '../{{component_path}}';
+
+{{#vue_router}}
+// Create a mock router
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    { path: '/', component: { template: '<div>Home</div>' } },
+    { path: '/about', component: { template: '<div>About</div>' } },
+    { path: '/detail/:id', component: { template: '<div>Detail</div>' }, name: 'detail' }
+  ]
+});
+{{/vue_router}}
+
+{{#vuex}}
+// Create a mock store
+const createMockStore = (initialState = {}) => {
+  return createStore({
+    state() {
+      return {
+        ...initialState
+      };
+    },
+    getters: {
+      // Add mock getters here
+      getItem: (state) => (id: string) => state.items?.find((item: any) => item.id === id),
+      isLoading: (state) => state.loading || false
+    },
+    mutations: {
+      // Add mock mutations here
+      setItems(state, items) {
+        state.items = items;
+      },
+      setLoading(state, loading) {
+        state.loading = loading;
+      }
+    },
+    actions: {
+      // Add mock actions here
+      fetchItems: vi.fn().mockResolvedValue([{ id: '1', name: 'Test Item' }]),
+      updateItem: vi.fn().mockResolvedValue({ id: '1', name: 'Updated Item' })
+    }
+  });
+};
+{{/vuex}}
+
+describe('{{component_name}}', () => {
+  {{#setup}}
+  let wrapper: VueWrapper<any>;
+  
+  {{#pinia}}
+  // Setup Pinia
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+  {{/pinia}}
+  
+  {{#fetch_mock}}
+  // Setup fetch mock
+  const fetchMock = setupFetchMock();
+  
+  beforeEach(() => {
+    fetchMock.resetMocks();
+  });
+  {{/fetch_mock}}
+  
+  afterEach(() => {
+    if (wrapper) {
+      wrapper.unmount();
+    }
+  });
+  {{/setup}}
+  
+  {{#mount_function}}
+  // Helper function to mount the component with all required providers
+  const mountComponent = (props = {}, options = {}) => {
+    return mount({{component_name}}, {
+      props,
+      {{#global_options}}
+      global: {
+        {{#vue_router}}
+        plugins: [router],
+        {{/vue_router}}
+        {{#vuex}}
+        plugins: [createMockStore()],
+        {{/vuex}}
+        {{#stubs}}
+        stubs: {
+          // Add stubs for child components if needed
+          'child-component': true
+        },
+        {{/stubs}}
+        {{#mocks}}
+        mocks: {
+          // Add mocks for global properties if needed
+          $t: (key: string) => key
+        }
+        {{/mocks}}
+      },
+      {{/global_options}}
+      ...options
+    });
+  };
+  
+  // Helper function to shallow mount the component
+  const shallowMountComponent = (props = {}, options = {}) => {
+    return shallowMount({{component_name}}, {
+      props,
+      {{#global_options}}
+      global: {
+        {{#vue_router}}
+        plugins: [router],
+        {{/vue_router}}
+        {{#vuex}}
+        plugins: [createMockStore()],
+        {{/vuex}}
+        {{#stubs}}
+        stubs: {
+          // Add stubs for child components if needed
+          'child-component': true
+        },
+        {{/stubs}}
+        {{#mocks}}
+        mocks: {
+          // Add mocks for global properties if needed
+          $t: (key: string) => key
+        }
+        {{/mocks}}
+      },
+      {{/global_options}}
+      ...options
+    });
+  };
+  {{/mount_function}}
+  
+  it('renders without crashing', () => {
+    {{#mount_function}}
+    wrapper = mountComponent();
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}});
+    {{/mount_function}}
+    
+    expect(wrapper.exists()).toBe(true);
+  });
+  
+  {{#test_props}}
+  it('renders with props correctly', () => {
+    const testProps = {
+      {{#props}}
+      {{name}}: {{value}},
+      {{/props}}
+    };
+    
+    {{#mount_function}}
+    wrapper = mountComponent(testProps);
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}}, {
+      props: testProps
+    });
+    {{/mount_function}}
+    
+    {{#props}}
+    {{#if_text}}
+    expect(wrapper.text()).toContain(testProps.{{name}});
+    {{/if_text}}
+    {{#if_test_id}}
+    expect(wrapper.find('[data-test="{{test_id}}"]').text()).toBe(testProps.{{name}});
+    {{/if_test_id}}
+    {{/props}}
+  });
+  {{/test_props}}
+  
+  {{#test_events}}
+  it('emits events correctly', async () => {
+    {{#mount_function}}
+    wrapper = mountComponent();
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}});
+    {{/mount_function}}
+    
+    // Trigger an event
+    await wrapper.find('button').trigger('click');
+    
+    // Check that the event was emitted
+    expect(wrapper.emitted()).toHaveProperty('click');
+    
+    // Check event payload if needed
+    {{#event_payload}}
+    expect(wrapper.emitted().click[0]).toEqual([{{payload}}]);
+    {{/event_payload}}
+  });
+  {{/test_events}}
+  
+  {{#test_slots}}
+  it('renders slots correctly', () => {
+    {{#mount_function}}
+    wrapper = mountComponent({}, {
+      slots: {
+        default: '<div data-test="default-slot">Default Slot Content</div>',
+        {{#named_slots}}
+        {{name}}: '<div data-test="{{name}}-slot">{{content}}</div>',
+        {{/named_slots}}
+      }
+    });
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}}, {
+      slots: {
+        default: '<div data-test="default-slot">Default Slot Content</div>',
+        {{#named_slots}}
+        {{name}}: '<div data-test="{{name}}-slot">{{content}}</div>',
+        {{/named_slots}}
+      }
+    });
+    {{/mount_function}}
+    
+    expect(wrapper.find('[data-test="default-slot"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="default-slot"]').text()).toBe('Default Slot Content');
+    
+    {{#named_slots}}
+    expect(wrapper.find('[data-test="{{name}}-slot"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="{{name}}-slot"]').text()).toBe('{{content}}');
+    {{/named_slots}}
+  });
+  {{/test_slots}}
+  
+  {{#test_lifecycle}}
+  it('calls lifecycle hooks correctly', async () => {
+    // Spy on component methods
+    const onMountedSpy = vi.spyOn({{component_name}}.methods, 'onMounted');
+    const onUnmountedSpy = vi.spyOn({{component_name}}.methods, 'onUnmounted');
+    
+    {{#mount_function}}
+    wrapper = mountComponent();
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}});
+    {{/mount_function}}
+    
+    expect(onMountedSpy).toHaveBeenCalled();
+    
+    wrapper.unmount();
+    
+    expect(onUnmountedSpy).toHaveBeenCalled();
+  });
+  {{/test_lifecycle}}
+  
+  {{#test_async}}
+  it('handles async operations correctly', async () => {
+    {{#fetch_mock}}
+    // Mock API response
+    fetchMock.mockResponseOnce(JSON.stringify({ data: 'test data' }));
+    {{/fetch_mock}}
+    
+    {{#mount_function}}
+    wrapper = mountComponent();
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}});
+    {{/mount_function}}
+    
+    // Test loading state
+    expect(wrapper.find('[data-test="loading-indicator"]').exists()).toBe(true);
+    
+    // Wait for async operation to complete
+    await wrapper.vm.$nextTick();
+    await wrapper.vm.$nextTick(); // Sometimes need multiple ticks for async operations
+    
+    // Test loaded state
+    expect(wrapper.find('[data-test="loading-indicator"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('test data');
+    
+    {{#fetch_mock}}
+    // Verify API was called correctly
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith('/api/data');
+    {{/fetch_mock}}
+  });
+  {{/test_async}}
+  
+  {{#test_conditional_rendering}}
+  it('renders conditionally based on props', async () => {
+    // Test with feature enabled
+    {{#mount_function}}
+    wrapper = mountComponent({ showFeature: true });
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}}, {
+      props: { showFeature: true }
+    });
+    {{/mount_function}}
+    
+    expect(wrapper.find('[data-test="feature"]').exists()).toBe(true);
+    
+    // Test with feature disabled
+    {{#mount_function}}
+    wrapper = mountComponent({ showFeature: false });
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}}, {
+      props: { showFeature: false }
+    });
+    {{/mount_function}}
+    
+    expect(wrapper.find('[data-test="feature"]').exists()).toBe(false);
+  });
+  {{/test_conditional_rendering}}
+  
+  {{#vue_router}}
+  it('handles routing correctly', async () => {
+    {{#mount_function}}
+    wrapper = mountComponent();
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}}, {
+      global: {
+        plugins: [router]
+      }
+    });
+    {{/mount_function}}
+    
+    // Test navigation
+    await wrapper.find('[data-test="nav-link"]').trigger('click');
+    
+    // Verify router was called with correct route
+    expect(router.currentRoute.value.path).toBe('/about');
+    
+    // Test route params
+    await router.push({ name: 'detail', params: { id: '123' } });
+    await wrapper.vm.$nextTick();
+    
+    expect(wrapper.find('[data-test="detail-id"]').text()).toBe('123');
+  });
+  {{/vue_router}}
+  
+  {{#vuex}}
+  it('interacts with Vuex store correctly', async () => {
+    const store = createMockStore({
+      items: [{ id: '1', name: 'Test Item' }],
+      loading: false
+    });
+    
+    {{#mount_function}}
+    wrapper = mountComponent({}, {
+      global: {
+        plugins: [store]
+      }
+    });
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}}, {
+      global: {
+        plugins: [store]
+      }
+    });
+    {{/mount_function}}
+    
+    // Test store getters
+    expect(wrapper.find('[data-test="item-name"]').text()).toBe('Test Item');
+    
+    // Test store actions
+    await wrapper.find('[data-test="fetch-button"]').trigger('click');
+    
+    expect(store.state.loading).toBe(true);
+    expect(store.actions.fetchItems).toHaveBeenCalled();
+  });
+  {{/vuex}}
+  
+  {{#pinia}}
+  it('interacts with Pinia store correctly', async () => {
+    // Test Pinia store interactions
+    {{#mount_function}}
+    wrapper = mountComponent();
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}});
+    {{/mount_function}}
+    
+    // Interact with component to trigger store actions
+    await wrapper.find('[data-test="increment-button"]').trigger('click');
+    
+    // Verify store state was updated
+    expect(wrapper.find('[data-test="counter-value"]').text()).toBe('1');
+  });
+  {{/pinia}}
+});
+{{/typescript}}
+
+{{^typescript}}
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { mount, shallowMount } from '@vue/test-utils';
+{{#vue_router}}
+import { createRouter, createWebHistory } from 'vue-router';
+{{/vue_router}}
+{{#vuex}}
+import { createStore } from 'vuex';
+{{/vuex}}
+{{#pinia}}
+import { createPinia, setActivePinia } from 'pinia';
+{{/pinia}}
+{{#fetch_mock}}
+import { setupFetchMock } from '../utils/fetchMock';
+{{/fetch_mock}}
+import {{component_name}} from '../{{component_path}}';
+
+{{#vue_router}}
+// Create a mock router
+const router = createRouter({
+  history: createWebHistory(),
+  routes: [
+    { path: '/', component: { template: '<div>Home</div>' } },
+    { path: '/about', component: { template: '<div>About</div>' } },
+    { path: '/detail/:id', component: { template: '<div>Detail</div>' }, name: 'detail' }
+  ]
+});
+{{/vue_router}}
+
+{{#vuex}}
+// Create a mock store
+const createMockStore = (initialState = {}) => {
+  return createStore({
+    state() {
+      return {
+        ...initialState
+      };
+    },
+    getters: {
+      // Add mock getters here
+      getItem: (state) => (id) => state.items?.find((item) => item.id === id),
+      isLoading: (state) => state.loading || false
+    },
+    mutations: {
+      // Add mock mutations here
+      setItems(state, items) {
+        state.items = items;
+      },
+      setLoading(state, loading) {
+        state.loading = loading;
+      }
+    },
+    actions: {
+      // Add mock actions here
+      fetchItems: vi.fn().mockResolvedValue([{ id: '1', name: 'Test Item' }]),
+      updateItem: vi.fn().mockResolvedValue({ id: '1', name: 'Updated Item' })
+    }
+  });
+};
+{{/vuex}}
+
+describe('{{component_name}}', () => {
+  {{#setup}}
+  let wrapper;
+  
+  {{#pinia}}
+  // Setup Pinia
+  beforeEach(() => {
+    setActivePinia(createPinia());
+  });
+  {{/pinia}}
+  
+  {{#fetch_mock}}
+  // Setup fetch mock
+  const fetchMock = setupFetchMock();
+  
+  beforeEach(() => {
+    fetchMock.resetMocks();
+  });
+  {{/fetch_mock}}
+  
+  afterEach(() => {
+    if (wrapper) {
+      wrapper.unmount();
+    }
+  });
+  {{/setup}}
+  
+  {{#mount_function}}
+  // Helper function to mount the component with all required providers
+  const mountComponent = (props = {}, options = {}) => {
+    return mount({{component_name}}, {
+      props,
+      {{#global_options}}
+      global: {
+        {{#vue_router}}
+        plugins: [router],
+        {{/vue_router}}
+        {{#vuex}}
+        plugins: [createMockStore()],
+        {{/vuex}}
+        {{#stubs}}
+        stubs: {
+          // Add stubs for child components if needed
+          'child-component': true
+        },
+        {{/stubs}}
+        {{#mocks}}
+        mocks: {
+          // Add mocks for global properties if needed
+          $t: (key) => key
+        }
+        {{/mocks}}
+      },
+      {{/global_options}}
+      ...options
+    });
+  };
+  
+  // Helper function to shallow mount the component
+  const shallowMountComponent = (props = {}, options = {}) => {
+    return shallowMount({{component_name}}, {
+      props,
+      {{#global_options}}
+      global: {
+        {{#vue_router}}
+        plugins: [router],
+        {{/vue_router}}
+        {{#vuex}}
+        plugins: [createMockStore()],
+        {{/vuex}}
+        {{#stubs}}
+        stubs: {
+          // Add stubs for child components if needed
+          'child-component': true
+        },
+        {{/stubs}}
+        {{#mocks}}
+        mocks: {
+          // Add mocks for global properties if needed
+          $t: (key) => key
+        }
+        {{/mocks}}
+      },
+      {{/global_options}}
+      ...options
+    });
+  };
+  {{/mount_function}}
+  
+  it('renders without crashing', () => {
+    {{#mount_function}}
+    wrapper = mountComponent();
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}});
+    {{/mount_function}}
+    
+    expect(wrapper.exists()).toBe(true);
+  });
+  
+  {{#test_props}}
+  it('renders with props correctly', () => {
+    const testProps = {
+      {{#props}}
+      {{name}}: {{value}},
+      {{/props}}
+    };
+    
+    {{#mount_function}}
+    wrapper = mountComponent(testProps);
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}}, {
+      props: testProps
+    });
+    {{/mount_function}}
+    
+    {{#props}}
+    {{#if_text}}
+    expect(wrapper.text()).toContain(testProps.{{name}});
+    {{/if_text}}
+    {{#if_test_id}}
+    expect(wrapper.find('[data-test="{{test_id}}"]').text()).toBe(testProps.{{name}});
+    {{/if_test_id}}
+    {{/props}}
+  });
+  {{/test_props}}
+  
+  {{#test_events}}
+  it('emits events correctly', async () => {
+    {{#mount_function}}
+    wrapper = mountComponent();
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}});
+    {{/mount_function}}
+    
+    // Trigger an event
+    await wrapper.find('button').trigger('click');
+    
+    // Check that the event was emitted
+    expect(wrapper.emitted()).toHaveProperty('click');
+    
+    // Check event payload if needed
+    {{#event_payload}}
+    expect(wrapper.emitted().click[0]).toEqual([{{payload}}]);
+    {{/event_payload}}
+  });
+  {{/test_events}}
+  
+  {{#test_slots}}
+  it('renders slots correctly', () => {
+    {{#mount_function}}
+    wrapper = mountComponent({}, {
+      slots: {
+        default: '<div data-test="default-slot">Default Slot Content</div>',
+        {{#named_slots}}
+        {{name}}: '<div data-test="{{name}}-slot">{{content}}</div>',
+        {{/named_slots}}
+      }
+    });
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}}, {
+      slots: {
+        default: '<div data-test="default-slot">Default Slot Content</div>',
+        {{#named_slots}}
+        {{name}}: '<div data-test="{{name}}-slot">{{content}}</div>',
+        {{/named_slots}}
+      }
+    });
+    {{/mount_function}}
+    
+    expect(wrapper.find('[data-test="default-slot"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="default-slot"]').text()).toBe('Default Slot Content');
+    
+    {{#named_slots}}
+    expect(wrapper.find('[data-test="{{name}}-slot"]').exists()).toBe(true);
+    expect(wrapper.find('[data-test="{{name}}-slot"]').text()).toBe('{{content}}');
+    {{/named_slots}}
+  });
+  {{/test_slots}}
+  
+  {{#test_lifecycle}}
+  it('calls lifecycle hooks correctly', async () => {
+    // Spy on component methods
+    const onMountedSpy = vi.spyOn({{component_name}}.methods, 'onMounted');
+    const onUnmountedSpy = vi.spyOn({{component_name}}.methods, 'onUnmounted');
+    
+    {{#mount_function}}
+    wrapper = mountComponent();
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}});
+    {{/mount_function}}
+    
+    expect(onMountedSpy).toHaveBeenCalled();
+    
+    wrapper.unmount();
+    
+    expect(onUnmountedSpy).toHaveBeenCalled();
+  });
+  {{/test_lifecycle}}
+  
+  {{#test_async}}
+  it('handles async operations correctly', async () => {
+    {{#fetch_mock}}
+    // Mock API response
+    fetchMock.mockResponseOnce(JSON.stringify({ data: 'test data' }));
+    {{/fetch_mock}}
+    
+    {{#mount_function}}
+    wrapper = mountComponent();
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}});
+    {{/mount_function}}
+    
+    // Test loading state
+    expect(wrapper.find('[data-test="loading-indicator"]').exists()).toBe(true);
+    
+    // Wait for async operation to complete
+    await wrapper.vm.$nextTick();
+    await wrapper.vm.$nextTick(); // Sometimes need multiple ticks for async operations
+    
+    // Test loaded state
+    expect(wrapper.find('[data-test="loading-indicator"]').exists()).toBe(false);
+    expect(wrapper.text()).toContain('test data');
+    
+    {{#fetch_mock}}
+    // Verify API was called correctly
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith('/api/data');
+    {{/fetch_mock}}
+  });
+  {{/test_async}}
+  
+  {{#test_conditional_rendering}}
+  it('renders conditionally based on props', async () => {
+    // Test with feature enabled
+    {{#mount_function}}
+    wrapper = mountComponent({ showFeature: true });
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}}, {
+      props: { showFeature: true }
+    });
+    {{/mount_function}}
+    
+    expect(wrapper.find('[data-test="feature"]').exists()).toBe(true);
+    
+    // Test with feature disabled
+    {{#mount_function}}
+    wrapper = mountComponent({ showFeature: false });
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}}, {
+      props: { showFeature: false }
+    });
+    {{/mount_function}}
+    
+    expect(wrapper.find('[data-test="feature"]').exists()).toBe(false);
+  });
+  {{/test_conditional_rendering}}
+  
+  {{#vue_router}}
+  it('handles routing correctly', async () => {
+    {{#mount_function}}
+    wrapper = mountComponent();
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}}, {
+      global: {
+        plugins: [router]
+      }
+    });
+    {{/mount_function}}
+    
+    // Test navigation
+    await wrapper.find('[data-test="nav-link"]').trigger('click');
+    
+    // Verify router was called with correct route
+    expect(router.currentRoute.value.path).toBe('/about');
+    
+    // Test route params
+    await router.push({ name: 'detail', params: { id: '123' } });
+    await wrapper.vm.$nextTick();
+    
+    expect(wrapper.find('[data-test="detail-id"]').text()).toBe('123');
+  });
+  {{/vue_router}}
+  
+  {{#vuex}}
+  it('interacts with Vuex store correctly', async () => {
+    const store = createMockStore({
+      items: [{ id: '1', name: 'Test Item' }],
+      loading: false
+    });
+    
+    {{#mount_function}}
+    wrapper = mountComponent({}, {
+      global: {
+        plugins: [store]
+      }
+    });
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}}, {
+      global: {
+        plugins: [store]
+      }
+    });
+    {{/mount_function}}
+    
+    // Test store getters
+    expect(wrapper.find('[data-test="item-name"]').text()).toBe('Test Item');
+    
+    // Test store actions
+    await wrapper.find('[data-test="fetch-button"]').trigger('click');
+    
+    expect(store.state.loading).toBe(true);
+    expect(store.actions.fetchItems).toHaveBeenCalled();
+  });
+  {{/vuex}}
+  
+  {{#pinia}}
+  it('interacts with Pinia store correctly', async () => {
+    // Test Pinia store interactions
+    {{#mount_function}}
+    wrapper = mountComponent();
+    {{/mount_function}}
+    {{^mount_function}}
+    wrapper = mount({{component_name}});
+    {{/mount_function}}
+    
+    // Interact with component to trigger store actions
+    await wrapper.find('[data-test="increment-button"]').trigger('click');
+    
+    // Verify store state was updated
+    expect(wrapper.find('[data-test="counter-value"]').text()).toBe('1');
+  });
+  {{/pinia}}
+});
+{{/typescript}}

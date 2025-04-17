@@ -1,0 +1,1038 @@
+{
+  "tools": [
+    {
+      "tier": "Core",
+      "name": "Code Execution",
+      "description": "Tools for executing code across multiple programming languages using LibreChat Code Interpreter API",
+      "tools": [
+        {
+          "name": "execute_code",
+          "description": "Executes code in various programming languages",
+          "parameters": {
+            "code": {
+              "type": "string",
+              "description": "Code to execute"
+            },
+            "language": {
+              "type": "string",
+              "description": "Programming language (python, javascript, typescript, c++, c#, go, rust, php)",
+              "enum": ["python", "javascript", "typescript", "c++", "c#", "go", "rust", "php"]
+            },
+            "timeout": {
+              "type": "integer",
+              "description": "Maximum execution time in seconds",
+              "default": 30
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Execution results including output, errors, and execution time"
+          }
+        },
+        {
+          "name": "execute_with_dependencies",
+          "description": "Executes code with specified dependencies",
+          "parameters": {
+            "code": {
+              "type": "string",
+              "description": "Code to execute"
+            },
+            "language": {
+              "type": "string",
+              "description": "Programming language",
+              "enum": ["python", "javascript", "typescript", "c++", "c#", "go", "rust", "php"]
+            },
+            "dependencies": {
+              "type": "array",
+              "description": "List of dependencies to install before execution",
+              "items": {
+                "type": "string"
+              }
+            },
+            "timeout": {
+              "type": "integer",
+              "description": "Maximum execution time in seconds",
+              "default": 60
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Execution results including output, errors, and execution time"
+          }
+        },
+        {
+          "name": "get_supported_languages",
+          "description": "Gets list of supported programming languages",
+          "parameters": {},
+          "returns": {
+            "type": "array",
+            "description": "List of supported language strings"
+          }
+        }
+      ]
+    },
+    {
+      "tier": "Core",
+      "name": "UI Components",
+      "description": "Tools for creating and managing UI components across different frameworks",
+      "tools": [
+        {
+          "name": "generate_component",
+          "description": "Creates UI components based on specifications",
+          "parameters": {
+            "component_spec": {
+              "type": "object",
+              "description": "Component specifications",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Component name"
+                },
+                "props": {
+                  "type": "object",
+                  "description": "Component properties"
+                },
+                "state": {
+                  "type": "object",
+                  "description": "Component state"
+                },
+                "children": {
+                  "type": "array",
+                  "description": "Child components"
+                },
+                "styles": {
+                  "type": "object",
+                  "description": "Component styles"
+                },
+                "framework": {
+                  "type": "string",
+                  "description": "Target framework (react, vue, flutter, etc.)"
+                }
+              },
+              "required": ["name"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Generated component code and metadata"
+          }
+        },
+        {
+          "name": "update_component",
+          "description": "Updates an existing component with new properties, state, or styles",
+          "parameters": {
+            "component_path": {
+              "type": "string",
+              "description": "Path to the component file"
+            },
+            "updates": {
+              "type": "object",
+              "description": "Updates to apply to the component"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Updated component code and metadata"
+          }
+        },
+        {
+          "name": "analyze_component",
+          "description": "Analyzes a component for best practices, performance issues, and accessibility",
+          "parameters": {
+            "component_path": {
+              "type": "string",
+              "description": "Path to the component file"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Analysis results"
+          }
+        },
+        {
+          "name": "optimize_component",
+          "description": "Optimizes a component for performance, accessibility, or bundle size",
+          "parameters": {
+            "component_path": {
+              "type": "string",
+              "description": "Path to the component file"
+            },
+            "optimization_type": {
+              "type": "string",
+              "description": "Type of optimization to perform",
+              "enum": ["performance", "accessibility", "bundle_size"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Optimized component code and metadata"
+          }
+        },
+        {
+          "name": "convert_component",
+          "description": "Converts a component from one framework to another",
+          "parameters": {
+            "component_path": {
+              "type": "string",
+              "description": "Path to the component file"
+            },
+            "target_framework": {
+              "type": "string",
+              "description": "Target framework to convert to",
+              "enum": ["react", "vue", "flutter", "swiftui", "csharp"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Converted component code and metadata"
+          }
+        }
+      ]
+    },
+    {
+      "tier": "Core",
+      "name": "UI Layouts",
+      "description": "Tools for creating and managing UI layouts across different frameworks",
+      "tools": [
+        {
+          "name": "generate_layout",
+          "description": "Creates UI layouts based on specifications",
+          "parameters": {
+            "layout_spec": {
+              "type": "object",
+              "description": "Layout specifications",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Layout name"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Layout type (grid, flex, responsive, etc.)"
+                },
+                "components": {
+                  "type": "array",
+                  "description": "Components to include in the layout"
+                },
+                "breakpoints": {
+                  "type": "object",
+                  "description": "Responsive breakpoints"
+                },
+                "framework": {
+                  "type": "string",
+                  "description": "Target framework (react, vue, flutter, etc.)"
+                }
+              },
+              "required": ["name", "type"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Generated layout code and metadata"
+          }
+        },
+        {
+          "name": "update_layout",
+          "description": "Updates an existing layout with new components, breakpoints, or structure",
+          "parameters": {
+            "layout_path": {
+              "type": "string",
+              "description": "Path to the layout file"
+            },
+            "updates": {
+              "type": "object",
+              "description": "Updates to apply to the layout"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Updated layout code and metadata"
+          }
+        },
+        {
+          "name": "analyze_layout",
+          "description": "Analyzes a layout for responsiveness, accessibility, and best practices",
+          "parameters": {
+            "layout_path": {
+              "type": "string",
+              "description": "Path to the layout file"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Analysis results"
+          }
+        },
+        {
+          "name": "optimize_layout",
+          "description": "Optimizes a layout for responsiveness, performance, or accessibility",
+          "parameters": {
+            "layout_path": {
+              "type": "string",
+              "description": "Path to the layout file"
+            },
+            "optimization_type": {
+              "type": "string",
+              "description": "Type of optimization to perform",
+              "enum": ["responsive", "performance", "accessibility"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Optimized layout code and metadata"
+          }
+        },
+        {
+          "name": "convert_layout",
+          "description": "Converts a layout from one framework to another",
+          "parameters": {
+            "layout_path": {
+              "type": "string",
+              "description": "Path to the layout file"
+            },
+            "target_framework": {
+              "type": "string",
+              "description": "Target framework to convert to",
+              "enum": ["react", "vue", "flutter", "swiftui", "csharp"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Converted layout code and metadata"
+          }
+        }
+      ]
+    },
+    {
+      "tier": "Core",
+      "name": "UI Styles",
+      "description": "Tools for creating and managing UI styles across different frameworks",
+      "tools": [
+        {
+          "name": "generate_styles",
+          "description": "Creates UI styles based on specifications",
+          "parameters": {
+            "style_spec": {
+              "type": "object",
+              "description": "Style specifications",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Style name"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Style type (component, layout, theme, etc.)"
+                },
+                "colors": {
+                  "type": "object",
+                  "description": "Color scheme"
+                },
+                "spacing": {
+                  "type": "object",
+                  "description": "Spacing values"
+                },
+                "typography": {
+                  "type": "object",
+                  "description": "Typography settings"
+                },
+                "framework": {
+                  "type": "string",
+                  "description": "Target framework (react, vue, flutter, etc.)"
+                }
+              },
+              "required": ["name", "type"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Generated style code and metadata"
+          }
+        },
+        {
+          "name": "update_styles",
+          "description": "Updates existing styles with new colors, spacing, or typography",
+          "parameters": {
+            "style_path": {
+              "type": "string",
+              "description": "Path to the style file"
+            },
+            "updates": {
+              "type": "object",
+              "description": "Updates to apply to the styles"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Updated style code and metadata"
+          }
+        },
+        {
+          "name": "analyze_styles",
+          "description": "Analyzes styles for consistency, accessibility, and best practices",
+          "parameters": {
+            "style_path": {
+              "type": "string",
+              "description": "Path to the style file"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Analysis results"
+          }
+        },
+        {
+          "name": "optimize_styles",
+          "description": "Optimizes styles for performance, maintainability, or bundle size",
+          "parameters": {
+            "style_path": {
+              "type": "string",
+              "description": "Path to the style file"
+            },
+            "optimization_type": {
+              "type": "string",
+              "description": "Type of optimization to perform",
+              "enum": ["performance", "maintainability", "bundle_size"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Optimized style code and metadata"
+          }
+        },
+        {
+          "name": "convert_styles",
+          "description": "Converts styles from one framework to another",
+          "parameters": {
+            "style_path": {
+              "type": "string",
+              "description": "Path to the style file"
+            },
+            "target_framework": {
+              "type": "string",
+              "description": "Target framework to convert to",
+              "enum": ["react", "vue", "flutter", "swiftui", "csharp"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Converted style code and metadata"
+          }
+        }
+      ]
+    },
+    {
+      "tier": "Specialized",
+      "name": "UI Animations",
+      "description": "Tools for creating and managing UI animations across different frameworks",
+      "tools": [
+        {
+          "name": "generate_animation",
+          "description": "Creates UI animations based on specifications",
+          "parameters": {
+            "animation_spec": {
+              "type": "object",
+              "description": "Animation specifications",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Animation name"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Animation type (fade, slide, scale, etc.)"
+                },
+                "duration": {
+                  "type": "number",
+                  "description": "Animation duration"
+                },
+                "easing": {
+                  "type": "string",
+                  "description": "Easing function"
+                },
+                "trigger": {
+                  "type": "string",
+                  "description": "Animation trigger (hover, click, load, etc.)"
+                },
+                "framework": {
+                  "type": "string",
+                  "description": "Target framework (react, vue, flutter, etc.)"
+                }
+              },
+              "required": ["name", "type"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Generated animation code and metadata"
+          }
+        },
+        {
+          "name": "update_animation",
+          "description": "Updates an existing animation with new duration, easing, or trigger",
+          "parameters": {
+            "animation_path": {
+              "type": "string",
+              "description": "Path to the animation file"
+            },
+            "updates": {
+              "type": "object",
+              "description": "Updates to apply to the animation"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Updated animation code and metadata"
+          }
+        },
+        {
+          "name": "analyze_animation",
+          "description": "Analyzes an animation for performance, accessibility, and best practices",
+          "parameters": {
+            "animation_path": {
+              "type": "string",
+              "description": "Path to the animation file"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Analysis results"
+          }
+        },
+        {
+          "name": "optimize_animation",
+          "description": "Optimizes an animation for performance, accessibility, or visual appeal",
+          "parameters": {
+            "animation_path": {
+              "type": "string",
+              "description": "Path to the animation file"
+            },
+            "optimization_type": {
+              "type": "string",
+              "description": "Type of optimization to perform",
+              "enum": ["performance", "accessibility", "visual_appeal"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Optimized animation code and metadata"
+          }
+        },
+        {
+          "name": "convert_animation",
+          "description": "Converts an animation from one framework to another",
+          "parameters": {
+            "animation_path": {
+              "type": "string",
+              "description": "Path to the animation file"
+            },
+            "target_framework": {
+              "type": "string",
+              "description": "Target framework to convert to",
+              "enum": ["react", "vue", "flutter", "swiftui", "csharp"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Converted animation code and metadata"
+          }
+        }
+      ]
+    },
+    {
+      "tier": "Specialized",
+      "name": "UI Interactions",
+      "description": "Tools for creating and managing UI interactions across different frameworks",
+      "tools": [
+        {
+          "name": "generate_interaction",
+          "description": "Creates UI interactions based on specifications",
+          "parameters": {
+            "interaction_spec": {
+              "type": "object",
+              "description": "Interaction specifications",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Interaction name"
+                },
+                "type": {
+                  "type": "string",
+                  "description": "Interaction type (click, hover, drag, form, etc.)"
+                },
+                "events": {
+                  "type": "object",
+                  "description": "Event handlers"
+                },
+                "feedback": {
+                  "type": "object",
+                  "description": "Visual/audio feedback"
+                },
+                "accessibility": {
+                  "type": "object",
+                  "description": "Accessibility considerations"
+                },
+                "framework": {
+                  "type": "string",
+                  "description": "Target framework (react, vue, flutter, etc.)"
+                }
+              },
+              "required": ["name", "type"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Generated interaction code and metadata"
+          }
+        },
+        {
+          "name": "update_interaction",
+          "description": "Updates an existing interaction with new events, feedback, or accessibility features",
+          "parameters": {
+            "interaction_path": {
+              "type": "string",
+              "description": "Path to the interaction file"
+            },
+            "updates": {
+              "type": "object",
+              "description": "Updates to apply to the interaction"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Updated interaction code and metadata"
+          }
+        },
+        {
+          "name": "analyze_interaction",
+          "description": "Analyzes an interaction for usability, accessibility, and best practices",
+          "parameters": {
+            "interaction_path": {
+              "type": "string",
+              "description": "Path to the interaction file"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Analysis results"
+          }
+        },
+        {
+          "name": "optimize_interaction",
+          "description": "Optimizes an interaction for usability, accessibility, or performance",
+          "parameters": {
+            "interaction_path": {
+              "type": "string",
+              "description": "Path to the interaction file"
+            },
+            "optimization_type": {
+              "type": "string",
+              "description": "Type of optimization to perform",
+              "enum": ["usability", "accessibility", "performance"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Optimized interaction code and metadata"
+          }
+        },
+        {
+          "name": "convert_interaction",
+          "description": "Converts an interaction from one framework to another",
+          "parameters": {
+            "interaction_path": {
+              "type": "string",
+              "description": "Path to the interaction file"
+            },
+            "target_framework": {
+              "type": "string",
+              "description": "Target framework to convert to",
+              "enum": ["react", "vue", "flutter", "swiftui", "csharp"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Converted interaction code and metadata"
+          }
+        }
+      ]
+    },
+    {
+      "tier": "Specialized",
+      "name": "Shared State",
+      "description": "Tools for managing state and synchronization between frontend and backend",
+      "tools": [
+        {
+          "name": "initialize_state",
+          "description": "Initializes shared state based on specifications",
+          "parameters": {
+            "state_spec": {
+              "type": "object",
+              "description": "State specifications",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "State store name"
+                },
+                "initial_state": {
+                  "type": "object",
+                  "description": "Initial state values"
+                },
+                "persistence": {
+                  "type": "boolean",
+                  "description": "Whether state should persist"
+                },
+                "sync_method": {
+                  "type": "string",
+                  "description": "Method for state synchronization (websocket, sse, etc.)"
+                },
+                "framework": {
+                  "type": "string",
+                  "description": "Target framework (react, vue, etc.)"
+                }
+              },
+              "required": ["name"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Initialized state configuration"
+          }
+        },
+        {
+          "name": "update_state",
+          "description": "Updates shared state and notifies subscribers",
+          "parameters": {
+            "state_name": {
+              "type": "string",
+              "description": "Name of the state to update"
+            },
+            "updates": {
+              "type": "object",
+              "description": "Updates to apply to the state"
+            },
+            "source": {
+              "type": "string",
+              "description": "Source of the update (frontend, backend)",
+              "enum": ["frontend", "backend"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Updated state"
+          }
+        },
+        {
+          "name": "subscribe_to_state",
+          "description": "Subscribes to state changes",
+          "parameters": {
+            "state_name": {
+              "type": "string",
+              "description": "Name of the state to subscribe to"
+            },
+            "callback": {
+              "type": "string",
+              "description": "Function to call when state changes"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Subscription information"
+          }
+        },
+        {
+          "name": "get_state",
+          "description": "Gets current state",
+          "parameters": {
+            "state_name": {
+              "type": "string",
+              "description": "Name of the state to get"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Current state"
+          }
+        },
+        {
+          "name": "sync_state",
+          "description": "Synchronizes state between frontend and backend",
+          "parameters": {
+            "state_name": {
+              "type": "string",
+              "description": "Name of the state to synchronize"
+            },
+            "target": {
+              "type": "string",
+              "description": "Target to synchronize with (frontend, backend)",
+              "enum": ["frontend", "backend"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Synchronization result"
+          }
+        }
+      ]
+    },
+    {
+      "tier": "MCP Toolbelt",
+      "name": "UI Framework Integration",
+      "description": "Tools for integrating with UI frameworks and libraries",
+      "tools": [
+        {
+          "name": "integrate_shadcn",
+          "description": "Integrates Shadcn UI components into a project",
+          "parameters": {
+            "project_path": {
+              "type": "string",
+              "description": "Path to the project"
+            },
+            "components": {
+              "type": "array",
+              "description": "List of Shadcn components to integrate"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Integration results"
+          }
+        },
+        {
+          "name": "integrate_aceternity",
+          "description": "Integrates Aceternity UI components into a project",
+          "parameters": {
+            "project_path": {
+              "type": "string",
+              "description": "Path to the project"
+            },
+            "components": {
+              "type": "array",
+              "description": "List of Aceternity components to integrate"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Integration results"
+          }
+        },
+        {
+          "name": "setup_tailwind",
+          "description": "Sets up Tailwind CSS in a project",
+          "parameters": {
+            "project_path": {
+              "type": "string",
+              "description": "Path to the project"
+            },
+            "config": {
+              "type": "object",
+              "description": "Tailwind configuration options"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Setup results"
+          }
+        },
+        {
+          "name": "setup_typescript",
+          "description": "Sets up TypeScript in a project",
+          "parameters": {
+            "project_path": {
+              "type": "string",
+              "description": "Path to the project"
+            },
+            "config": {
+              "type": "object",
+              "description": "TypeScript configuration options"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Setup results"
+          }
+        },
+        {
+          "name": "convert_js_to_ts",
+          "description": "Converts JavaScript files to TypeScript",
+          "parameters": {
+            "file_path": {
+              "type": "string",
+              "description": "Path to the JavaScript file or directory"
+            },
+            "options": {
+              "type": "object",
+              "description": "Conversion options"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Conversion results"
+          }
+        }
+      ]
+    },
+    {
+      "tier": "MCP Toolbelt",
+      "name": "AI Integration",
+      "description": "Tools for integrating AI capabilities into UI",
+      "tools": [
+        {
+          "name": "setup_ai_sdk",
+          "description": "Sets up Vercel AI SDK in a project",
+          "parameters": {
+            "project_path": {
+              "type": "string",
+              "description": "Path to the project"
+            },
+            "config": {
+              "type": "object",
+              "description": "AI SDK configuration options"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Setup results"
+          }
+        },
+        {
+          "name": "create_ai_component",
+          "description": "Creates an AI-powered UI component",
+          "parameters": {
+            "component_spec": {
+              "type": "object",
+              "description": "Component specifications",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Component name"
+                },
+                "ai_features": {
+                  "type": "array",
+                  "description": "AI features to include"
+                },
+                "framework": {
+                  "type": "string",
+                  "description": "Target framework (react, vue, etc.)"
+                }
+              },
+              "required": ["name", "ai_features"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Generated AI component code and metadata"
+          }
+        },
+        {
+          "name": "integrate_copilot_kit",
+          "description": "Integrates CoPilotKit CoAgents into a project",
+          "parameters": {
+            "project_path": {
+              "type": "string",
+              "description": "Path to the project"
+            },
+            "config": {
+              "type": "object",
+              "description": "CoPilotKit configuration options"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Integration results"
+          }
+        },
+        {
+          "name": "setup_shared_state",
+          "description": "Sets up shared state between frontend and backend for AI components",
+          "parameters": {
+            "project_path": {
+              "type": "string",
+              "description": "Path to the project"
+            },
+            "state_config": {
+              "type": "object",
+              "description": "Shared state configuration"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Setup results"
+          }
+        }
+      ]
+    },
+    {
+      "tier": "MCP Toolbelt",
+      "name": "Cross-Platform Development",
+      "description": "Tools for cross-platform development",
+      "tools": [
+        {
+          "name": "setup_electron",
+          "description": "Sets up Electron for desktop application development",
+          "parameters": {
+            "project_path": {
+              "type": "string",
+              "description": "Path to the project"
+            },
+            "config": {
+              "type": "object",
+              "description": "Electron configuration options"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Setup results"
+          }
+        },
+        {
+          "name": "setup_lynx_react",
+          "description": "Sets up Lynx-React for mobile application development",
+          "parameters": {
+            "project_path": {
+              "type": "string",
+              "description": "Path to the project"
+            },
+            "config": {
+              "type": "object",
+              "description": "Lynx-React configuration options"
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Setup results"
+          }
+        },
+        {
+          "name": "create_responsive_component",
+          "description": "Creates a responsive component that works across platforms",
+          "parameters": {
+            "component_spec": {
+              "type": "object",
+              "description": "Component specifications",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "description": "Component name"
+                },
+                "platforms": {
+                  "type": "array",
+                  "description": "Platforms to support (web, desktop, mobile)"
+                },
+                "framework": {
+                  "type": "string",
+                  "description": "Target framework (react, vue, etc.)"
+                }
+              },
+              "required": ["name", "platforms"]
+            }
+          },
+          "returns": {
+            "type": "object",
+            "description": "Generated responsive component code and metadata"
+          }
+        }
+      ]
+    }
+  ]
+}
