@@ -1,24 +1,32 @@
 """
 Neovim tool for the Python agent that allows interacting with Neovim as a
-parallel workflow.
+parallel workflow with real-time database integration for state persistence.
 """
 
 import asyncio
+import os
 import requests
+import time
 from typing import Dict, Any, Optional, List
 
 from ..utils.log import get_logger
 
+try:
+    from ...tools.neovim.db_integration import neovim_db_integration
+except ImportError:
+    neovim_db_integration = None
+
 
 class NeovimTool:
-    """Tool for interacting with Neovim as a parallel workflow environment."""
+    """Tool for interacting with Neovim as a parallel workflow environment with state persistence."""
 
     def __init__(self):
         """Initialize the Neovim tool."""
         self.logger = get_logger("neovim-tool", emoji="📝")
-        self.neovim_api_base = "http://localhost:8090/neovim"
+        self.neovim_api_base = os.environ.get("NEOVIM_API_BASE", "http://localhost:8090/neovim")
         self.active_instances = {}
         self.background_tasks = {}
+        self.db_integration_enabled = neovim_db_integration is not None
 
     async def start_instance(self, instance_id: str) -> bool:
         """Start a new Neovim instance.
@@ -37,6 +45,15 @@ class NeovimTool:
             if response.status_code == 200:
                 self.active_instances[instance_id] = True
                 self.logger.info(f"Started Neovim instance: {instance_id}")
+                
+                if self.db_integration_enabled and neovim_db_integration is not None:
+                    try:
+                        await neovim_db_integration.start_sync(instance_id, self.neovim_api_base)
+                        
+                        await neovim_db_integration.restore_state(instance_id, self.neovim_api_base)
+                    except Exception as db_error:
+                        self.logger.warning(f"Database integration error: {db_error}")
+                
                 return True
             else:
                 self.logger.error(
@@ -57,6 +74,12 @@ class NeovimTool:
             bool: True if instance was stopped successfully
         """
         try:
+            if self.db_integration_enabled and neovim_db_integration is not None:
+                try:
+                    await neovim_db_integration.stop_sync(instance_id)
+                except Exception as db_error:
+                    self.logger.warning(f"Database integration error during stop: {db_error}")
+            
             response = requests.post(
                 f"{self.neovim_api_base}/stop",
                 json={"id": instance_id}
@@ -241,6 +264,12 @@ class NeovimTool:
 
         for instance_id in list(self.active_instances.keys()):
             await self.stop_instance(instance_id)
+        
+        if self.db_integration_enabled and neovim_db_integration is not None:
+            try:
+                await neovim_db_integration.cleanup()
+            except Exception as db_error:
+                self.logger.warning(f"Database integration cleanup error: {db_error}")
 
         self.logger.info(
             "Cleaned up all Neovim instances and background tasks"
