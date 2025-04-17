@@ -10,6 +10,7 @@ import (
 	"github.com/apache/rocketmq-client-go/v2/consumer"
 	"github.com/apache/rocketmq-client-go/v2/primitive"
 	"github.com/spectrumwebco/agent_runtime/internal/config"
+	"github.com/spectrumwebco/agent_runtime/internal/statemanager/neovim"
 	"github.com/spectrumwebco/agent_runtime/internal/statemanager/rocketmq"
 )
 
@@ -21,6 +22,7 @@ type StateManager struct {
 	wg             sync.WaitGroup
 	stateCache     map[string][]byte
 	stateCacheLock sync.RWMutex
+	neovimManager  *NeovimStateManager
 }
 
 func NewStateManager(cfg *config.Config) (*StateManager, error) {
@@ -45,6 +47,9 @@ func NewStateManager(cfg *config.Config) (*StateManager, error) {
 		cancel:     cancel,
 		stateCache: make(map[string][]byte),
 	}
+	
+	neovimStateManager := neovim.NewStateManager(nil, nil, nil, nil, nil, nil)
+	manager.neovimManager = NewNeovimStateManager(manager, neovimStateManager)
 
 	consumerCfg := rocketmq.ConsumerConfig{
 		NameServerAddrs:        cfg.RocketMQ.NameServerAddrs,
@@ -142,6 +147,12 @@ func (sm *StateManager) Close() error {
 
 	if err := sm.consumer.Close(); err != nil {
 		log.Printf("Error closing state consumer: %v\n", err)
+	}
+
+	if sm.neovimManager != nil {
+		if err := sm.neovimManager.Close(); err != nil {
+			log.Printf("Error closing Neovim state manager: %v\n", err)
+		}
 	}
 
 	log.Println("State Manager shut down successfully")

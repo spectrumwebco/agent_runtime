@@ -52,7 +52,18 @@ spec:
             g++ \
             cmake \
             gnome-terminal \
-            gnome-tweaks
+            gnome-tweaks \
+            neovim \
+            ripgrep \
+            fd-find \
+            unzip \
+            ninja-build \
+            gettext \
+            libtool \
+            libtool-bin \
+            autoconf \
+            automake \
+            pkg-config
 
           systemctl enable xrdp
 
@@ -198,9 +209,139 @@ spec:
           mkdir -p /var/run/kata-containers/mem-agent
           
           mkdir -p /home/ubuntu/Desktop
+          mkdir -p /home/ubuntu/.config/nvim
+          mkdir -p /home/ubuntu/.local/share/nvim/site/pack/packer/start
+          
+          git clone --depth 1 https://github.com/wbthomason/packer.nvim /home/ubuntu/.local/share/nvim/site/pack/packer/start/packer.nvim
+          
+          cat > /usr/share/applications/neovim.desktop <<EOF
+          [Desktop Entry]
+          Name=Neovim
+          Comment=Edit text files
+          Exec=gnome-terminal -- nvim %F
+          Terminal=false
+          Type=Application
+          Icon=nvim
+          Categories=Utility;TextEditor;
+          StartupNotify=true
+          MimeType=text/plain;
+          EOF
+          
+          cat > /home/ubuntu/.config/nvim/init.lua <<EOF
+          -- Basic Neovim configuration
+          vim.opt.number = true
+          vim.opt.relativenumber = true
+          vim.opt.tabstop = 2
+          vim.opt.shiftwidth = 2
+          vim.opt.expandtab = true
+          vim.opt.smartindent = true
+          vim.opt.wrap = false
+          vim.opt.swapfile = false
+          vim.opt.backup = false
+          vim.opt.undodir = os.getenv("HOME") .. "/.vim/undodir"
+          vim.opt.undofile = true
+          vim.opt.hlsearch = false
+          vim.opt.incsearch = true
+          vim.opt.termguicolors = true
+          vim.opt.scrolloff = 8
+          vim.opt.signcolumn = "yes"
+          vim.opt.updatetime = 50
+          vim.opt.colorcolumn = "80"
+          
+          -- Plugin management with packer
+          require('packer').startup(function(use)
+            -- Packer can manage itself
+            use 'wbthomason/packer.nvim'
+            
+            -- LSP Configuration
+            use 'neovim/nvim-lspconfig'
+            
+            -- Autocompletion
+            use 'hrsh7th/nvim-cmp'
+            use 'hrsh7th/cmp-nvim-lsp'
+            use 'hrsh7th/cmp-buffer'
+            use 'hrsh7th/cmp-path'
+            
+            -- Snippets
+            use 'L3MON4D3/LuaSnip'
+            use 'saadparwaiz1/cmp_luasnip'
+            
+            -- Telescope for fuzzy finding
+            use {
+              'nvim-telescope/telescope.nvim',
+              requires = { {'nvim-lua/plenary.nvim'} }
+            }
+            
+            -- Treesitter for better syntax highlighting
+            use {
+              'nvim-treesitter/nvim-treesitter',
+              run = ':TSUpdate'
+            }
+            
+            -- Terminal integration
+            use 'akinsho/toggleterm.nvim'
+            
+            -- Git integration
+            use 'lewis6991/gitsigns.nvim'
+            
+            -- Theme
+            use 'folke/tokyonight.nvim'
+          end)
+          
+          -- Set colorscheme
+          vim.cmd[[colorscheme tokyonight]]
+          
+          -- Terminal integration setup
+          require('toggleterm').setup{
+            size = 20,
+            open_mapping = [[<c-\\>]],
+            hide_numbers = true,
+            shade_filetypes = {},
+            shade_terminals = true,
+            shading_factor = 2,
+            start_in_insert = true,
+            insert_mappings = true,
+            persist_size = true,
+            direction = 'float',
+            close_on_exit = true,
+            shell = vim.o.shell,
+            float_opts = {
+              border = 'curved',
+              winblend = 0,
+              highlights = {
+                border = "Normal",
+                background = "Normal",
+              }
+            }
+          }
+          
+          -- Function to set keymaps
+          local function map(mode, lhs, rhs, opts)
+            local options = { noremap = true, silent = true }
+            if opts then
+              options = vim.tbl_extend('force', options, opts)
+            end
+            vim.api.nvim_set_keymap(mode, lhs, rhs, options)
+          end
+          
+          -- Terminal keymaps
+          map('n', '<leader>t', ':ToggleTerm<CR>')
+          map('t', '<esc>', [[<C-\\><C-n>]])
+          
+          -- Telescope keymaps
+          map('n', '<leader>ff', ':Telescope find_files<CR>')
+          map('n', '<leader>fg', ':Telescope live_grep<CR>')
+          map('n', '<leader>fb', ':Telescope buffers<CR>')
+          map('n', '<leader>fh', ':Telescope help_tags<CR>')
+          EOF
+          
+          chown -R ubuntu:ubuntu /home/ubuntu/.config
+          chown -R ubuntu:ubuntu /home/ubuntu/.local
+          
           cp /usr/share/applications/vscode.desktop /home/ubuntu/Desktop/
           cp /usr/share/applications/jetbrains-toolbox.desktop /home/ubuntu/Desktop/
           cp /usr/share/applications/windsurf.desktop /home/ubuntu/Desktop/
+          cp /usr/share/applications/neovim.desktop /home/ubuntu/Desktop/
           chmod +x /home/ubuntu/Desktop/*.desktop
         securityContext:
           privileged: true
@@ -216,12 +357,326 @@ spec:
         args:
         - |
           apt-get update && \
-          apt-get install -y golang git curl jq build-essential
+          apt-get install -y golang git curl jq build-essential neovim python3-neovim
 
           git clone https://github.com/spectrumwebco/gitops-go.git /opt/gitops-go
           cd /opt/gitops-go
           go mod download
           go build -o /usr/local/bin/gitops-mcp-server
+          
+          mkdir -p /opt/agent-runtime/neovim
+          
+          cat > /opt/agent-runtime/neovim/neovim_integration.go <<EOF
+          package main
+
+          import (
+            "encoding/json"
+            "fmt"
+            "log"
+            "net/http"
+            "os"
+            "os/exec"
+            "strings"
+            "sync"
+            "time"
+          )
+
+          // NeovimServer manages Neovim instances and provides an API for the agent to interact with them
+          type NeovimServer struct {
+            instances     map[string]*NeovimInstance
+            instancesLock sync.Mutex
+          }
+
+          // NeovimInstance represents a running Neovim instance
+          type NeovimInstance struct {
+            ID        string
+            Cmd       *exec.Cmd
+            InputChan chan string
+            OutputChan chan string
+            ErrorChan chan string
+            Running   bool
+          }
+
+          // NewNeovimServer creates a new NeovimServer
+          func NewNeovimServer() *NeovimServer {
+            return &NeovimServer{
+              instances: make(map[string]*NeovimInstance),
+            }
+          }
+
+          // StartNeovim starts a new Neovim instance
+          func (s *NeovimServer) StartNeovim(id string) (*NeovimInstance, error) {
+            s.instancesLock.Lock()
+            defer s.instancesLock.Unlock()
+
+            if _, exists := s.instances[id]; exists {
+              return nil, fmt.Errorf("Neovim instance with ID %s already exists", id)
+            }
+
+            cmd := exec.Command("nvim", "--headless", "--listen", "/tmp/nvim-"+id+".sock")
+            
+            instance := &NeovimInstance{
+              ID:        id,
+              Cmd:       cmd,
+              InputChan: make(chan string),
+              OutputChan: make(chan string),
+              ErrorChan: make(chan string),
+              Running:   true,
+            }
+
+            s.instances[id] = instance
+
+            // Start Neovim
+            if err := cmd.Start(); err != nil {
+              delete(s.instances, id)
+              return nil, err
+            }
+
+            // Handle command completion
+            go func() {
+              err := cmd.Wait()
+              instance.Running = false
+              if err != nil {
+                log.Printf("Neovim instance %s exited with error: %v", id, err)
+              } else {
+                log.Printf("Neovim instance %s exited", id)
+              }
+            }()
+
+            return instance, nil
+          }
+
+          // StopNeovim stops a Neovim instance
+          func (s *NeovimServer) StopNeovim(id string) error {
+            s.instancesLock.Lock()
+            defer s.instancesLock.Unlock()
+
+            instance, exists := s.instances[id]
+            if !exists {
+              return fmt.Errorf("Neovim instance with ID %s does not exist", id)
+            }
+
+            if instance.Running {
+              if err := instance.Cmd.Process.Kill(); err != nil {
+                return err
+              }
+            }
+
+            delete(s.instances, id)
+            return nil
+          }
+
+          // ExecuteCommand executes a command in a Neovim instance
+          func (s *NeovimServer) ExecuteCommand(id string, command string) (string, error) {
+            s.instancesLock.Lock()
+            instance, exists := s.instances[id]
+            s.instancesLock.Unlock()
+
+            if !exists {
+              return "", fmt.Errorf("Neovim instance with ID %s does not exist", id)
+            }
+
+            if !instance.Running {
+              return "", fmt.Errorf("Neovim instance %s is not running", id)
+            }
+
+            // Execute command using nvim --remote-send
+            cmd := exec.Command("nvim", "--server", "/tmp/nvim-"+id+".sock", "--remote-send", command)
+            output, err := cmd.CombinedOutput()
+            if err != nil {
+              return "", err
+            }
+
+            return string(output), nil
+          }
+
+          // GetBuffer gets the content of a buffer in a Neovim instance
+          func (s *NeovimServer) GetBuffer(id string, bufferID int) (string, error) {
+            s.instancesLock.Lock()
+            instance, exists := s.instances[id]
+            s.instancesLock.Unlock()
+
+            if !exists {
+              return "", fmt.Errorf("Neovim instance with ID %s does not exist", id)
+            }
+
+            if !instance.Running {
+              return "", fmt.Errorf("Neovim instance %s is not running", id)
+            }
+
+            // Get buffer content using nvim --remote-expr
+            cmd := exec.Command("nvim", "--server", "/tmp/nvim-"+id+".sock", "--remote-expr", 
+                               fmt.Sprintf("join(getbufline(%d, 1, '$'), '\n')", bufferID))
+            output, err := cmd.CombinedOutput()
+            if err != nil {
+              return "", err
+            }
+
+            return string(output), nil
+          }
+
+          // StartServer starts the HTTP server for the Neovim integration
+          func (s *NeovimServer) StartServer(port int) error {
+            http.HandleFunc("/neovim/start", func(w http.ResponseWriter, r *http.Request) {
+              if r.Method != http.MethodPost {
+                http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+                return
+              }
+
+              var request struct {
+                ID string \`json:"id"\`
+              }
+
+              if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+                http.Error(w, err.Error(), http.StatusBadRequest)
+                return
+              }
+
+              instance, err := s.StartNeovim(request.ID)
+              if err != nil {
+                http.Error(w, err.Error(), http.StatusInternalServerError)
+                return
+              }
+
+              response := struct {
+                ID      string \`json:"id"\`
+                Running bool   \`json:"running"\`
+              }{
+                ID:      instance.ID,
+                Running: instance.Running,
+              }
+
+              w.Header().Set("Content-Type", "application/json")
+              json.NewEncoder(w).Encode(response)
+            })
+
+            http.HandleFunc("/neovim/stop", func(w http.ResponseWriter, r *http.Request) {
+              if r.Method != http.MethodPost {
+                http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+                return
+              }
+
+              var request struct {
+                ID string \`json:"id"\`
+              }
+
+              if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+                http.Error(w, err.Error(), http.StatusBadRequest)
+                return
+              }
+
+              if err := s.StopNeovim(request.ID); err != nil {
+                http.Error(w, err.Error(), http.StatusInternalServerError)
+                return
+              }
+
+              w.WriteHeader(http.StatusOK)
+            })
+
+            http.HandleFunc("/neovim/execute", func(w http.ResponseWriter, r *http.Request) {
+              if r.Method != http.MethodPost {
+                http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+                return
+              }
+
+              var request struct {
+                ID      string \`json:"id"\`
+                Command string \`json:"command"\`
+              }
+
+              if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
+                http.Error(w, err.Error(), http.StatusBadRequest)
+                return
+              }
+
+              output, err := s.ExecuteCommand(request.ID, request.Command)
+              if err != nil {
+                http.Error(w, err.Error(), http.StatusInternalServerError)
+                return
+              }
+
+              response := struct {
+                Output string \`json:"output"\`
+              }{
+                Output: output,
+              }
+
+              w.Header().Set("Content-Type", "application/json")
+              json.NewEncoder(w).Encode(response)
+            })
+
+            http.HandleFunc("/neovim/buffer", func(w http.ResponseWriter, r *http.Request) {
+              if r.Method != http.MethodGet {
+                http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+                return
+              }
+
+              id := r.URL.Query().Get("id")
+              if id == "" {
+                http.Error(w, "Missing instance ID", http.StatusBadRequest)
+                return
+              }
+
+              bufferID := 0
+              if bufferIDStr := r.URL.Query().Get("buffer"); bufferIDStr != "" {
+                fmt.Sscanf(bufferIDStr, "%d", &bufferID)
+              }
+
+              content, err := s.GetBuffer(id, bufferID)
+              if err != nil {
+                http.Error(w, err.Error(), http.StatusInternalServerError)
+                return
+              }
+
+              response := struct {
+                Content string \`json:"content"\`
+              }{
+                Content: content,
+              }
+
+              w.Header().Set("Content-Type", "application/json")
+              json.NewEncoder(w).Encode(response)
+            })
+
+            return http.ListenAndServe(fmt.Sprintf(":%d", port), nil)
+          }
+
+          func main() {
+            server := NewNeovimServer()
+            
+            port := 8090
+            if portEnv := os.Getenv("NEOVIM_SERVER_PORT"); portEnv != "" {
+              fmt.Sscanf(portEnv, "%d", &port)
+            }
+            
+            log.Printf("Starting Neovim server on port %d", port)
+            if err := server.StartServer(port); err != nil {
+              log.Fatalf("Failed to start server: %v", err)
+            }
+          }
+          EOF
+          
+          cd /opt/agent-runtime/neovim
+          go build -o /usr/local/bin/neovim-server neovim_integration.go
+          
+          cat > /etc/systemd/system/neovim-server.service <<EOF
+          [Unit]
+          Description=Neovim Integration Server
+          After=network.target
+          
+          [Service]
+          Type=simple
+          User=root
+          Environment=NEOVIM_SERVER_PORT=8090
+          ExecStart=/usr/local/bin/neovim-server
+          Restart=always
+          
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          
+          systemctl enable neovim-server
+          systemctl start neovim-server
 
           mkdir -p /etc/librechat
           
