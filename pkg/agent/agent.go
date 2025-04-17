@@ -23,6 +23,8 @@ type Agent struct {
 	eventStream   EventStream
 	stateManager  StateManager
 	tools         []Tool
+	neovimTools   []NeovimTool
+	activeNeovim  map[string]bool
 	mutex         sync.RWMutex
 	isRunning     bool
 	stopCh        chan struct{}
@@ -43,9 +45,25 @@ type Tool interface {
 	Execute(ctx context.Context, args map[string]interface{}) (map[string]interface{}, error)
 }
 
+type NeovimTool interface {
+	Tool
+	IsNeovimTool() bool
+}
+
 func NewAgent(id, name, role string, capabilities []string, eventStream EventStream, stateManager StateManager) *Agent {
 	if id == "" {
 		id = uuid.New().String()
+	}
+
+	hasNeovimCapability := false
+	for _, cap := range capabilities {
+		if cap == "neovim" {
+			hasNeovimCapability = true
+			break
+		}
+	}
+	if !hasNeovimCapability {
+		capabilities = append(capabilities, "neovim")
 	}
 
 	return &Agent{
@@ -63,6 +81,8 @@ func NewAgent(id, name, role string, capabilities []string, eventStream EventStr
 		eventStream:  eventStream,
 		stateManager: stateManager,
 		tools:        []Tool{},
+		neovimTools:  []NeovimTool{},
+		activeNeovim: make(map[string]bool),
 		mutex:        sync.RWMutex{},
 		isRunning:    false,
 		stopCh:       make(chan struct{}),
@@ -126,7 +146,15 @@ func (a *Agent) AddTool(tool Tool) {
 	a.mutex.Lock()
 	defer a.mutex.Unlock()
 
-	a.tools = append(a.tools, tool)
+	if neovimTool, ok := tool.(NeovimTool); ok && neovimTool.IsNeovimTool() {
+		a.neovimTools = append(a.neovimTools, neovimTool)
+		a.emitEvent(models.EventTypeNeovim, models.EventSourceNeovim, "neovim_tool_added", map[string]string{
+			"agent_id":  a.ID,
+			"tool_name": tool.Name(),
+		})
+	} else {
+		a.tools = append(a.tools, tool)
+	}
 }
 
 func (a *Agent) GetTools() []Tool {
@@ -134,6 +162,13 @@ func (a *Agent) GetTools() []Tool {
 	defer a.mutex.RUnlock()
 
 	return a.tools
+}
+
+func (a *Agent) GetNeovimTools() []NeovimTool {
+	a.mutex.RLock()
+	defer a.mutex.RUnlock()
+
+	return a.neovimTools
 }
 
 func (a *Agent) ExecuteTool(ctx context.Context, toolName string, args map[string]interface{}) (map[string]interface{}, error) {
@@ -159,6 +194,33 @@ func (a *Agent) ExecuteTool(ctx context.Context, toolName string, args map[strin
 			}
 
 			a.emitEvent(models.EventTypeAction, models.EventSourceAgent, "tool_execution_completed", map[string]string{
+				"agent_id":  a.ID,
+				"tool_name": toolName,
+			})
+
+			return result, nil
+		}
+	}
+
+	for _, tool := range a.neovimTools {
+		if tool.Name() == toolName {
+			a.emitEvent(models.EventTypeNeovim, models.EventSourceNeovim, "neovim_tool_execution_started", map[string]string{
+				"agent_id":  a.ID,
+				"tool_name": toolName,
+			})
+
+			result, err := tool.Execute(ctx, args)
+
+			if err != nil {
+				a.emitEvent(models.EventTypeNeovim, models.EventSourceNeovim, "neovim_tool_execution_failed", map[string]string{
+					"agent_id":  a.ID,
+					"tool_name": toolName,
+					"error":     err.Error(),
+				})
+				return nil, err
+			}
+
+			a.emitEvent(models.EventTypeNeovim, models.EventSourceNeovim, "neovim_tool_execution_completed", map[string]string{
 				"agent_id":  a.ID,
 				"tool_name": toolName,
 			})

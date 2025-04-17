@@ -15,6 +15,7 @@ const (
 	EventTypeDatasource EventType = "datasource"
 	EventTypeStateUpdate EventType = "state_update" // For RocketMQ
 	EventTypeCacheUpdate EventType = "cache_update" // For DragonflyDB invalidation
+	EventTypeNeovim     EventType = "neovim"        // For Neovim operations
 
 	EventSourceUser    EventSource = "user"
 	EventSourceAgent   EventSource = "agent"
@@ -23,6 +24,7 @@ const (
 	EventSourceCICD    EventSource = "ci_cd"
 	EventSourceK8s     EventSource = "kubernetes"
 	EventSourceSandbox EventSource = "sandbox"
+	EventSourceNeovim  EventSource = "neovim"       // For Neovim events
 )
 
 type Event struct {
