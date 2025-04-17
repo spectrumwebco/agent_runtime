@@ -5,9 +5,8 @@ parallel workflow with state persistence integration.
 
 import asyncio
 import os
+from typing import Dict, Any, Optional, List, Tuple
 import requests
-import time
-from typing import Dict, Any, Optional, List
 
 from ..utils.log import get_logger
 
@@ -52,34 +51,33 @@ class NeovimTool:
         try:
             response = requests.post(
                 f"{self.neovim_api_base}/start",
-                json={"id": instance_id}
+                json={"id": instance_id},
+                timeout=10
             )
             if response.status_code == 200:
                 self.active_instances[instance_id] = True
-                self.logger.info(f"Started Neovim instance: {instance_id}")
+                self.logger.info("Started Neovim instance: %s", instance_id)
                 
                 if self.db_integration_enabled and neovim_db_integration is not None:
                     try:
                         await neovim_db_integration.start_sync(instance_id, self.neovim_api_base)
                         await neovim_db_integration.restore_state(instance_id, self.neovim_api_base)
                     except Exception as db_error:
-                        self.logger.warning(f"Database integration error: {db_error}")
+                        self.logger.warning("Database integration error: %s", db_error)
                 
                 if self.shared_state_enabled and neovim_state_manager is not None:
                     try:
                         neovim_state_manager.start_sync(instance_id, self.neovim_api_base)
                         neovim_state_manager.restore_instance_state(instance_id, self.neovim_api_base)
                     except Exception as state_error:
-                        self.logger.warning(f"Shared state integration error: {state_error}")
+                        self.logger.warning("Shared state integration error: %s", state_error)
                 
                 return True
-            else:
-                self.logger.error(
-                    f"Failed to start Neovim instance: {response.text}"
-                )
-                return False
+            
+            self.logger.error("Failed to start Neovim instance: %s", response.text)
+            return False
         except Exception as e:
-            self.logger.error(f"Error starting Neovim instance: {e}")
+            self.logger.error("Error starting Neovim instance: %s", e)
             return False
 
     async def stop_instance(self, instance_id: str) -> bool:
@@ -96,30 +94,29 @@ class NeovimTool:
                 try:
                     await neovim_db_integration.stop_sync(instance_id)
                 except Exception as db_error:
-                    self.logger.warning(f"Database integration error during stop: {db_error}")
+                    self.logger.warning("Database integration error during stop: %s", db_error)
             
             if self.shared_state_enabled and neovim_state_manager is not None:
                 try:
                     neovim_state_manager.stop_sync(instance_id)
                 except Exception as state_error:
-                    self.logger.warning(f"Shared state integration error during stop: {state_error}")
+                    self.logger.warning("Shared state integration error during stop: %s", state_error)
             
             response = requests.post(
                 f"{self.neovim_api_base}/stop",
-                json={"id": instance_id}
+                json={"id": instance_id},
+                timeout=10
             )
             if response.status_code == 200:
                 if instance_id in self.active_instances:
                     del self.active_instances[instance_id]
-                self.logger.info(f"Stopped Neovim instance: {instance_id}")
+                self.logger.info("Stopped Neovim instance: %s", instance_id)
                 return True
-            else:
-                self.logger.error(
-                    f"Failed to stop Neovim instance: {response.text}"
-                )
-                return False
+            
+            self.logger.error("Failed to stop Neovim instance: %s", response.text)
+            return False
         except Exception as e:
-            self.logger.error(f"Error stopping Neovim instance: {e}")
+            self.logger.error("Error stopping Neovim instance: %s", e)
             return False
 
     async def execute_command(
@@ -160,12 +157,12 @@ class NeovimTool:
             task_id = f"{instance_id}_{len(self.background_tasks)}"
             self.background_tasks[task_id] = task
             self.logger.info(
-                f"Started background task {task_id} for Neovim instance: "
-                f"{instance_id}"
+                "Started background task %s for Neovim instance: %s",
+                task_id, instance_id
             )
             return {"status": "running_in_background", "task_id": task_id}
-        else:
-            return await self._execute_command(instance_id, command)
+        
+        return await self._execute_command(instance_id, command)
 
     async def _execute_command(
         self, instance_id: str, command: str
@@ -182,17 +179,16 @@ class NeovimTool:
         try:
             response = requests.post(
                 f"{self.neovim_api_base}/execute",
-                json={"id": instance_id, "command": command}
+                json={"id": instance_id, "command": command},
+                timeout=10
             )
             if response.status_code == 200:
                 return response.json()
-            else:
-                self.logger.error(
-                    f"Failed to execute Neovim command: {response.text}"
-                )
-                return {"error": f"Failed to execute command: {response.text}"}
+            
+            self.logger.error("Failed to execute Neovim command: %s", response.text)
+            return {"error": f"Failed to execute command: {response.text}"}
         except Exception as e:
-            self.logger.error(f"Error executing Neovim command: {e}")
+            self.logger.error("Error executing Neovim command: %s", e)
             return {"error": f"Error executing command: {str(e)}"}
 
     async def get_state(self, instance_id: str) -> Dict[str, Any]:
@@ -207,17 +203,16 @@ class NeovimTool:
         try:
             response = requests.get(
                 f"{self.neovim_api_base}/state",
-                params={"id": instance_id}
+                params={"id": instance_id},
+                timeout=10
             )
             if response.status_code == 200:
                 return response.json()
-            else:
-                self.logger.error(
-                    f"Failed to get Neovim state: {response.text}"
-                )
-                return {"error": f"Failed to get state: {response.text}"}
+            
+            self.logger.error("Failed to get Neovim state: %s", response.text)
+            return {"error": f"Failed to get state: {response.text}"}
         except Exception as e:
-            self.logger.error(f"Error getting Neovim state: {e}")
+            self.logger.error("Error getting Neovim state: %s", e)
             return {"error": f"Error getting state: {str(e)}"}
 
     async def get_background_tasks(self) -> List[str]:
@@ -249,8 +244,8 @@ class NeovimTool:
             except Exception as e:
                 del self.background_tasks[task_id]
                 return {"status": "failed", "error": str(e)}
-        else:
-            return {"status": "running"}
+        
+        return {"status": "running"}
 
     async def cancel_background_task(self, task_id: str) -> Dict[str, Any]:
         """Cancel a background task.
@@ -275,6 +270,79 @@ class NeovimTool:
         del self.background_tasks[task_id]
         return {"status": "cancelled"}
 
+    async def start_bulk_instances(self, count: int, prefix: str = "neovim_") -> List[str]:
+        """Start multiple Neovim instances in bulk.
+
+        Args:
+            count: Number of instances to start
+            prefix: Prefix for instance IDs
+
+        Returns:
+            List[str]: List of started instance IDs
+        """
+        instance_ids = []
+        for i in range(count):
+            instance_id = f"{prefix}{i}"
+            success = await self.start_instance(instance_id)
+            if success:
+                instance_ids.append(instance_id)
+        
+        self.logger.info("Started %d Neovim instances in bulk", len(instance_ids))
+        return instance_ids
+
+    async def execute_in_all(self, command: str, file: Optional[str] = None) -> Dict[str, Any]:
+        """Execute a command in all active Neovim instances.
+
+        Args:
+            command: Neovim command to execute
+            file: Optional file to open before executing the command
+
+        Returns:
+            Dict[str, Any]: Results for each instance
+        """
+        results = {}
+        for instance_id in list(self.active_instances.keys()):
+            results[instance_id] = await self.execute_command(
+                instance_id, command, file=file
+            )
+        
+        return results
+
+    async def execute_agent_framework_command(
+        self, 
+        instance_id: str, 
+        command: str, 
+        terminal_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Execute a command through the agent_framework terminal integration.
+
+        Args:
+            instance_id: Unique identifier for the Neovim instance
+            command: Shell command to execute
+            terminal_id: Optional terminal ID for the agent_framework
+
+        Returns:
+            Dict[str, Any]: Command result
+        """
+        if not terminal_id:
+            terminal_id = f"neovim_{instance_id}"
+        
+        neovim_command = f":terminal {command}<CR>"
+        
+        result = await self.execute_command(instance_id, neovim_command)
+        if result is None:
+            return {"error": "Failed to execute command in Neovim instance"}
+        
+        try:
+            self.logger.info(
+                "Registered terminal command with agent_framework: %s (terminal: %s)",
+                command, terminal_id
+            )
+        except Exception as e:
+            self.logger.error("Failed to register with agent_framework: %s", e)
+        
+        return result
+
     async def cleanup(self) -> None:
         """Clean up all Neovim instances and background tasks."""
         for task_id, task in list(self.background_tasks.items()):
@@ -293,17 +361,15 @@ class NeovimTool:
             try:
                 await neovim_db_integration.cleanup()
             except Exception as db_error:
-                self.logger.warning(f"Database integration cleanup error: {db_error}")
+                self.logger.warning("Database integration cleanup error: %s", db_error)
         
         if self.shared_state_enabled and neovim_state_manager is not None:
             try:
                 neovim_state_manager.stop()
             except Exception as state_error:
-                self.logger.warning(f"Shared state integration cleanup error: {state_error}")
+                self.logger.warning("Shared state integration cleanup error: %s", state_error)
 
-        self.logger.info(
-            "Cleaned up all Neovim instances and background tasks"
-        )
+        self.logger.info("Cleaned up all Neovim instances and background tasks")
 
 
 neovim_tool = NeovimTool()

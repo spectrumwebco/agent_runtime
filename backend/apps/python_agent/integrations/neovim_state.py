@@ -5,23 +5,25 @@ This module provides integration between Neovim and the shared state system,
 allowing Neovim state to be persisted and synchronized across components.
 """
 
-import json
 import logging
 import threading
 import time
-from typing import Dict, Any, List, Optional, Union, Callable
+from typing import Dict, Any, List, Optional
 from pydantic import BaseModel, Field
 
-from .shared_state import SharedState, SharedStateConfig
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from integrations.shared_state import SharedState
 
 logger = logging.getLogger(__name__)
 
 class NeovimStateEntry(BaseModel):
     """Neovim state entry for a specific instance."""
-    
     instance_id: str = Field(..., description="Unique identifier for the Neovim instance")
     buffers: List[Dict[str, Any]] = Field(default_factory=list, description="List of open buffers")
-    cursor_positions: Dict[str, Dict[str, int]] = Field(default_factory=dict, description="Cursor positions for each buffer")
+    cursor_positions: Dict[str, Dict[str, int]] = Field(default_factory=dict, 
+                                                       description="Cursor positions for each buffer")
     registers: Dict[str, str] = Field(default_factory=dict, description="Neovim registers")
     marks: Dict[str, Dict[str, Any]] = Field(default_factory=dict, description="Neovim marks")
     options: Dict[str, Any] = Field(default_factory=dict, description="Neovim options")
@@ -30,7 +32,6 @@ class NeovimStateEntry(BaseModel):
 
 class NeovimStateManager:
     """Manager for Neovim state in the shared state system."""
-    
     def __init__(self, shared_state: Optional[SharedState] = None):
         """Initialize the Neovim state manager.
         
@@ -93,7 +94,7 @@ class NeovimStateManager:
         
         self._running = False
         
-        for instance_id, thread in list(self._sync_threads.items()):
+        for instance_id in list(self._sync_threads.keys()):
             self.stop_sync(instance_id)
         
         logger.info("Stopped Neovim state manager")
@@ -145,7 +146,7 @@ class NeovimStateManager:
             bool: True if sync started successfully
         """
         if instance_id in self._sync_threads:
-            logger.warning(f"Sync already running for Neovim instance: {instance_id}")
+            logger.warning("Sync already running for Neovim instance: %s", instance_id)
             return True
         
         thread = threading.Thread(
@@ -157,7 +158,7 @@ class NeovimStateManager:
         
         self._sync_threads[instance_id] = thread
         
-        logger.info(f"Started sync for Neovim instance: {instance_id}")
+        logger.info("Started sync for Neovim instance: %s", instance_id)
         return True
     
     def stop_sync(self, instance_id: str) -> bool:
@@ -170,14 +171,13 @@ class NeovimStateManager:
             bool: True if sync stopped successfully
         """
         if instance_id not in self._sync_threads:
-            logger.warning(f"No sync running for Neovim instance: {instance_id}")
+            logger.warning("No sync running for Neovim instance: %s", instance_id)
             return True
         
         self.update_instance_state(instance_id, {'active': False})
+        self._sync_threads.pop(instance_id)
         
-        thread = self._sync_threads.pop(instance_id)
-        
-        logger.info(f"Stopped sync for Neovim instance: {instance_id}")
+        logger.info("Stopped sync for Neovim instance: %s", instance_id)
         return True
     
     def _sync_loop(self, instance_id: str, neovim_api_base: str, interval: float):
@@ -194,7 +194,8 @@ class NeovimStateManager:
             try:
                 response = requests.get(
                     f"{neovim_api_base}/state",
-                    params={"id": instance_id}
+                    params={"id": instance_id},
+                    timeout=10
                 )
                 
                 if response.status_code == 200:
@@ -212,10 +213,9 @@ class NeovimStateManager:
                     
                     self.update_instance_state(instance_id, state_update)
                 else:
-                    logger.warning(f"Failed to get Neovim state: {response.text}")
-            
+                    logger.warning("Failed to get Neovim state: %s", response.text)
             except Exception as e:
-                logger.error(f"Error in sync loop: {e}")
+                logger.error("Error in sync loop: %s", e)
             
             time.sleep(interval)
     
@@ -235,7 +235,7 @@ class NeovimStateManager:
             instance_state = self.get_instance_state(instance_id)
             
             if not instance_state:
-                logger.warning(f"No state found for Neovim instance: {instance_id}")
+                logger.warning("No state found for Neovim instance: %s", instance_id)
                 return False
             
             neovim_state = {
@@ -248,18 +248,18 @@ class NeovimStateManager:
             
             response = requests.post(
                 f"{neovim_api_base}/restore",
-                json={"id": instance_id, "state": neovim_state}
+                json={"id": instance_id, "state": neovim_state},
+                timeout=10
             )
             
             if response.status_code == 200:
-                logger.info(f"Restored state for Neovim instance: {instance_id}")
+                logger.info("Restored state for Neovim instance: %s", instance_id)
                 return True
-            else:
-                logger.error(f"Failed to restore Neovim state: {response.text}")
-                return False
-        
+            
+            logger.error("Failed to restore Neovim state: %s", response.text)
+            return False
         except Exception as e:
-            logger.error(f"Error restoring Neovim state: {e}")
+            logger.error("Error restoring Neovim state: %s", e)
             return False
     
     def list_instances(self, active_only: bool = False) -> List[str]:
@@ -277,8 +277,7 @@ class NeovimStateManager:
                     instance_id for instance_id, state in self._neovim_instances.items()
                     if state.get('active', False)
                 ]
-            else:
-                return list(self._neovim_instances.keys())
+            return list(self._neovim_instances.keys())
     
     def __enter__(self):
         """Context manager entry."""
