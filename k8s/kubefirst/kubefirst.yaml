@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubefirst
+  namespace: kubefirst
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubefirst
+  template:
+    metadata:
+      labels:
+        app: kubefirst
+    spec:
+      serviceAccountName: kubefirst
+      containers:
+      - name: kubefirst
+        image: kubefirst/kubefirst:v2.7.0
+        args:
+        - server
+        - --config-file=/etc/kubefirst/config.yaml
+        ports:
+        - containerPort: 8080
+          name: http
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/kubefirst
+        - name: secret-volume
+          mountPath: /etc/kubefirst-secret
+      volumes:
+      - name: config-volume
+        configMap:
+          name: kubefirst-config
+      - name: secret-volume
+        secret:
+          secretName: kubefirst-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kubefirst
+  namespace: kubefirst
+spec:
+  selector:
+    app: kubefirst
+  ports:
+  - port: 80
+    targetPort: 8080
+    name: http
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: kubefirst
+  namespace: kubefirst
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kubefirst-role
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubefirst-role-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: kubefirst-role
+subjects:
+- kind: ServiceAccount
+  name: kubefirst
+  namespace: kubefirst
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kubefirst-config
+  namespace: kubefirst
+data:
+  config.yaml: |
+    apiVersion: kubefirst.io/v1
+    kind: KubefirstConfig
+    spec:
+      gitProvider: gitea
+      gitAuth:
+        type: basic
+        username: "ove"
+        passwordSecretRef: "gitea-password"
+      cloudProvider: k3d
+      clusterName: agent-runtime-cluster
+      gitopsTemplateURL: "https://github.com/kubefirst/gitops-template.git"
+      gitopsTemplateBranch: "main"

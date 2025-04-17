@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vault
+  namespace: kubefirst
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vault
+  template:
+    metadata:
+      labels:
+        app: vault
+    spec:
+      containers:
+      - name: vault
+        image: hashicorp/vault:1.14
+        ports:
+        - containerPort: 8200
+          name: http
+        - containerPort: 8201
+          name: internal
+        env:
+        - name: VAULT_DEV_ROOT_TOKEN_ID
+          valueFrom:
+            secretKeyRef:
+              name: vault-secret
+              key: root-token
+        - name: VAULT_DEV_LISTEN_ADDRESS
+          value: "0.0.0.0:8200"
+        volumeMounts:
+        - name: vault-data
+          mountPath: /vault/data
+      volumes:
+      - name: vault-data
+        persistentVolumeClaim:
+          claimName: vault-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vault
+  namespace: kubefirst
+spec:
+  selector:
+    app: vault
+  ports:
+  - port: 8200
+    targetPort: 8200
+    name: http
+  - port: 8201
+    targetPort: 8201
+    name: internal
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: vault-data-pvc
+  namespace: kubefirst
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: vault-secret
+  namespace: kubefirst
+type: Opaque
+data:
+  root-token: a3ViZWZpcnN0LXJvb3QtdG9rZW4= # kubefirst-root-token base64 encoded

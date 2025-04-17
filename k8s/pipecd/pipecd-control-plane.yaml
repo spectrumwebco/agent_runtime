@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pipecd-control-plane
+  namespace: pipecd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pipecd-control-plane
+  template:
+    metadata:
+      labels:
+        app: pipecd-control-plane
+    spec:
+      serviceAccountName: pipecd
+      containers:
+      - name: control-plane
+        image: ghcr.io/pipe-cd/pipecd:v0.51.1
+        args:
+        - server
+        - --config-file=/etc/pipecd-config/control-plane-config.yaml
+        ports:
+        - containerPort: 9082
+          name: http
+        - containerPort: 9083
+          name: grpc
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/pipecd-config
+      volumes:
+      - name: config-volume
+        configMap:
+          name: pipecd-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: pipecd-control-plane
+  namespace: pipecd
+spec:
+  selector:
+    app: pipecd-control-plane
+  ports:
+  - port: 80
+    targetPort: 9082
+    name: http
+  - port: 9083
+    targetPort: 9083
+    name: grpc
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pipecd-config
+  namespace: pipecd
+data:
+  control-plane-config.yaml: |
+    apiVersion: pipecd.dev/v1beta1
+    kind: ControlPlane
+    spec:
+      address: ":9082"
+      stateKey: "pipecd-state-key"
+      datastore:
+        type: "filestore"
+        config:
+          path: "/data/filestore"
+      filestore:
+        type: "minio"
+        config:
+          endpoint: "minio.minio.svc.cluster.local:9000"
+          bucket: "pipecd"
+          accessKeyFile: "/etc/pipecd-secret/minio-access-key"
+          secretKeyFile: "/etc/pipecd-secret/minio-secret-key"
+          autoCreateBucket: true
+      git:
+        sshKeyFile: "/etc/pipecd-secret/ssh-key"
+      repositories:
+        - repoId: "agent-runtime"
+          remote: "https://github.com/spectrumwebco/agent_runtime.git"
+          branch: "main"
