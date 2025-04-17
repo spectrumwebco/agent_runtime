@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: otf
+  labels:
+    app.kubernetes.io/name: otf
+    app.kubernetes.io/part-of: agent-runtime

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: terraform-operator
+  labels:
+    app.kubernetes.io/name: terraform-operator
+    app.kubernetes.io/part-of: agent-runtime

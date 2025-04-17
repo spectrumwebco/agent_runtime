@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pipecd-piped
+  namespace: pipecd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pipecd-piped
+  template:
+    metadata:
+      labels:
+        app: pipecd-piped
+    spec:
+      serviceAccountName: pipecd
+      containers:
+      - name: piped
+        image: ghcr.io/pipe-cd/piped:v0.51.1
+        args:
+        - piped
+        - --config-file=/etc/pipecd-config/piped-config.yaml
+        volumeMounts:
+        - name: config-volume
+          mountPath: /etc/pipecd-config
+        - name: secret-volume
+          mountPath: /etc/pipecd-secret
+      volumes:
+      - name: config-volume
+        configMap:
+          name: pipecd-piped-config
+      - name: secret-volume
+        secret:
+          secretName: pipecd-piped-secret
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: pipecd-piped-config
+  namespace: pipecd
+data:
+  piped-config.yaml: |
+    apiVersion: pipecd.dev/v1beta1
+    kind: Piped
+    spec:
+      projectID: "agent-runtime-project"
+      pipedID: "agent-runtime-piped"
+      pipedKeyFile: "/etc/pipecd-secret/piped-key"
+      apiAddress: "pipecd-control-plane.pipecd.svc.cluster.local:9083"
+      webAddress: "http://pipecd-control-plane.pipecd.svc.cluster.local"
+      git:
+        sshKeyFile: "/etc/pipecd-secret/ssh-key"
+      repositories:
+        - repoId: "agent-runtime"
+          remote: "https://github.com/spectrumwebco/agent_runtime.git"
+          branch: "main"
+      platforms:
+        - name: kubernetes
+          type: KUBERNETES
+          config:
+            kubeconfigPath: "/etc/pipecd-secret/kubeconfig"
+        - name: terraform
+          type: TERRAFORM
+          config:
+            vars:
+              project: "agent-runtime"
+              region: "us-central1"

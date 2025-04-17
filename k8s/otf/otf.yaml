@@ -1,0 +1,55 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otf
+  namespace: otf
+  labels:
+    app: otf
+    app.kubernetes.io/part-of: agent-runtime
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otf
+  template:
+    metadata:
+      labels:
+        app: otf
+    spec:
+      containers:
+      - name: otf
+        image: otfninja/otf:latest
+        ports:
+        - containerPort: 8080
+        resources:
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+          requests:
+            cpu: "0.5"
+            memory: "500Mi"
+        env:
+        - name: OTF_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: otf-secrets
+              key: api-key
+      serviceAccountName: otf-sa
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otf
+  namespace: otf
+spec:
+  selector:
+    app: otf
+  ports:
+  - port: 80
+    targetPort: 8080
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otf-sa
+  namespace: otf

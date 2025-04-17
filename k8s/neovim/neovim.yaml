@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: neovim
+  namespace: neovim
+  labels:
+    app.kubernetes.io/name: neovim
+    app.kubernetes.io/part-of: agent-runtime
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: neovim
+  template:
+    metadata:
+      labels:
+        app: neovim
+    spec:
+      containers:
+      - name: neovim
+        image: neovim/neovim:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8090
+          name: http
+        env:
+        - name: NEOVIM_API_BASE
+          value: "http://localhost:8090/neovim"
+        - name: SUPABASE_URL
+          valueFrom:
+            configMapKeyRef:
+              name: neovim-config
+              key: supabase_url
+        - name: SUPABASE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: neovim-secrets
+              key: supabase_key
+        volumeMounts:
+        - name: neovim-config
+          mountPath: /root/.config/nvim
+        - name: neovim-data
+          mountPath: /root/.local/share/nvim
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+      volumes:
+      - name: neovim-config
+        configMap:
+          name: neovim-config
+      - name: neovim-data
+        persistentVolumeClaim:
+          claimName: neovim-data-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: neovim
+  namespace: neovim
+  labels:
+    app.kubernetes.io/name: neovim
+    app.kubernetes.io/part-of: agent-runtime
+spec:
+  selector:
+    app: neovim
+  ports:
+  - port: 8090
+    targetPort: 8090
+    name: http
+  type: ClusterIP
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: neovim-data-pvc
+  namespace: neovim
+  labels:
+    app.kubernetes.io/name: neovim
+    app.kubernetes.io/part-of: agent-runtime
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: neovim-secrets
+  namespace: neovim
+  labels:
+    app.kubernetes.io/name: neovim
+    app.kubernetes.io/part-of: agent-runtime
+type: Opaque
+data:
+  supabase_key: ZXlKaGJHY2lPaUpJVXpJMU5pSXNJblI1Y0NJNklrcFhWQ0o5LmV5SnBjM01pT2lKemRYQmhZbUZ6WlNJc0luSmxaaUk2SW1GblpXNTBMWEoxYm5ScGJXVWlMQ0p5YjJ4bElqb2lZVzV2YmlJc0ltbGhkQ0k2TVRZeE5qUXhNamd3TUN3aVpYaHdJam94T1RNeU1EQXdNREF3ZlEuWlhaaGJYQnNaUT09

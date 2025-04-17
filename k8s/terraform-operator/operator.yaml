@@ -1,0 +1,29 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: terraform-operator
+  namespace: terraform-operator
+  labels:
+    app: terraform-operator
+    app.kubernetes.io/part-of: agent-runtime
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: terraform-operator
+  template:
+    metadata:
+      labels:
+        app: terraform-operator
+    spec:
+      containers:
+      - name: terraform-operator
+        image: galleybytes/terraform-operator:latest
+        resources:
+          limits:
+            cpu: "1"
+            memory: "1Gi"
+          requests:
+            cpu: "0.5"
+            memory: "500Mi"
+      serviceAccountName: terraform-operator-sa

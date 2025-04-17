@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chaoskube
+  namespace: chaoskube
+  labels:
+    app.kubernetes.io/name: chaoskube
+    app.kubernetes.io/part-of: agent-runtime
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chaoskube
+  template:
+    metadata:
+      labels:
+        app: chaoskube
+    spec:
+      serviceAccountName: chaoskube
+      containers:
+      - name: chaoskube
+        image: ghcr.io/linki/chaoskube:v0.26.0
+        args:
+        - --interval=10m
+        - --labels=app.kubernetes.io/part-of=agent-runtime
+        - --namespaces=!kube-system,!chaos-mesh,!chaoskube
+        - --annotations=!chaos.alpha.kubernetes.io/protected=true
+        - --master=http://localhost:8080
+        - --debug
+        - --dry-run
+        resources:
+          limits:
+            cpu: 100m
+            memory: 128Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chaoskube
+  namespace: chaoskube
+  labels:
+    app.kubernetes.io/name: chaoskube
+    app.kubernetes.io/part-of: agent-runtime
+spec:
+  selector:
+    app: chaoskube
+  ports:
+  - port: 8080
+    targetPort: 8080
+    name: http
+  type: ClusterIP
