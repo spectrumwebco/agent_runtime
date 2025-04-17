@@ -1,6 +1,6 @@
 """
 Neovim tool for the Python agent that allows interacting with Neovim as a
-parallel workflow with real-time database integration for state persistence.
+parallel workflow with state persistence integration.
 """
 
 import asyncio
@@ -11,10 +11,17 @@ from typing import Dict, Any, Optional, List
 
 from ..utils.log import get_logger
 
+# Try to import the database integration
 try:
     from ...tools.neovim.db_integration import neovim_db_integration
 except ImportError:
     neovim_db_integration = None
+
+# Try to import the shared state integration
+try:
+    from ...integrations.neovim_state import neovim_state_manager
+except ImportError:
+    neovim_state_manager = None
 
 
 class NeovimTool:
@@ -26,7 +33,12 @@ class NeovimTool:
         self.neovim_api_base = os.environ.get("NEOVIM_API_BASE", "http://localhost:8090/neovim")
         self.active_instances = {}
         self.background_tasks = {}
+        
         self.db_integration_enabled = neovim_db_integration is not None
+        self.shared_state_enabled = neovim_state_manager is not None
+        
+        if self.shared_state_enabled and neovim_state_manager is not None:
+            neovim_state_manager.start()
 
     async def start_instance(self, instance_id: str) -> bool:
         """Start a new Neovim instance.
@@ -49,10 +61,16 @@ class NeovimTool:
                 if self.db_integration_enabled and neovim_db_integration is not None:
                     try:
                         await neovim_db_integration.start_sync(instance_id, self.neovim_api_base)
-                        
                         await neovim_db_integration.restore_state(instance_id, self.neovim_api_base)
                     except Exception as db_error:
                         self.logger.warning(f"Database integration error: {db_error}")
+                
+                if self.shared_state_enabled and neovim_state_manager is not None:
+                    try:
+                        neovim_state_manager.start_sync(instance_id, self.neovim_api_base)
+                        neovim_state_manager.restore_instance_state(instance_id, self.neovim_api_base)
+                    except Exception as state_error:
+                        self.logger.warning(f"Shared state integration error: {state_error}")
                 
                 return True
             else:
@@ -79,6 +97,12 @@ class NeovimTool:
                     await neovim_db_integration.stop_sync(instance_id)
                 except Exception as db_error:
                     self.logger.warning(f"Database integration error during stop: {db_error}")
+            
+            if self.shared_state_enabled and neovim_state_manager is not None:
+                try:
+                    neovim_state_manager.stop_sync(instance_id)
+                except Exception as state_error:
+                    self.logger.warning(f"Shared state integration error during stop: {state_error}")
             
             response = requests.post(
                 f"{self.neovim_api_base}/stop",
@@ -270,6 +294,12 @@ class NeovimTool:
                 await neovim_db_integration.cleanup()
             except Exception as db_error:
                 self.logger.warning(f"Database integration cleanup error: {db_error}")
+        
+        if self.shared_state_enabled and neovim_state_manager is not None:
+            try:
+                neovim_state_manager.stop()
+            except Exception as state_error:
+                self.logger.warning(f"Shared state integration cleanup error: {state_error}")
 
         self.logger.info(
             "Cleaned up all Neovim instances and background tasks"
