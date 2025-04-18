@@ -5,31 +5,27 @@ This module provides compliance checking capabilities for the Veigar agent,
 focusing on Defense for Australia E8 requirements and other security frameworks.
 """
 
-import os
-import sys
-import json
 import logging
-import subprocess
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Union
+import random
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
 
 class ComplianceChecker:
     """Compliance checker for security frameworks."""
-    
+
     def __init__(self, frameworks: Optional[List[str]] = None):
         """
         Initialize the compliance checker.
-        
+
         Args:
             frameworks: List of compliance frameworks to check against
         """
         self.frameworks = frameworks if frameworks is not None else ["e8", "nist", "owasp"]
         self.compliance_rules = self._initialize_compliance_rules()
-        logger.info(f"Initialized compliance checker with frameworks: {', '.join(self.frameworks)}")
-    
+        logger.info("Initialized compliance checker with frameworks: %s", ", ".join(self.frameworks))
+
     def _initialize_compliance_rules(self) -> Dict[str, List[Dict[str, Any]]]:
         """Initialize the compliance rules for each framework."""
         return {
