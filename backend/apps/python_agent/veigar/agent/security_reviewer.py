@@ -29,22 +29,22 @@ logger = logging.getLogger(__name__)
 
 class SecurityReviewConfig(BaseModel):
     """Configuration for security review."""
-    
+
     class AgentConfig(BaseModel):
         """Agent configuration."""
-        
+
         class ModelConfig(BaseModel):
             """Model configuration."""
             model_name: str = "gemini-2.5-pro"
             temperature: float = 0.0
             top_p: float = 1.0
             per_instance_cost_limit: float = 3.0
-        
+
         model: ModelConfig = Field(default_factory=ModelConfig)
         prompt_template: str = "veigar_security_prompt.txt"
         max_iterations: int = 10
         tools: List[str] = Field(default_factory=list)
-    
+
     class SecurityConfig(BaseModel):
         """Security configuration."""
         compliance_frameworks: List[str] = Field(default_factory=lambda: ["e8", "nist", "owasp"])
@@ -53,10 +53,10 @@ class SecurityReviewConfig(BaseModel):
         dynamic_analysis_enabled: bool = False
         threat_intelligence_enabled: bool = True
         severity_threshold: str = "medium"  # Options: "low", "medium", "high", "critical"
-    
+
     agent: AgentConfig = Field(default_factory=AgentConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
-    
+
 
 @dataclass
 class SecurityReviewResult:
@@ -67,13 +67,13 @@ class SecurityReviewResult:
 
 class SecurityReviewer:
     """Security reviewer for PR vulnerability scanning."""
-    
+
     def __init__(self, config: SecurityReviewConfig):
         """Initialize the security reviewer."""
         self.config = config
         self.go_runtime = get_go_runtime_integration()
         self.trajectory = Trajectory()
-        
+
         self.static_analyzer = StaticAnalysisTool()
         self.vulnerability_scanner = VulnerabilityScanner()
         self.compliance_checker = ComplianceChecker(
@@ -82,14 +82,14 @@ class SecurityReviewer:
         self.security_analyzer = SecurityAnalyzer(
             severity_threshold=self.config.security.severity_threshold
         )
-        
+
         self.prompt_template = self._load_prompt_template()
-    
+
     @classmethod
     def from_config(cls, config: SecurityReviewConfig) -> 'SecurityReviewer':
         """Create a security reviewer from a configuration."""
         return cls(config)
-    
+
     def _load_prompt_template(self) -> str:
         """Load the prompt template."""
         try:
@@ -100,37 +100,37 @@ class SecurityReviewer:
                 return """
                 You are Veigar, a cybersecurity expert specializing in code security review.
                 Your task is to review pull requests for security vulnerabilities and compliance issues.
-                
+
                 Focus on:
                 1. Identifying security vulnerabilities in the code
                 2. Checking compliance with Defense for Australia E8 requirements
                 3. Providing detailed remediation recommendations
-                
+
                 Use the security tools available to you to perform a comprehensive security review.
                 """
         except Exception as e:
             logger.error(f"Error loading prompt template: {e}")
             return "You are Veigar, a cybersecurity expert specializing in code security review."
-    
+
     def review_pr(self, pr_data: Dict[str, Any]) -> SecurityReviewResult:
         """
         Review a pull request for security vulnerabilities.
-        
+
         Args:
             pr_data: Pull request data including repository, branch, and files
-            
+
         Returns:
             SecurityReviewResult: The security review results
         """
         logger.info(f"Starting security review for PR {pr_data.get('pr_id')} in {pr_data.get('repository')}")
-        
+
         self.trajectory.add_step(
             TrajectoryStep(
                 role="system",
                 content=f"Starting security review for PR {pr_data.get('pr_id')} in {pr_data.get('repository')}"
             )
         )
-        
+
         if self.config.security.static_analysis_enabled:
             static_analysis_results = self._perform_static_analysis(pr_data)
             self.trajectory.add_step(
@@ -141,7 +141,7 @@ class SecurityReviewer:
             )
         else:
             static_analysis_results = {"status": "skipped"}
-        
+
         vulnerability_results = self._scan_vulnerabilities(pr_data)
         self.trajectory.add_step(
             TrajectoryStep(
@@ -149,7 +149,7 @@ class SecurityReviewer:
                 content=f"Vulnerability scan results: {json.dumps(vulnerability_results, indent=2)}"
             )
         )
-        
+
         compliance_results = self._check_compliance(pr_data)
         self.trajectory.add_step(
             TrajectoryStep(
@@ -157,10 +157,10 @@ class SecurityReviewer:
                 content=f"Compliance check results: {json.dumps(compliance_results, indent=2)}"
             )
         )
-        
+
         security_analysis = self._analyze_security(
-            static_analysis_results, 
-            vulnerability_results, 
+            static_analysis_results,
+            vulnerability_results,
             compliance_results
         )
         self.trajectory.add_step(
@@ -169,7 +169,7 @@ class SecurityReviewer:
                 content=f"Security analysis: {json.dumps(security_analysis, indent=2)}"
             )
         )
-        
+
         security_report = self._generate_security_report(
             pr_data,
             static_analysis_results,
@@ -183,9 +183,9 @@ class SecurityReviewer:
                 content=security_report
             )
         )
-        
+
         exit_status = "approved" if security_analysis.get("severity_level") in ["none", "low"] else "rejected"
-        
+
         result = SecurityReviewResult(
             trajectory=self.trajectory,
             info={
@@ -196,11 +196,11 @@ class SecurityReviewer:
                 "severity_level": security_analysis.get("severity_level", "low")
             }
         )
-        
+
         logger.info(f"Completed security review for PR {pr_data.get('pr_id')} with status {exit_status}")
-        
+
         return result
-    
+
     def _perform_static_analysis(self, pr_data: Dict[str, Any]) -> Dict[str, Any]:
         """Perform static analysis on the PR code."""
         try:
@@ -212,7 +212,7 @@ class SecurityReviewer:
         except Exception as e:
             logger.error(f"Error performing static analysis: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     def _scan_vulnerabilities(self, pr_data: Dict[str, Any]) -> Dict[str, Any]:
         """Scan for vulnerabilities in the PR code."""
         try:
@@ -225,7 +225,7 @@ class SecurityReviewer:
         except Exception as e:
             logger.error(f"Error scanning vulnerabilities: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     def _check_compliance(self, pr_data: Dict[str, Any]) -> Dict[str, Any]:
         """Check compliance with security frameworks."""
         try:
@@ -237,7 +237,7 @@ class SecurityReviewer:
         except Exception as e:
             logger.error(f"Error checking compliance: {e}")
             return {"status": "error", "error": str(e)}
-    
+
     def _analyze_security(
         self,
         static_analysis_results: Dict[str, Any],
@@ -254,7 +254,7 @@ class SecurityReviewer:
         except Exception as e:
             logger.error(f"Error analyzing security: {e}")
             return {"status": "error", "error": str(e), "severity_level": "high"}
-    
+
     def _generate_security_report(
         self,
         pr_data: Dict[str, Any],
@@ -268,38 +268,50 @@ class SecurityReviewer:
         vulnerability_section = "\n\n## Vulnerabilities\n\n"
         if vulnerabilities:
             for vuln in vulnerabilities:
-                vulnerability_section += f"- **{vuln.get('severity', 'Unknown')}**: {vuln.get('title', 'Unknown vulnerability')}\n"
-                vulnerability_section += f"  - **Location**: {vuln.get('file', 'Unknown')}:{vuln.get('line', 'Unknown')}\n"
-                vulnerability_section += f"  - **Description**: {vuln.get('description', 'No description')}\n"
-                vulnerability_section += f"  - **Remediation**: {vuln.get('remediation', 'No remediation provided')}\n\n"
+                severity = vuln.get('severity', 'Unknown')
+                title = vuln.get('title', 'Unknown vulnerability')
+                vulnerability_section += f"- **{severity}**: {title}\n"
+                file_loc = vuln.get('file', 'Unknown')
+                line_loc = vuln.get('line', 'Unknown')
+                vulnerability_section += f"  - **Location**: {file_loc}:{line_loc}\n"
+                desc = vuln.get('description', 'No description')
+                vulnerability_section += f"  - **Description**: {desc}\n"
+                remedy = vuln.get('remediation', 'No remediation provided')
+                vulnerability_section += f"  - **Remediation**: {remedy}\n\n"
         else:
             vulnerability_section += "No vulnerabilities found.\n\n"
-        
+
         compliance_section = "\n\n## Compliance\n\n"
         for framework, results in compliance_results.items():
             if framework == "status" or framework == "error":
                 continue
-            
+
             compliance_section += f"### {framework.upper()}\n\n"
             issues = results.get("issues", [])
             if issues:
                 for issue in issues:
-                    compliance_section += f"- **{issue.get('severity', 'Unknown')}**: {issue.get('title', 'Unknown issue')}\n"
-                    compliance_section += f"  - **Description**: {issue.get('description', 'No description')}\n"
-                    compliance_section += f"  - **Remediation**: {issue.get('remediation', 'No remediation provided')}\n\n"
+                    severity = issue.get('severity', 'Unknown')
+                    title = issue.get('title', 'Unknown issue')
+                    compliance_section += f"- **{severity}**: {title}\n"
+                    desc = issue.get('description', 'No description')
+                    compliance_section += f"  - **Description**: {desc}\n"
+                    remedy = issue.get('remediation', 'No remediation provided')
+                    compliance_section += f"  - **Remediation**: {remedy}\n\n"
             else:
                 compliance_section += f"Compliant with {framework.upper()} requirements.\n\n"
-        
+
         analysis_section = "\n\n## Security Analysis\n\n"
-        analysis_section += f"**Overall Severity**: {security_analysis.get('severity_level', 'Unknown')}\n\n"
-        analysis_section += f"**Summary**: {security_analysis.get('summary', 'No summary provided')}\n\n"
-        
+        severity = security_analysis.get('severity_level', 'Unknown')
+        analysis_section += f"**Overall Severity**: {severity}\n\n"
+        summary = security_analysis.get('summary', 'No summary provided')
+        analysis_section += f"**Summary**: {summary}\n\n"
+
         recommendations = security_analysis.get('recommendations', [])
         if recommendations:
             analysis_section += "**Recommendations**:\n\n"
             for rec in recommendations:
                 analysis_section += f"- {rec}\n"
-        
+
         report = f"""# Security Review for PR #{pr_data.get('pr_id')} in {pr_data.get('repository')}
 
 
@@ -319,13 +331,13 @@ This security review was performed by Veigar, the cybersecurity agent for the Au
 
 {self._generate_conclusion(security_analysis)}
 """
-        
+
         return report
-    
+
     def _generate_conclusion(self, security_analysis: Dict[str, Any]) -> str:
         """Generate a conclusion based on the security analysis."""
         severity_level = security_analysis.get('severity_level', 'unknown')
-        
+
         if severity_level == "none":
             return "This PR passes all security checks and is ready to be merged."
         elif severity_level == "low":
