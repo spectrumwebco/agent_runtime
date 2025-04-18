@@ -5,12 +5,10 @@ This module provides a security reviewer for the Veigar agent, implementing
 PR vulnerability scanning and compliance checking with Defense for Australia E8 requirements.
 """
 
-import os
-import sys
 import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Union, Tuple
+from typing import Any, Dict, List, Optional
 from dataclasses import dataclass, field
 from pydantic import BaseModel, Field
 
@@ -109,7 +107,7 @@ class SecurityReviewer:
                 Use the security tools available to you to perform a comprehensive security review.
                 """
         except Exception as e:
-            logger.error(f"Error loading prompt template: {e}")
+            logger.error("Error loading prompt template: %s", e)
             return "You are Veigar, a cybersecurity expert specializing in code security review."
 
     def review_pr(self, pr_data: Dict[str, Any]) -> SecurityReviewResult:
@@ -122,7 +120,8 @@ class SecurityReviewer:
         Returns:
             SecurityReviewResult: The security review results
         """
-        logger.info(f"Starting security review for PR {pr_data.get('pr_id')} in {pr_data.get('repository')}")
+        logger.info("Starting security review for PR %s in %s", 
+                  pr_data.get('pr_id'), pr_data.get('repository'))
 
         self.trajectory.add_step(
             TrajectoryStep(
@@ -197,7 +196,8 @@ class SecurityReviewer:
             }
         )
 
-        logger.info(f"Completed security review for PR {pr_data.get('pr_id')} with status {exit_status}")
+        logger.info("Completed security review for PR %s with status %s", 
+                  pr_data.get('pr_id'), exit_status)
 
         return result
 
@@ -210,7 +210,7 @@ class SecurityReviewer:
                 files=pr_data.get("files", [])
             )
         except Exception as e:
-            logger.error(f"Error performing static analysis: {e}")
+            logger.error("Error performing static analysis: %s", e)
             return {"status": "error", "error": str(e)}
 
     def _scan_vulnerabilities(self, pr_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -223,7 +223,7 @@ class SecurityReviewer:
                 scan_depth=self.config.security.vulnerability_scan_depth
             )
         except Exception as e:
-            logger.error(f"Error scanning vulnerabilities: {e}")
+            logger.error("Error scanning vulnerabilities: %s", e)
             return {"status": "error", "error": str(e)}
 
     def _check_compliance(self, pr_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -235,7 +235,7 @@ class SecurityReviewer:
                 files=pr_data.get("files", [])
             )
         except Exception as e:
-            logger.error(f"Error checking compliance: {e}")
+            logger.error("Error checking compliance: %s", e)
             return {"status": "error", "error": str(e)}
 
     def _analyze_security(
@@ -252,7 +252,7 @@ class SecurityReviewer:
                 compliance=compliance_results
             )
         except Exception as e:
-            logger.error(f"Error analyzing security: {e}")
+            logger.error("Error analyzing security: %s", e)
             return {"status": "error", "error": str(e), "severity_level": "high"}
 
     def _generate_security_report(
